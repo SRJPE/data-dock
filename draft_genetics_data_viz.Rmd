@@ -1,0 +1,56 @@
+---
+title: "draft genetics visualizations"
+output: html_document
+date: "2025-06-23"
+---
+
+```{r}
+library(DBI)
+library(tidyverse)
+con <- DBI::dbConnect(drv = RPostgres::Postgres(),
+                      host = "run-id-database.postgres.database.azure.com",
+                      dbname = "runiddb-prod",
+                      user = Sys.getenv("runid_db_user"),
+                      password = Sys.getenv("runid_db_password"),
+                      port = 5432)
+
+DBI::dbListTables(con)
+
+# Emanuel provided this query (https://github.com/SRJPE/jpe-genetics-edi/blob/main/data-query.sql)
+run_designation_raw <- dbGetQuery(
+  con,
+  "SELECT DISTINCT ON (gri.sample_id)
+    gri.sample_id,
+    rt.run_name,
+    substring(gri.sample_id FROM '^[^_]+_((?:100|[1-9][0-9]?))_') AS sample_event,
+    st.datetime_collected,
+    st.fork_length_mm,
+    st.field_run_type_id
+FROM
+    genetic_run_identification gri
+JOIN public.run_type rt
+ON rt.id = gri.run_type_id
+JOIN public.sample st
+ON st.id = gri.sample_id
+WHERE gri.sample_id LIKE '___24%%'
+ORDER BY
+    gri.sample_id,
+    gri.created_at DESC;
+"
+)
+# run_designation_raw <- dbGetQuery(con, "select g.sample_id, r.run_name
+#                               from genetic_run_identification g
+#                               left join run_type r on g.run_type_id = r.id")
+
+run_designation <- run_designation_raw |> 
+  mutate(site = substr(sample_id, 1, 3),
+         sample = substr(sample_id, 4, nchar(sample_id))) |> 
+  separate(sample, into = c("year","event","event1","event2"))
+
+run_designation |> 
+  filter(site == "BTC") |> 
+  group_by(site,year,event) |> 
+  mutate(total_sample = n())
+  
+filter(run_designation, site =="BTC", year == 24, event == 6) |> view()
+```
