@@ -84,24 +84,25 @@ run_designation_percent |>
   filter(location_name == "Butte", year == 2024) |> 
   ggplot(aes(x = sample_event, y = run_percent, fill = run_name)) +
   geom_bar(stat = "identity", position = "stack") +
-  scale_fill_brewer(palette = "Set2") +
+  scale_fill_viridis_d(option = "D") +
+  scale_y_continuous(breaks = seq(0, 100, by = 20)) + 
   theme_minimal() +
   labs(fill = "",
        x = "Sample Event",
        y = "Percent")
 
 ## Butte Creek - sample number
-run_designation_percent |> 
-  filter(location_name == "Butte", year == 2024) |> 
-  ggplot(aes(x = sample_event, y = count, fill = run_name)) +
-  geom_bar(stat = "identity", position = "stack") +
-  scale_fill_viridis_d(option = "D") +
-  theme_minimal() +
-  labs(fill = "",
-       x = "Sample Event",
-       y = "Sample Count")
+# run_designation_percent |> 
+#   filter(location_name == "Butte", year == 2024) |> 
+#   ggplot(aes(x = sample_event, y = count, fill = run_name)) +
+#   geom_bar(stat = "identity", position = "stack") +
+#   scale_fill_viridis_d(option = "D") +
+#   theme_minimal() +
+#   labs(fill = "",
+#        x = "Sample Event",
+#        y = "Sample Count")
 
-## Butte Creek - side-by-side
+## Butte Creek - sample number / side-by-side
 run_designation_percent |> 
   filter(location_name == "Butte", year == 2024) |> 
   ggplot(aes(x = sample_event, y = count, fill = run_name)) +
@@ -151,15 +152,16 @@ leaflet() |>
   addPolylines(data = salmonid_habitat_extents,
                label = ~lapply(river, htmltools::HTML),
                popup = ~river,
-               color = "#BB7693",
+               color = "#5299D9",
                opacity = 1,
                weight = 1.5) |> 
   addCircleMarkers(data = rst_sites,
                    radius = 6,
-                   fillColor = "blue",
+                   fillColor = "black",
                    color = "black",
                    weight = 1,
                    fillOpacity = 0.7,
                    popup = ~popup)
+
 ```
 
