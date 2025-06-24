@@ -12,6 +12,8 @@ editor_options:
 library(DBI)
 library(tidyverse)
 library(leaflet)
+library(dplyr)
+library(sf)
 
 colors_full <-  c("#9A8822", "#F5CDB4", "#F8AFA8", "#FDDDA0", "#74A089", #Royal 2
                   "#899DA4", "#C93312", "#DC863B", # royal 1 (- 3)
@@ -82,7 +84,7 @@ run_designation_percent |>
   filter(location_name == "Butte", year == 2024) |> 
   ggplot(aes(x = sample_event, y = run_percent, fill = run_name)) +
   geom_bar(stat = "identity", position = "stack") +
-  scale_fill_manual(values = colors_full) +
+  scale_fill_brewer(palette = "Set2") +
   theme_minimal() +
   labs(fill = "",
        x = "Sample Event",
@@ -93,29 +95,71 @@ run_designation_percent |>
   filter(location_name == "Butte", year == 2024) |> 
   ggplot(aes(x = sample_event, y = count, fill = run_name)) +
   geom_bar(stat = "identity", position = "stack") +
-  scale_fill_manual(values = colors_full) +
+  scale_fill_viridis_d(option = "D") +
+  theme_minimal() +
+  labs(fill = "",
+       x = "Sample Event",
+       y = "Sample Count")
+
+## Butte Creek - side-by-side
+run_designation_percent |> 
+  filter(location_name == "Butte", year == 2024) |> 
+  ggplot(aes(x = sample_event, y = count, fill = run_name)) +
+  geom_bar(stat = "identity", 
+           position = position_dodge2(width = 0.8, preserve = "single"),  
+           width = 0.7) +
+  scale_fill_viridis_d(option = "D") +  
+  scale_x_continuous(breaks = 1:20) +
+  scale_y_continuous(breaks = 1:11) +
   theme_minimal() +
   labs(fill = "",
        x = "Sample Event",
        y = "Sample Count")
 ```
+
 # Monitoring map
 
 Insert leaflet map here - use this map as a starting place: https://github.com/SRJPE/jpe-map-shiny
-```{r}
-rst <- readRDS("data-raw/rst_sites.Rds")
+```{r echo=FALSE}
+# data from jpe
+rst_raw <- readRDS("data-raw/rst_sites.Rds")
+
+rst <- rst_raw |> 
+  filter(site %in% c("lcc", "ubc", "mill creek", "deer creek", "okie dam",
+                     "tisdale", "knights landing", "hallwood", "herringer riffle")) 
+
+# adding Delta Entry and Lower Feather Rm 17
+additional_rst <- readxl::read_xlsx("data-raw/sample_locations_20220830.xlsx") |>
+  filter(code %in% c("F17", "DEL")) |> 
+  st_as_sf(coords = c("longitude", "latitude"), crs = 4326) |> 
+  mutate(stream = tolower(stream_name),
+         site = tolower(location_name),
+         watershed_name = stream_name, #TODO assuming there is 1 site on these two, check
+         popup = case_when(stream == "feather river" ~ "<p><em>Rotary Screw Trap</em></p><p><strong>Feather River</strong></p><p>Number of Subsites: 1</p>",
+                           T ~ "<p><em>Rotary Screw Trap</em></p><p><strong>Sacramento River</strong></p><p>Number of Subsites: 1</p>")) |> 
+  select(stream, site, geometry, popup, watershed_name, stream_name) 
+
+rst_sites <- bind_rows(additional_rst, rst) 
+
+# habitat extents
+salmonid_habitat_extents <- readRDS("data-raw/salmonid_habitat_extents.Rds")
 
 leaflet() |>
+  addMapPane("Lines-Habitat", zIndex = 430) |>
   addTiles(urlTemplate = "https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}",
            attribution = 'Basemap © Esri, GEBCO, NOAA, CHS, etc.') |>
-  addCircleMarkers(
-    data = rst,
-    radius = 6,
-    fillColor = "blue",
-    color = "black",
-    weight = 1,
-    fillOpacity = 0.7,
-    popup = ~paste("Coordinates:", round(st_coordinates(rst)[,2], 3), ",", round(st_coordinates(rst)[,1], 3)))
-
+  addPolylines(data = salmonid_habitat_extents,
+               label = ~lapply(river, htmltools::HTML),
+               popup = ~river,
+               color = "#BB7693",
+               opacity = 1,
+               weight = 1.5) |> 
+  addCircleMarkers(data = rst_sites,
+                   radius = 6,
+                   fillColor = "blue",
+                   color = "black",
+                   weight = 1,
+                   fillOpacity = 0.7,
+                   popup = ~popup)
 ```
 
