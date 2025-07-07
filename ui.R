@@ -3,7 +3,7 @@ library(shiny)
 
 ui <- fluidPage(
   navbarPage(
-    "Name of Dashboard",
+    "Genetics and Discrete Water Quality Pilot Dashboard",
 
 ## Overview Tab --------------------------------------------------------
     tabPanel("Overview",
@@ -11,9 +11,9 @@ ui <- fluidPage(
                column(6,
                       h3("What is this project?"),
                       p("Text explaining project..."),
-                      h3("Model Alternatives"),
-                      p("(1) Stock-recruit"),
-                      p("Additional explanation.")
+                      h3("Dashboard explanation"),
+                      p("Water Quality"),
+                      p("Genetics")
                       ),
                column(6,
                       imageOutput("map", height = "400px") # Placeholder map
@@ -59,19 +59,32 @@ tabPanel("Water Quality",
 tabPanel("Genetics",
          sidebarLayout(
            sidebarPanel(
-             h4("Filter Options"),   # Placeholder for future filters
-             p("More filters to come")
+             h4("Filter Options"),
+             p("More filters to come"),
+
+             selectInput("location", "Location:",
+                         choices = c("Battle Creek", "Butte Creek", "Clear Creek",
+                                     "Deer Creek", "Feather River RM-17", "Feather River RM-61",
+                                     "Mill Creek", "Yuba River", "Sacramento River - Knights Landing",
+                                     "Sacramento River - Tisdale")),
+             sliderInput("year_range", "Year Range (decide if Water Year filter is necessary):",
+                         min = 2000,
+                         max = 2025,
+                         value = c(2020, 2022),
+                         step = 1,
+                         sep = ""),
+             selectInput("plot_type", "Plot Type:",
+                         choices = c("Time Series", "Bar Plot"))
              ),
            mainPanel(
              tabsetPanel(
-               tabPanel("Conceptual Diagram"),
-               tabPanel("Additional Panel 1"),
-               tabPanel("Additional Panel 2")
+               tabPanel("Map Placeholder (to be updated with genetics data)",
+                        leafletOutput("genetics_map", height = "600px"))
+               # sub tabs ?
                )
              )
            )
          ),
-
 ## Resources Tab -------------------------------------------------------
 tabPanel("Resources",
          tabsetPanel(

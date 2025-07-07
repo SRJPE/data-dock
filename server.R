@@ -28,5 +28,29 @@ server <- function(input, output, session) {
   #        align = "left")
   #
   # }, deleteFile = F)
-}
+
   # Conceptual diagrams
+
+output$genetics_map <- renderLeaflet({
+  leaflet() |>
+    addMapPane("Lines-Habitat", zIndex = 430) |>
+    addTiles(
+      urlTemplate = "https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}",
+      attribution = 'Basemap © Esri, GEBCO, NOAA, CHS, etc.') |>
+    addPolylines(
+      data = salmonid_habitat_extents,
+      label = ~lapply(river, htmltools::HTML),
+      popup = ~river,
+      color = "#5299D9",
+      opacity = 1,
+      weight = 1.5) |>
+    addCircleMarkers(
+      data = rst_sites,
+      radius = 6,
+      fillColor = "black",
+      color = "black",
+      weight = 1,
+      fillOpacity = 0.7,
+      popup = ~popup)
+})
+}
