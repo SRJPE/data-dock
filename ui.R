@@ -25,20 +25,38 @@ ui <- fluidPage(
 tabPanel("Water Quality",
          sidebarLayout(
            sidebarPanel(
-             h4("Controls (coming soon)")
+             h4("Controls"),
+             selectInput("region", "Region/site:",
+                         choices = c("Carquinez", "Central Delta", "Confluence",
+                                     "North Delta", "San Pablo Bay", "South Delta",
+                                     "Suisun and Grizzly Bays", "Suisun Marsh")),
+             sliderInput("year_range", "Year Range (update min and max years):",
+                         min = 2000,
+                         max = 2025,
+                         value = c(2020, 2022),
+                         step = 1,
+                         sep = ""),
+             selectInput("analyte", "Analyte:",
+                         choices = c("Specific Conductance", "Turbidity",
+                                     "Dissolved Ammonia", "Chlorophyll a",
+                                     "Dissolved Nitrate + Nitrite", "Total Phosphorus")),
+             selectInput("data_classification", "Data Classification:",
+                         choices = c("Field", "Lab")),
+             selectInput("plot_type", "Plot Type:",
+                         choices = c("Time Series", "Bar Plot"))
              ),
            mainPanel(
              tabsetPanel(
                tabPanel("Map Placeholder"),
-               tabPanel("Plot Placeholder"),
-               tabPanel("Table Placeholder")
+               # tabPanel("Plot Placeholder"), keeping this in case we want more tabs
+               # tabPanel("Table Placeholder")
                )
              )
            )
          ),
 
 ## Another Tab ---------------------------------------------------------
-tabPanel("Data Explorer",
+tabPanel("Genetics",
          sidebarLayout(
            sidebarPanel(
              h4("Filter Options"),   # Placeholder for future filters
