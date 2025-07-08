@@ -46,7 +46,7 @@ displayAllColors(wes_palette("Moonrise2"))
 # show_col(tritan(colors_full, severity = 0.6))
 
 library(colorBlindness)
-displayAllColors(torres)
+#displayAllColors(torres)
 con <- DBI::dbConnect(drv = RPostgres::Postgres(),
                       host = "run-id-database.postgres.database.azure.com",
                       dbname = "runiddb-prod",
@@ -102,7 +102,7 @@ run_designation_percent <- run_designation |>
 - What about data pre 2024?
 - Confirm the run labels with Sean
 
-## One year or time series
+## One year or time series 
 
 ```{r}
 # Consider option of viewing as percent or as the sample number
@@ -170,8 +170,11 @@ plot1 / plot3
 ## Aggregated by event/date across multiple years
 
 ```{r}
+# the idea of this plot is retain the variability based on time of year but aggregate multiple years together
+# note that depending on how the filter options work this may not be worth including
+
 run_designation_mean <- run_designation_percent |> 
-  group_by(location_name, sample_event, run_name) |> 
+  group_by(location_name, sample_event, run_name) |> # maybe creating a month variable is better than grouping by sample event
   summarize(run_percent = mean(run_percent, na.rm = T),
             count = sum(count, na.rm = T)) # could also take the average count but think more informative to sum
 
@@ -207,6 +210,8 @@ plot1 / plot3
 ## Aggregated proportions
 
 ```{r}
+# we could also show the sample size as a plot rather than labels. i thought the labels were informative enough and didn't need a bar chart
+
 mean_proportions <- run_designation_percent |> 
   group_by(location_name, run_name) |> 
   summarize(mean_run_percent = mean(run_percent, na.rm = T),
