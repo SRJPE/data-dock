@@ -1,7 +1,7 @@
 ---
 title: "draft genetics visualizations"
 date: "`r Sys.Date()`"
-output: github_document
+output: html_document
 editor_options: 
   markdown: 
     wrap: 72
@@ -14,6 +14,8 @@ library(tidyverse)
 library(leaflet)
 library(dplyr)
 library(sf)
+#library(gridExtra)
+library(patchwork)
 
 colors_full <-  c("#9A8822", "#F5CDB4", "#F8AFA8", "#FDDDA0", "#74A089", #Royal 2
                   "#899DA4", "#C93312", "#DC863B", # royal 1 (- 3)
@@ -23,6 +25,28 @@ colors_full <-  c("#9A8822", "#F5CDB4", "#F8AFA8", "#FDDDA0", "#74A089", #Royal 
                   "#9986A5", "#EAD3BF", "#AA9486", "#B6854D", "#798E87" # Isle of dogs 2 altered slightly
 )
 
+
+tol_muted <- c("#2E2585", "#337538", "#5DA899", "#94CBEC","#DCCD7D", "#C26A77", "#9F4A96","#7E2954")
+
+four_colors <- c("#2E2585","#337538","#C26A77","#7E2954")
+
+grand_budapest <- c("#E6A0C4", "#C6CDF7", "#D8A499", "#7294D4")
+
+moonrise_2 <- c("#798E87FF", "#C27D38FF", "#CCC591FF", "#29211FFF")
+
+a_palette <- c("#2A363BFF", "#019875FF", "#99B898FF", "#FECEA8FF", "#FF847CFF", "#E84A5FFF", "#C0392BFF", "#96281BFF")
+pony_o <- c("#4C413FFF", "#5A6F80FF", "#278B9AFF", "#E75B64FF", "#DE7862FF", "#D8AF39FF", "#E8C4A2FF")
+
+
+library(wesanderson)
+?wesanderson::wes_palette()
+displayAllColors(wes_palette("Moonrise2"))
+# library(colorspace)
+# library(scales)
+# show_col(tritan(colors_full, severity = 0.6))
+
+library(colorBlindness)
+#displayAllColors(torres)
 con <- DBI::dbConnect(drv = RPostgres::Postgres(),
                       host = "run-id-database.postgres.database.azure.com",
                       dbname = "runiddb-prod",
@@ -74,21 +98,28 @@ run_designation_percent <- run_designation |>
 
 # Draft visualizations
 
+- Ask Emanuel about the datetime
+- What about data pre 2024?
+- Confirm the run labels with Sean
+
+## One year or time series 
+
 ```{r}
 # Consider option of viewing as percent or as the sample number
 
 #TODO: work on the color scheme, update sample event to a date range (datetime from db is empty so need to figure out how to get that - consult with emanuel), consider making the plot by sample count side-by-side instead of stacked but need to make the width uniform
 
 ## Butte Creek - percent
-run_designation_percent |> 
+plot1 <- run_designation_percent |> 
   filter(location_name == "Butte", year == 2024) |> 
   ggplot(aes(x = sample_event, y = run_percent, fill = run_name)) +
   geom_bar(stat = "identity", position = "stack") +
   scale_fill_viridis_d(option = "D") +
   scale_y_continuous(breaks = seq(0, 100, by = 20)) + 
+  guides(fill = "none") +
   theme_minimal() +
   labs(fill = "",
-       x = "Sample Event",
+       x = "",
        y = "Percent")
 
 ## Butte Creek - sample number
@@ -103,7 +134,7 @@ run_designation_percent |>
 #        y = "Sample Count")
 
 ## Butte Creek - sample number / side-by-side
-run_designation_percent |> 
+plot2 <- run_designation_percent |> 
   filter(location_name == "Butte", year == 2024) |> 
   ggplot(aes(x = sample_event, y = count, fill = run_name)) +
   geom_bar(stat = "identity", 
@@ -113,14 +144,97 @@ run_designation_percent |>
   scale_x_continuous(breaks = 1:20) +
   scale_y_continuous(breaks = 1:11) +
   theme_minimal() +
+   guides(fill = "none") +
   labs(fill = "",
        x = "Sample Event",
        y = "Sample Count")
+
+plot3 <- run_designation_percent |> 
+  filter(location_name == "Butte", year == 2024) |> 
+  ggplot(aes(x = sample_event, y = count, color = run_name)) +
+  geom_line()+
+  scale_color_viridis_d(option = "D") +  
+  scale_x_continuous(breaks = 1:20) +
+  scale_y_continuous(breaks = 1:11) +
+  theme_minimal() +
+   guides(color = "none") +
+  labs(fill = "",
+       x = "Sample Event",
+       y = "Sample Count")
+
+#grid.arrange(plot1, plot3, nrow = 2)
+# uses patchwork
+plot1 / plot3
 ```
+
+## Aggregated by event/date across multiple years
+
+```{r}
+# the idea of this plot is retain the variability based on time of year but aggregate multiple years together
+# note that depending on how the filter options work this may not be worth including
+
+run_designation_mean <- run_designation_percent |> 
+  group_by(location_name, sample_event, run_name) |> # maybe creating a month variable is better than grouping by sample event
+  summarize(run_percent = mean(run_percent, na.rm = T),
+            count = sum(count, na.rm = T)) # could also take the average count but think more informative to sum
+
+## We only have 2024 data so this will look the same
+plot1 <- run_designation_mean |> 
+  filter(location_name == "Butte") |> 
+  ggplot(aes(x = sample_event, y = run_percent, fill = run_name)) +
+  geom_bar(stat = "identity", position = "stack") +
+  scale_fill_viridis_d(option = "D") +
+  scale_y_continuous(breaks = seq(0, 100, by = 20)) + 
+  guides(fill = "none") +
+  theme_minimal() +
+  labs(fill = "",
+       x = "",
+       y = "Percent")
+
+plot3 <- run_designation_mean |> 
+  filter(location_name == "Butte") |> 
+  ggplot(aes(x = sample_event, y = count, color = run_name)) +
+  geom_line()+
+  scale_color_viridis_d(option = "D") +  
+  scale_x_continuous(breaks = 1:20) +
+  scale_y_continuous(breaks = 1:11) +
+  theme_minimal() +
+   guides(color = "none") +
+  labs(fill = "",
+       x = "Sample Event",
+       y = "Sample Count")
+
+plot1 / plot3
+```
+
+## Aggregated proportions
+
+```{r}
+# we could also show the sample size as a plot rather than labels. i thought the labels were informative enough and didn't need a bar chart
+
+mean_proportions <- run_designation_percent |> 
+  group_by(location_name, run_name) |> 
+  summarize(mean_run_percent = mean(run_percent, na.rm = T),
+            run_sd = sd(run_percent, na.rm = T),
+            count = sum(count, na.rm = T)) # could also take the average count but think more informative to sum
+
+plot1 <- mean_proportions |> 
+  filter(location_name == "Butte") |> 
+  ggplot(aes(x = run_name, y = mean_run_percent)) +
+  geom_bar(stat = "identity", fill = "#9986A5") +
+  geom_errorbar(aes(ymin = mean_run_percent - run_sd, ymax = mean_run_percent + run_sd), width = 0.2, color = "gray") +
+  geom_text(aes(label = paste0("n=", count), y = 3), size = 3) +
+  theme_minimal() +
+  labs(x = "",
+       y = "Percent")
+plot1
+```
+
 
 # Monitoring map
 
 Insert leaflet map here - use this map as a starting place: https://github.com/SRJPE/jpe-map-shiny
+
 ```{r echo=FALSE}
 # data from jpe
 rst_raw <- readRDS("data-raw/rst_sites.Rds")
