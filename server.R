@@ -13,21 +13,7 @@ server <- function(input, output, session) {
                             )
                           ),
                         easyClose = TRUE))
-  # Overview visuals
-# output$model_alternatives <- renderImage({
-#   list(src = "data_raw/images/model_alternatives_simplified.png",
-#        width = "50%",
-#        align = "left")
-#
-# }, deleteFile = F)
 
-# output$map <- renderImage({
-#
-#   list(src = "data_raw/images/map.png",
-#        width = "90%",
-#        align = "left")
-#
-# }, deleteFile = F)
 
 # Conceptual diagrams
 
@@ -52,45 +38,74 @@ server <- function(input, output, session) {
         color = "black",
         weight = 1,
         fillOpacity = 0.7,
-        popup = ~popup)
+        popup = ~toupper(stream))
     })
 
-  # ---- Plot Output Based on Marker Click ----
+  # ---- Floating Plot (Triggers on Map Click) ----
   observeEvent(input$genetics_map_marker_click, {
     clicked_site <- input$genetics_map_marker_click$id
+
     output$genetics_plot <- renderPlot({
       req(clicked_site)
       req(input$plot_type == "Bar Plot")
 
-     # map site names
-      site_name_lookup <- c(
-        "butte" = "Butte",
-        "feather-rm17" = "Feather River RM-17",
-        "mill creek" = "Mill Creek")
-      display_location <- site_name_lookup[[clicked_site]] %||% clicked_site
+      # Optional: map site ID to display name
+      location_lookup <- c("butte" = "Butte", "mill creek" = "Mill Creek")
+      location_name <- location_lookup[[clicked_site]] %||% clicked_site
 
-      # Filter your dataset
-      filtered_data <- run_designation_percent |>
-        filter(location_name == display_location,
+      filtered <- run_designation_percent |>
+        filter(location_name == location_name,
                year >= input$year_range[1],
                year <= input$year_range[2])
+      if (nrow(filtered) == 0) {
+        ggplot() +
+          annotate("text", x = 0.5, y = 0.5, label = "No data available", size = 6, hjust = 0.5) +
+          theme_void()
+      } else {
+        ggplot(filtered, aes(x = sample_event, y = run_percent, fill = run_name)) +
+          geom_bar(stat = "identity", position = "stack") +
+          scale_fill_viridis_d(option = "D") +
+          scale_y_continuous(breaks = seq(0, 100, by = 20)) +
+          theme_minimal() +
+          labs(fill = "", x = "Sample Event", y = "Percent")
+        }
+      })
+    })
+  # ---- (Optional) Plot for Attribute Filter ----
+  observeEvent(input$location_id, {
+    req(input$which_view == "Attribute Filter")
+    req(input$location_id)
 
-      # If there's no data, return an empty message
-      if (nrow(filtered_data) == 0) {
+    output$genetics_plot <- renderPlot({
+      selected_label <- input$location_id
+      selected_data <- run_designation_percent  |>
+        mutate(label = as.charachter(sample_event))  |>
+        filter(label == selected_label)
+
+      if (nrow(selected_data) == 0) {
         ggplot() +
           annotate("text", x = 0.5, y = 0.5, label = "No data available", size = 6, hjust = 0.5) +
           theme_void()
         } else {
-          ggplot(filtered_data, aes(x = sample_event, y = run_percent, fill = run_name)) +
+          ggplot(selected_data, aes(x = sample_event, y = run_percent, fill = run_name)) +
             geom_bar(stat = "identity", position = "stack") +
             scale_fill_viridis_d(option = "D") +
             scale_y_continuous(breaks = seq(0, 100, by = 20)) +
             theme_minimal() +
-            labs(fill = "",
-                 x = "Sample Event",
-                 y = "Percent")
+            labs(fill = "", x = "Sample Event", y = "Percent")
           }
       })
-  })
+    })
+  # adding just to display example
+  # output$genetics_plot <- renderPlot({
+  #   req(input$which_view == "Attribute Filter")
+  #   if (input$location_filter == "Butte" && input$plot_type == "Run Proportion") {
+  #     return(plot1)
+  #   }
+  #
+  #   ggplot() +
+  #     annotate("text", x = 0.5, y = 0.5, label = "Select a valid filter", size = 5) +
+  #     theme_void()
+  # })
   }
 
