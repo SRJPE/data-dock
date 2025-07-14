@@ -1,7 +1,7 @@
 server <- function(input, output, session) {
   # welcome modal
   # first visit modal
-  showModal(modalDialog(title = "Welcome to the SRJPE Genetics and Water Quality Dashboard!",
+  showModal(modalDialog(title = "Welcome to the Genetics and Water Quality Dashboard!",
                         tagList(
                           tags$h5("NOTE: This tool is in development!"),
                           tags$p("This web-tool is designed to explore..."),
@@ -9,7 +9,7 @@ server <- function(input, output, session) {
                           tags$ul(
                             tags$li("Review water quality outputs"),
                             tags$li("Review genetics data outputs"),
-                            tags$li("Learn about other SRJPE resources")
+                            tags$li("Learn about other resources")
                             )
                           ),
                         easyClose = TRUE))
@@ -34,11 +34,9 @@ server <- function(input, output, session) {
         data = rst_sites,
         layerId = ~site,  # this enables marker click tracking
         radius = 6,
-        fillColor = "black",
         color = "black",
-        weight = 1,
-        fillOpacity = 0.7,
-        popup = ~toupper(stream))
+        fillOpacity = 0.2,
+        popup = ~label)
     })
 
   # ---- Floating Plot (Triggers on Map Click) ----
@@ -73,7 +71,7 @@ server <- function(input, output, session) {
     })
   # ---- (Optional) Plot for Attribute Filter ----
   observeEvent(input$location_id, {
-    req(input$which_view == "Attribute Filter")
+    req(input$which_view == "Dropdown Filter")
     req(input$location_id)
 
     output$genetics_plot <- renderPlot({

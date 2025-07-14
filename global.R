@@ -26,7 +26,12 @@ rst_raw <- readRDS("data-raw/rst_sites.Rds")
 
 rst <- rst_raw |>
   filter(site %in% c("lcc", "ubc", "mill creek", "deer creek", "okie dam",
-                     "tisdale", "knights landing", "hallwood", "herringer riffle"))
+                     "tisdale", "knights landing", "hallwood", "eye riffle")) |>
+  select(stream, site, geometry) |>
+  mutate(label = case_when(site == "knights landing" ~ "Sacramento River - Knights Landing",
+                           site == "tisdale" ~ "Sacramento River - Tisdale",
+                           site == "eye riffle" ~ "Feather River - RM 61",
+                           T ~ str_to_title(stream)))
 
 # adding Delta Entry and Lower Feather Rm 17
 additional_rst <- readxl::read_xlsx("data-raw/sample_locations_20220830.xlsx") |>
@@ -34,10 +39,10 @@ additional_rst <- readxl::read_xlsx("data-raw/sample_locations_20220830.xlsx") |
   st_as_sf(coords = c("longitude", "latitude"), crs = 4326) |>
   mutate(stream = tolower(stream_name),
          site = tolower(location_name),
-         watershed_name = stream_name, #TODO assuming there is 1 site on these two, check
-         popup = case_when(stream == "feather river" ~ "<p><em>Rotary Screw Trap</em></p><p><strong>Feather River</strong></p><p>Number of Subsites: 1</p>",
-                           T ~ "<p><em>Rotary Screw Trap</em></p><p><strong>Sacramento River</strong></p><p>Number of Subsites: 1</p>")) |>
-  select(stream, site, geometry, popup, watershed_name, stream_name)
+         label = case_when(site == "sac-delta entry" ~ "Sacramento River - Delta Entry",
+                           site == "feather-rm17" ~ "Feather River - RM17")
+        ) |>
+  select(stream, site, geometry, label)
 
 rst_sites <- bind_rows(additional_rst, rst)
 

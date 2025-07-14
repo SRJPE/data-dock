@@ -40,7 +40,8 @@ pony_o <- c("#4C413FFF", "#5A6F80FF", "#278B9AFF", "#E75B64FF", "#DE7862FF", "#D
 
 library(wesanderson)
 ?wesanderson::wes_palette()
-displayAllColors(wes_palette("Moonrise2"))
+displayAllColors(wes_palette("Royal2"))
+displayAllColors(four_colors)
 # library(colorspace)
 # library(scales)
 # show_col(tritan(colors_full, severity = 0.6))

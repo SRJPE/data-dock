@@ -56,7 +56,7 @@ tabPanel("Water Quality",
            )
          ),
 
-## Another Tab ---------------------------------------------------------
+## Genetics Tab ---------------------------------------------------------
 tabPanel("Genetics",
          fluidRow(
            column(
@@ -74,9 +74,9 @@ tabPanel("Genetics",
                radioButtons(
                  inputId = "which_view",
                  label = NULL,
-                 choices = c("Attribute Filter", "Map Filter"),
+                 choices = c("Dropdown Filter", "Map Filter"),
                  inline = TRUE,
-                 selected = "Attribute Filter"
+                 selected = "Dropdown Filter"
                )
              )
            )
@@ -84,7 +84,7 @@ tabPanel("Genetics",
 
          # === Conditional Panels for Filtering ===
          conditionalPanel(
-           condition = "input.which_view == 'Attribute Filter'",
+           condition = "input.which_view == 'Dropdown Filter'",
            div(
              style = "display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 10px;",
              div(
@@ -153,8 +153,7 @@ tabPanel("Genetics",
                          style = "background:none; border:none; color:#007BFF; font-weight:bold; cursor:pointer;")
              ),
            tags$h4("Instructions"),
-           tags$p("Attribute Filter - Select a monitoring location by name on the dropdown. This will populate which transects were monitored at that monitoring location. Each transect is associated with a specific monitoring date and ID. Once selected, a heat map of percent cover along the transect will be visible. If a fish was present during monitoring, it will be highlighted with a red outline."),
-           tags$p("Map Filter - Find a monitoring location of interest within the map and click on it. Once clicked, a dropdown will populate showing all possible transects and monitoring dates that were done at that location. When a transect/date is selected, a heat map of percent cover along the transect will be visible. If a fish was present during monitoring, it will be highlighted with a red outline.")
+           tags$p("Filter the data by time and space or view all data. You can filter by monitoring location either by selecting the name in the dropdown menu or by selecting the location of interest in the map. If you would like to use the map as a filter please select Map Filter")
          ),
 
          # === Map and Floating Plot Panel ===
