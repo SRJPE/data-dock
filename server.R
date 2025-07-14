@@ -1,6 +1,5 @@
 server <- function(input, output, session) {
   # welcome modal
-  # first visit modal
   showModal(modalDialog(title = "Welcome to the Genetics and Water Quality Dashboard!",
                         tagList(
                           tags$h5("NOTE: This tool is in development!"),
@@ -15,7 +14,7 @@ server <- function(input, output, session) {
                         easyClose = TRUE))
 
 
-# Conceptual diagrams
+# Genetics Map
 
   output$genetics_map <- renderLeaflet({
     leaflet() |>
@@ -32,7 +31,7 @@ server <- function(input, output, session) {
         weight = 1.5) |>
       addCircleMarkers(
         data = rst_sites,
-        layerId = ~site,  # this enables marker click tracking
+        layerId = ~label,  # this enables marker click tracking
         radius = 6,
         color = "black",
         fillOpacity = 0.2,
@@ -40,70 +39,106 @@ server <- function(input, output, session) {
     })
 
   # ---- Floating Plot (Triggers on Map Click) ----
-  observeEvent(input$genetics_map_marker_click, {
-    clicked_site <- input$genetics_map_marker_click$id
+  # observeEvent(input$genetics_map_marker_click, {
+  #   clicked_site <- input$genetics_map_marker_click$id
 
-    output$genetics_plot <- renderPlot({
-      req(clicked_site)
-      req(input$plot_type == "Bar Plot")
+  click_marker <- eventReactive(input$genetics_map_marker_click, {
+    req(input$which_view == "Map Filter")
+    click <- input$genetics_map_marker_click
+    print(click)
+    return(click$id)
+  })
 
-      # Optional: map site ID to display name
-      location_lookup <- c("butte" = "Butte", "mill creek" = "Mill Creek")
-      location_name <- location_lookup[[clicked_site]] %||% clicked_site
-
-      filtered <- run_designation_percent |>
-        filter(location_name == location_name,
+  genetics_filtered_data <- reactive({
+    if(input$which_view == "Map Filter") {
+    run_designation_percent |>
+    filter(map_label %in% click_marker(),
+           year >= input$year_range[1],
+           year <= input$year_range[2])
+    } else if (input$which_view == "Dropdown Filter" & input$location_filter != "All Locations") {
+      run_designation_percent |>
+        filter(map_label %in% input$location_filter,
                year >= input$year_range[1],
                year <= input$year_range[2])
-      if (nrow(filtered) == 0) {
-        ggplot() +
-          annotate("text", x = 0.5, y = 0.5, label = "No data available", size = 6, hjust = 0.5) +
-          theme_void()
-      } else {
-        ggplot(filtered, aes(x = sample_event, y = run_percent, fill = run_name)) +
-          geom_bar(stat = "identity", position = "stack") +
-          scale_fill_viridis_d(option = "D") +
-          scale_y_continuous(breaks = seq(0, 100, by = 20)) +
-          theme_minimal() +
-          labs(fill = "", x = "Sample Event", y = "Percent")
-        }
-      })
-    })
-  # ---- (Optional) Plot for Attribute Filter ----
-  observeEvent(input$location_id, {
+    } else {
+      run_designation_percent |>
+        filter(year >= input$year_range[1],
+               year <= input$year_range[2])
+    }
+  })
+
+  genetics_dropdown_filtered_data <- reactive({
+
+  })
+
+  output$genetics_map_plot <- renderPlot({
+    req(input$which_view == "Map Filter")
+    req(input$plot_type == "Run Proportions by Month")
+
+    if (is.null(input$genetics_map_marker_click)) {
+      ggplot() +
+        annotate("text", x = 0.5, y = 0.5, label = "Click on a Sampling Location\nin Map View to Populate Plot",
+                 size = 6, hjust = 0.5, vjust = 0.5) +
+        theme_void() +
+        theme(
+          plot.title = element_text(size = 16, face = "bold", hjust = 0.5)
+        )
+
+   } else if (nrow(genetics_filtered_data()) == 0) {
+      ggplot() +
+        annotate(
+          "text",
+          x = 0.5,
+          y = 0.5,
+          label = "No data available",
+          size = 6,
+          hjust = 0.5
+        ) +
+        theme_void()
+    } else {
+      ggplot(genetics_filtered_data(),
+             aes(x = sample_event, y = run_percent, fill = run_name)) +
+        geom_bar(stat = "identity", position = "stack") +
+        scale_fill_viridis_d(option = "D") +
+        scale_y_continuous(breaks = seq(0, 100, by = 20)) +
+        theme_minimal() +
+        labs(fill = "", x = "Sample Event", y = "Percent")
+    }
+  })
+  # ---- Plot for Dropdown Filter ----
+  output$genetics_dropdown_plot <- renderPlot({
     req(input$which_view == "Dropdown Filter")
-    req(input$location_id)
+    req(input$plot_type == "Run Proportions by Month")
 
-    output$genetics_plot <- renderPlot({
-      selected_label <- input$location_id
-      selected_data <- run_designation_percent  |>
-        mutate(label = as.charachter(sample_event))  |>
-        filter(label == selected_label)
+      if (nrow(genetics_filtered_data()) == 0) {
+      ggplot() +
+        annotate(
+          "text",
+          x = 0.5,
+          y = 0.5,
+          label = "No data available",
+          size = 6,
+          hjust = 0.5
+        ) +
+        theme_void()
+    } else {
+      ggplot(genetics_filtered_data(),
+             aes(x = sample_event, y = run_percent, fill = run_name)) +
+        geom_bar(stat = "identity", position = "stack") +
+        scale_fill_viridis_d(option = "D") +
+        scale_y_continuous(breaks = seq(0, 100, by = 20)) +
+        theme_minimal() +
+        labs(fill = "", x = "Sample Event", y = "Percent")
+    }
+  })
 
-      if (nrow(selected_data) == 0) {
-        ggplot() +
-          annotate("text", x = 0.5, y = 0.5, label = "No data available", size = 6, hjust = 0.5) +
-          theme_void()
-        } else {
-          ggplot(selected_data, aes(x = sample_event, y = run_percent, fill = run_name)) +
-            geom_bar(stat = "identity", position = "stack") +
-            scale_fill_viridis_d(option = "D") +
-            scale_y_continuous(breaks = seq(0, 100, by = 20)) +
-            theme_minimal() +
-            labs(fill = "", x = "Sample Event", y = "Percent")
-          }
-      })
-    })
-  # adding just to display example
-  # output$genetics_plot <- renderPlot({
-  #   req(input$which_view == "Attribute Filter")
-  #   if (input$location_filter == "Butte" && input$plot_type == "Run Proportion") {
-  #     return(plot1)
-  #   }
-  #
-  #   ggplot() +
-  #     annotate("text", x = 0.5, y = 0.5, label = "Select a valid filter", size = 5) +
-  #     theme_void()
-  # })
+  output$dynamic_plot <- renderUI({
+    if (input$which_view == "Map Filter") {
+      plotOutput("genetics_map_plot")
+    } else {
+      plotOutput("genetics_dropdown_plot")
+    }
+  })
+
   }
 

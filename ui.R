@@ -92,7 +92,7 @@ tabPanel("Genetics",
                selectInput(
                  inputId = "location_filter",
                  label = tags$strong("Filter by Location:"),
-                 choices = c("All Locations", sort(unique(run_designation_percent$location_name))),
+                 choices = c("All Locations", sort(unique(run_designation_percent$map_label))),
                  selected = "All Locations"
                  )
                ),
@@ -127,6 +127,28 @@ tabPanel("Genetics",
          # --- Map Filter Panel ---
          conditionalPanel(
            condition = "input.which_view == 'Map Filter'",
+           div(
+             style = "display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 10px;",
+             div(
+               style = "min-width: 250px;",
+               sliderInput(
+                 inputId = "year_range",
+                 label = tags$strong("Year Range:"),
+                 min = 2020,
+                 max = 2025,
+                 value = c(2020, 2024),
+                 step = 1,
+                 sep = ""
+               )
+             ),
+             div(
+               style = "min-width: 200px;",
+               selectInput(
+                 inputId = "plot_type",
+                 label = tags$strong("Summarize by:"),
+                 choices = c("Run Proportion", "Run Proportions by Month")
+               )
+             )),
            fluidRow(
              column(
                width = 6,
@@ -169,7 +191,7 @@ tabPanel("Genetics",
                              top = 80, right = 30, width = 500, draggable = TRUE,
                              style = "z-index:500; background-color:white; padding:10px; border-radius:10px;",
                              h4("Run Composition Plot"),
-                             plotOutput("genetics_plot", height = "300px")
+                             uiOutput("dynamic_plot", height = "300px")
                              )
                )
              )

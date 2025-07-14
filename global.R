@@ -123,28 +123,35 @@ run_designation <- run_designation_raw |>
   mutate(code = substr(sample_id, 1, 3),
          year= paste0(20,substr(sample_id, 4,5)),
          sample_event = as.numeric(sample_event)) |>
-  left_join(select(sample_location, code, location_name))
+  left_join(select(sample_location, code, location_name)) |>
+  mutate(map_label = case_when(location_name %in% c("Battle", "Clear", "Mill", "Deer", "Butte") ~ paste0(location_name, " Creek"),
+                               location_name == "Sac-KNL" ~ "Sacramento River - Knights Landing",
+                               location_name == "Sac-Tisdale" ~ "Sacramento River - Tisdale",
+                               location_name == "Feather-RM61" ~ "Feather River - RM 61",
+                               location_name == "Feather-RM17" ~ "Feather River - RM 17",
+                               location_name == "Sac-Delta Entry" ~ "Sacramento River - Delta Entry",
+                               location_name == "Yuba" ~ "Yuba River"))
 
 run_designation_percent <- run_designation |>
-  group_by(location_name, sample_event, year, run_name) |>
+  group_by(map_label, sample_event, year, run_name) |>
   summarize(count = n()) |>
-  group_by(location_name, year, sample_event) |>
+  group_by(map_label, year, sample_event) |>
   mutate(total_sample = sum(count),
          run_percent = (count/total_sample) * 100)
 
 # plots just for display now
 mean_proportions <- run_designation_percent |>
-  group_by(location_name, run_name) |>
+  group_by(map_label, run_name) |>
   summarize(mean_run_percent = mean(run_percent, na.rm = T),
             run_sd = sd(run_percent, na.rm = T),
             count = sum(count, na.rm = T))
 
-plot1 <- mean_proportions |>
-  filter(location_name == "Butte") |>
-  ggplot(aes(x = run_name, y = mean_run_percent)) +
-  geom_bar(stat = "identity", fill = "#9986A5") +
-  geom_errorbar(aes(ymin = mean_run_percent - run_sd, ymax = mean_run_percent + run_sd), width = 0.2, color = "gray") +
-  geom_text(aes(label = paste0("n=", count), y = 3), size = 3) +
-  theme_minimal() +
-  labs(x = "",
-       y = "Percent")
+# plot1 <- mean_proportions |>
+#   filter(location_name == "Butte") |>
+#   ggplot(aes(x = run_name, y = mean_run_percent)) +
+#   geom_bar(stat = "identity", fill = "#9986A5") +
+#   geom_errorbar(aes(ymin = mean_run_percent - run_sd, ymax = mean_run_percent + run_sd), width = 0.2, color = "gray") +
+#   geom_text(aes(label = paste0("n=", count), y = 3), size = 3) +
+#   theme_minimal() +
+#   labs(x = "",
+#        y = "Percent")
