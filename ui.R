@@ -96,11 +96,6 @@ tabPanel("Genetics",
                  selected = "All Locations"
                  )
                ),
-             # Uncomment this section if needed
-             # div(
-             #   style = "min-width: 200px;",
-             #   uiOutput("location_id_ui")
-             # ),
              div(
                style = "min-width: 250px;",
                sliderInput(
@@ -118,7 +113,7 @@ tabPanel("Genetics",
                selectInput(
                  inputId = "plot_type",
                  label = tags$strong("Summarize by:"),
-                 choices = c("Run Proportion", "Run Proportions by Month")
+                 choices = c("Run Proportions", "Run Proportions by Month")
                  )
                )
              )
@@ -146,15 +141,9 @@ tabPanel("Genetics",
                selectInput(
                  inputId = "plot_type",
                  label = tags$strong("Summarize by:"),
-                 choices = c("Run Proportion", "Run Proportions by Month")
+                 choices = c("Run Proportions", "Run Proportions by Month")
                )
-             )),
-           fluidRow(
-             column(
-               width = 6,
-               uiOutput("location_id_ui_map")
-               )
-             )
+             ))
            ),
 
          # === Hidden Modal Overlay ===
@@ -181,22 +170,12 @@ tabPanel("Genetics",
          # === Map and Floating Plot Panel ===
          fluidRow(
            column(
-             width = 12,
-             div(
-               leafletOutput("genetics_map", height = "600px"),
-
-               # Floating plot panel
-               absolutePanel(id = "plot_panel",
-                             class = "panel panel-default",
-                             top = 80, right = 30, width = 500, draggable = TRUE,
-                             style = "z-index:500; background-color:white; padding:10px; border-radius:10px;",
-                             h4("Run Composition Plot"),
-                             uiOutput("dynamic_plot", height = "300px")
-                             )
-               )
-             )
-           )
-         ),
+             width = 4,
+             leafletOutput("genetics_map", height = "600px")),
+           column(width = 8,
+                  uiOutput("genetics_dynamic_plot")
+                  ))
+               ),
 
 ## Resources Tab -------------------------------------------------------
 tabPanel("Resources",
@@ -215,5 +194,5 @@ tabPanel("Resources",
                     )
            )
          )
-)
-)
+))
+
