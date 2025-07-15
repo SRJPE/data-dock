@@ -99,7 +99,7 @@ tabPanel("Genetics",
              div(
                style = "min-width: 250px;",
                sliderInput(
-                 inputId = "year_range",
+                 inputId = "year_range1",
                  label = tags$strong("Year Range:"),
                  min = 2020,
                  max = 2025,
@@ -111,7 +111,7 @@ tabPanel("Genetics",
              div(
                style = "min-width: 200px;",
                selectInput(
-                 inputId = "plot_type",
+                 inputId = "plot_type1",
                  label = tags$strong("Summarize by:"),
                  choices = c("Run Proportions", "Run Proportions by Month")
                  )
@@ -127,7 +127,7 @@ tabPanel("Genetics",
              div(
                style = "min-width: 250px;",
                sliderInput(
-                 inputId = "year_range",
+                 inputId = "year_range2",
                  label = tags$strong("Year Range:"),
                  min = 2020,
                  max = 2025,
@@ -139,7 +139,7 @@ tabPanel("Genetics",
              div(
                style = "min-width: 200px;",
                selectInput(
-                 inputId = "plot_type",
+                 inputId = "plot_type2",
                  label = tags$strong("Summarize by:"),
                  choices = c("Run Proportions", "Run Proportions by Month")
                )

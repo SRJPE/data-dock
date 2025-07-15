@@ -57,8 +57,8 @@ server <- function(input, output, session) {
     if(input$which_view == "Map Filter") {
       run_designation |>
         filter(map_label %in% click_marker(),
-               year >= input$year_range[1],
-               year <= input$year_range[2]) |>
+               year >= input$year_range2[1],
+               year <= input$year_range2[2]) |>
         group_by(map_label, sample_event, year, run_name) |>
         summarize(count = n()) |>
         group_by(map_label, year, sample_event) |>
@@ -67,8 +67,8 @@ server <- function(input, output, session) {
     } else if (input$which_view == "Dropdown Filter" & input$location_filter != "All Locations") {
       run_designation |>
         filter(map_label %in% input$location_filter,
-               year >= input$year_range[1],
-               year <= input$year_range[2]) |>
+               year >= input$year_range1[1],
+               year <= input$year_range1[2]) |>
         group_by(map_label, sample_event, year, run_name) |>
         summarize(count = n()) |>
         group_by(map_label, year, sample_event) |>
@@ -76,8 +76,8 @@ server <- function(input, output, session) {
                run_percent = (count / total_sample) * 100)
     } else {
       run_designation |>
-        filter(year >= input$year_range[1],
-               year <= input$year_range[2]) |>
+        filter(year >= input$year_range1[1],
+               year <= input$year_range1[2]) |>
         group_by(map_label, sample_event, year, run_name) |>
         summarize(count = n()) |>
         group_by(map_label, year, sample_event) |>
@@ -86,10 +86,41 @@ server <- function(input, output, session) {
     }
   })
 
-
+  genetics_filtered_data_year <- reactive({
+    if(input$which_view == "Map Filter") {
+      run_designation |>
+        filter(map_label %in% click_marker(),
+               year >= input$year_range2[1],
+               year <= input$year_range2[2]) |>
+        group_by(map_label, year, run_name) |>
+        summarize(count = n()) |>
+        group_by(map_label, year) |>
+        mutate(total_sample = sum(count),
+               run_percent = (count / total_sample) * 100)
+    } else if (input$which_view == "Dropdown Filter" & input$location_filter != "All Locations") {
+      run_designation |>
+        filter(map_label %in% input$location_filter,
+               year >= input$year_range1[1],
+               year <= input$year_range1[2]) |>
+        group_by(map_label, year, run_name) |>
+        summarize(count = n()) |>
+        group_by(map_label, year) |>
+        mutate(total_sample = sum(count),
+               run_percent = (count / total_sample) * 100)
+    } else {
+      run_designation |>
+        filter(year >= input$year_range1[1],
+               year <= input$year_range1[2]) |>
+        group_by(map_label, year, run_name) |>
+        summarize(count = n()) |>
+        group_by(map_label, year) |>
+        mutate(total_sample = sum(count),
+               run_percent = (count / total_sample) * 100)
+    }
+  })
 
   output$genetics_plot_month <- renderPlot({
-    req(input$plot_type == "Run Proportions by Month")
+    req(input$plot_type1 == "Run Proportions by Month" | input$plot_type2 == "Run Proportions by Month")
 
     if (input$which_view == "Map Filter" & is.null(input$genetics_map_marker_click)) {
       ggplot() +
@@ -134,7 +165,7 @@ server <- function(input, output, session) {
   })
 
   output$genetics_plot_year <- renderPlot({
-    req(input$plot_type == "Run Proportions")
+    req(input$plot_type1 == "Run Proportions" | input$plot_type2 == "Run Proportions" )
 
     if (input$which_view == "Map Filter" & is.null(input$genetics_map_marker_click)) {
       ggplot() +
@@ -145,7 +176,7 @@ server <- function(input, output, session) {
           plot.title = element_text(size = 16, face = "bold", hjust = 0.5)
         )
 
-    } else if (nrow(genetics_filtered_data_month()) == 0) {
+    } else if (nrow(genetics_filtered_data_year()) == 0) {
       ggplot() +
         annotate(
           "text",
@@ -157,14 +188,9 @@ server <- function(input, output, session) {
         ) +
         theme_void()
     } else {
-      genetics_filtered_data_month() |>
-        group_by(run_name) |>
-        summarize(mean_run_percent = mean(run_percent, na.rm = T),
-                  run_sd = sd(run_percent, na.rm = T),
-                  count = sum(count, na.rm = T)) |>
-        ggplot(aes(x = run_name, y = mean_run_percent)) +
+      genetics_filtered_data_year() |>
+        ggplot(aes(x = run_name, y = run_percent)) +
         geom_bar(stat = "identity", fill = "#9986A5") +
-        geom_errorbar(aes(ymin = mean_run_percent - run_sd, ymax = mean_run_percent + run_sd), width = 0.2, color = "gray") +
         geom_text(aes(label = paste0("n=", count), y = 3), size = 3) +
         theme_minimal() +
         labs(x = "",
@@ -173,7 +199,7 @@ server <- function(input, output, session) {
   })
 
   output$genetics_dynamic_plot <- renderUI({
-    if (input$plot_type == "Run Proportions") {
+    if (input$plot_type1 == "Run Proportions" | input$plot_type2 == "Run Proportions") {
       plotOutput("genetics_plot_year", height = "600px")
     } else {
       plotOutput("genetics_plot_month", height = "600px")

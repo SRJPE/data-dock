@@ -98,7 +98,6 @@ JOIN run_type rt
 ON rt.id = gri.run_type_id
 JOIN sample st
 ON st.id = gri.sample_id
-WHERE gri.sample_id LIKE '___24%%'
 ORDER BY
     gri.sample_id,
     gri.created_at DESC;
