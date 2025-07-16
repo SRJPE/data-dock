@@ -121,5 +121,10 @@ run_designation <- run_designation_raw |>
                                location_name == "Yuba" ~ "Yuba River"))
 
 
-# plots just for display now
+run_designation_percent <- run_designation |>
+  group_by(location_name, sample_event, year, run_name) |>
+  summarize(count = n()) |>
+  group_by(location_name, year, sample_event) |>
+  mutate(total_sample = sum(count),
+         run_percent = (count/total_sample) * 100)
 
