@@ -206,5 +206,36 @@ server <- function(input, output, session) {
     }
   })
 
-  }
+# Water Quality  Map --------------------------------------------------------------
+
+output$wq_map <- renderLeaflet({
+  leaflet() |>
+    addMapPane("Lines-Habitat", zIndex = 430) |>
+    addTiles(
+      urlTemplate = "https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}",
+      attribution = 'Basemap © Esri, GEBCO, NOAA, CHS, etc.') |>
+    addPolylines(
+      data = salmonid_habitat_extents,
+      label = ~lapply(river, htmltools::HTML),
+      popup = ~river,
+      color = "#5299D9",
+      opacity = 1,
+      weight = 1.5) |>
+    addCircleMarkers(
+      data = wq_metadata,
+      layerId = ~station_id,  # this enables marker click tracking
+      radius = 6,
+      color = "black",
+      fillOpacity = 0.2,
+      popup = ~status
+      )
+})
+
+click_marker_wq <- eventReactive(input$wq_map_marker_click, {
+  req(input$which_view == "Map Filter")
+  click_wq <- input$wq_map_marker_click
+  print(click_wq)
+  return(click_wq$id)
+})
+}
 

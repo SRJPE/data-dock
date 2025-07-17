@@ -16,6 +16,7 @@ library(bayesplot)
 library(sf)
 library(DBI)
 library(patchwork)
+library(janitor)
 
 
 # Colors ------------------------------------------------------------------
@@ -120,11 +121,10 @@ run_designation <- run_designation_raw |>
                                location_name == "Sac-Delta Entry" ~ "Sacramento River - Delta Entry",
                                location_name == "Yuba" ~ "Yuba River"))
 
+# water quality location metadata
 
-run_designation_percent <- run_designation |>
-  group_by(location_name, sample_event, year, run_name) |>
-  summarize(count = n()) |>
-  group_by(location_name, year, sample_event) |>
-  mutate(total_sample = sum(count),
-         run_percent = (count/total_sample) * 100)
-
+wq_metadata <- readxl::read_xlsx("data-raw/station_metadata.xlsx") |>
+  clean_names() |>
+  filter(latitude != "variable") |> # these data entries do not have lat/long, so I am leaving them out for now
+  st_as_sf(coords = c("longitude", "latitude"), crs = 4326) |>
+  glimpse()
