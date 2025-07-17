@@ -224,16 +224,21 @@ output$wq_map <- renderLeaflet({
     addCircleMarkers(
       data = wq_metadata,
       layerId = ~station_id,
-      label = ~paste(status, "Water Quality", station_type, "Station"),
+      label = ~paste(station_description),
       radius = 6,
       stroke = TRUE,
       weight = 1,
       color = "black",
       fillOpacity = 0.7,
       fillColor = ~ifelse(status == "Active", "#1b9e77", "#d95f02"),  # green vs orange
-      popup = ~paste("</b>Status:", status, "</b><br/>Station Type:</b>", station_type, "</b><br/></b>Start Date:", start_date, "</b><br/>End Date:", end_date)
-    )
-})
+      popup = ~paste0(
+        "<b>", station_description, "</b><br/>",
+        "<b>Status:</b> ", status, "<br/>",
+        "<b>Station Type:</b> ", station_type, "<br/>",
+        "<b>Start Date:</b> ", start_date, "<br/>",
+        "<b>End Date:</b> ", end_date)
+      )
+  })
 
   click_marker_wq <- eventReactive(input$wq_map_marker_click, {
     req(!is.null(input$wq_map_marker_click))
@@ -271,12 +276,48 @@ observeEvent(input$location_filter_wq, {
         weight = 2,
         fillOpacity = 0.9,
         group = "highlight",
-        label = ~paste("Selected:", status, station_type, "Station")
-      ) |>
+        label = ~paste("Selected:", status, station_type, "Station")) |>
+      addPopups(
+        lng = selected_station$longitude,
+        lat = selected_station$latitude,
+        popup = paste0(
+          "<b>", selected_station$station_description, "</b><br/>",
+          "<b>Status:</b> ", selected_station$status, "<br/>",
+          "<b>Type:</b> ", selected_station$station_type, "<br/>",
+          "<b>Start Date:</b> ", selected_station$start_date, "<br/>",
+          "<b>End Date:</b> ", selected_station$end_date)) |>
       setView(lng = selected_station$longitude,
               lat = selected_station$latitude,
               zoom = 11)
-  })
+    })
 
+# zoom & highlight when map marker is clicked
+observeEvent(input$wq_map_marker_click, {
+  clicked_id <- input$wq_map_marker_click$id
+  req(clicked_id)
+
+  # Optional: keep dropdown in sync
+  updateSelectInput(session, "location_filter_wq", selected = clicked_id)
+
+  selected_station <- wq_metadata[wq_metadata$station_id == clicked_id, ]
+  req(nrow(selected_station) == 1)
+
+  leafletProxy("wq_map") |>
+    clearGroup("highlight") |>
+    addCircleMarkers(
+      data = selected_station,
+      lat = ~latitude,
+      lng = ~longitude,
+      radius = 10,
+      fillColor = "red",
+      color = "white",
+      weight = 2,
+      fillOpacity = 0.9,
+      group = "highlight",
+      label = ~paste("<b>Selected:</b>", station_description)) |>
+    setView(lng = selected_station$longitude,
+            lat = selected_station$latitude,
+            zoom = 11)
+})
 }
 

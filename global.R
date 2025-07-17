@@ -68,6 +68,11 @@ additional_rst <- readxl::read_xlsx("data-raw/sample_locations_20220830.xlsx") |
 
 rst_sites <- bind_rows(additional_rst, rst)
 
+# adding lat/long fields for zooming functionality
+coords <- sf::st_coordinates(rst_sites)
+rst_sites$longitude <- coords[, 1]
+rst_sites$latitude <- coords[, 2]
+
 # habitat extents
 salmonid_habitat_extents <- readRDS("data-raw/salmonid_habitat_extents.Rds")
 
@@ -136,7 +141,7 @@ wq_metadata <- readxl::read_xlsx("data-raw/station_metadata.xlsx") |>
   st_as_sf(coords = c("longitude", "latitude"), crs = 4326) |>
   glimpse()
 
-# adding lati/long fields for zooming functionality
+# adding lat/long fields for zooming functionality
 coords <- sf::st_coordinates(wq_metadata)
 wq_metadata$longitude <- coords[, 1]
 wq_metadata$latitude <- coords[, 2]
