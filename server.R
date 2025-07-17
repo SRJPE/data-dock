@@ -223,12 +223,16 @@ output$wq_map <- renderLeaflet({
       weight = 1.5) |>
     addCircleMarkers(
       data = wq_metadata,
-      layerId = ~station_id,  # this enables marker click tracking
+      layerId = ~station_id,
+      label = ~paste(status, "Water Quality", station_type, "Station"),
       radius = 6,
+      stroke = TRUE,
+      weight = 1,
       color = "black",
-      fillOpacity = 0.2,
-      popup = ~status
-      )
+      fillOpacity = 0.7,
+      fillColor = ~ifelse(status == "Active", "#1b9e77", "#d95f02"),  # green vs orange
+      popup = ~paste("</b>Status:", status, "</b><br/>Station Type:</b>", station_type, "</b><br/></b>Start Date:", start_date, "</b><br/>End Date:", end_date )
+    )
 })
 
 click_marker_wq <- eventReactive(input$wq_map_marker_click, {
