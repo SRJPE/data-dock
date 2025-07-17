@@ -231,15 +231,52 @@ output$wq_map <- renderLeaflet({
       color = "black",
       fillOpacity = 0.7,
       fillColor = ~ifelse(status == "Active", "#1b9e77", "#d95f02"),  # green vs orange
-      popup = ~paste("</b>Status:", status, "</b><br/>Station Type:</b>", station_type, "</b><br/></b>Start Date:", start_date, "</b><br/>End Date:", end_date )
+      popup = ~paste("</b>Status:", status, "</b><br/>Station Type:</b>", station_type, "</b><br/></b>Start Date:", start_date, "</b><br/>End Date:", end_date)
     )
 })
 
-click_marker_wq <- eventReactive(input$wq_map_marker_click, {
-  req(input$which_view == "Map Filter")
-  click_wq <- input$wq_map_marker_click
-  print(click_wq)
-  return(click_wq$id)
-})
+  click_marker_wq <- eventReactive(input$wq_map_marker_click, {
+    req(!is.null(input$wq_map_marker_click))
+    input$wq_map_marker_click$id
+    })
+
+# adding reactive to zoom into selected site
+observeEvent(input$location_filter_wq, {
+  req(input$location_filter_wq)
+
+    if (input$location_filter_wq == "All Locations") {
+      leafletProxy("wq_map") |>
+        clearGroup("highlight") |>
+        fitBounds(
+          lng1 = min(wq_metadata$longitude, na.rm = TRUE),
+          lat1 = min(wq_metadata$latitude, na.rm = TRUE),
+          lng2 = max(wq_metadata$longitude, na.rm = TRUE),
+          lat2 = max(wq_metadata$latitude, na.rm = TRUE)
+          )
+      return()
+    }
+
+    selected_station <- wq_metadata[wq_metadata$station_id == input$location_filter_wq, ]
+    req(nrow(selected_station) == 1)
+
+    leafletProxy("wq_map") |>
+      clearGroup("highlight") |>
+      addCircleMarkers(
+        data = selected_station,
+        lat = ~latitude,
+        lng = ~longitude,
+        radius = 10,
+        fillColor = "red",
+        color = "white",
+        weight = 2,
+        fillOpacity = 0.9,
+        group = "highlight",
+        label = ~paste("Selected:", status, station_type, "Station")
+      ) |>
+      setView(lng = selected_station$longitude,
+              lat = selected_station$latitude,
+              zoom = 11)
+  })
+
 }
 

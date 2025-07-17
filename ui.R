@@ -34,33 +34,30 @@ tabPanel("Water Quality",
                  shiny::icon("question-circle"),
                  style = "cursor: pointer; color: #007BFF; margin-left: 5px;",
                  onclick = "document.getElementById('instructions_modal').style.display='block';
-                     document.getElementById('modal_overlay').style.display='block';"
-               ),
+                     document.getElementById('modal_overlay').style.display='block';"),
                radioButtons(
-                 inputId = "which_view",
+                 inputId = "which_view_wq",
                  label = NULL,
                  choices = c("Dropdown Filter", "Map Filter"),
                  inline = TRUE,
-                 selected = "Dropdown Filter"
+                 selected = "Dropdown Filter")
                )
              )
-           )
-         ),
+           ),
          conditionalPanel(
-           condition = "input.which_view == 'Dropdown Filter'",
+           condition = "input.which_view_wq == 'Dropdown Filter'",
            div(
              style = "display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 10px;",
              div(
                style = "min-width: 200px;",
                selectInput(
-                 inputId = "location_filter",
+                 inputId = "location_filter_wq",
                  label = tags$strong("Filter by Location:"),
-                 choices = c("All Locations", sort(unique(wq_metadata$station_description))),
+                 choices = c("All Locations" = "All Locations",
+                             setNames(wq_metadata$station_id, wq_metadata$station_description)),
                  selected = "All Locations"
-                 )
+               )
                ),
-
-
 
              #TODO confirm that we will no longer use the sites
          # sidebarLayout(
@@ -73,36 +70,35 @@ tabPanel("Water Quality",
          div(
            style = "min-width: 250px;",
            sliderInput("year_range", "Year Range (update min and max years):",
-                         min = 2020,
-                         max = 2025,
-                         value = c(2020, 2022),
-                         step = 1,
-                         sep = "")
+                       min = 2020,
+                       max = 2025,
+                       value = c(2020, 2022),
+                       step = 1,
+                       sep = "")
            ),
-           div(
-             style = "min-width: 200px;",
-             selectInput("analyte", "Analyte:",
-                         choices = c("Specific Conductance", "Turbidity",
-                                     "Dissolved Ammonia", "Chlorophyll a",
-                                     "Dissolved Nitrate + Nitrite", "Total Phosphorus"))
-             ),
-             div(
-               style = "min-width: 200px;",
-               selectInput("data_classification", "Data Classification:",
-                         choices = c("Field", "Lab"))
-               ),
          div(
            style = "min-width: 200px;",
-             selectInput("plot_type", "Plot Type:",
-                         choices = c("Time Series", "Bar Plot"))
-
-             )
+           selectInput("analyte", "Analyte:",
+                       choices = c("Specific Conductance", "Turbidity",
+                                   "Dissolved Ammonia", "Chlorophyll a",
+                                   "Dissolved Nitrate + Nitrite", "Total Phosphorus"))
+           ),
+         div(
+           style = "min-width: 200px;",
+           selectInput("data_classification", "Data Classification:",
+                       choices = c("Field", "Lab"))
+           ),
+         div(
+           style = "min-width: 200px;",
+           selectInput("plot_type", "Plot Type:",
+                       choices = c("Time Series", "Bar Plot"))
            )
+         )
          ),
 
          # --- Map Filter Panel ---
          conditionalPanel(
-           condition = "input.which_view == 'Map Filter'",
+           condition = "input.which_view_wq == 'Map Filter'",
            div(
              style = "display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 10px;",
              div(
@@ -114,17 +110,26 @@ tabPanel("Water Quality",
                  max = 2025,
                  value = c(2020, 2024),
                  step = 1,
-                 sep = ""
-               )
+                 sep = "")
+               ),
+             div(
+               style = "min-width: 200px;",
+               selectInput("analyte", "Analyte:",
+                           choices = c("Specific Conductance", "Turbidity",
+                                       "Dissolved Ammonia", "Chlorophyll a",
+                                       "Dissolved Nitrate + Nitrite", "Total Phosphorus"))
              ),
              div(
                style = "min-width: 200px;",
-               selectInput(
-                 inputId = "plot_type2",
-                 label = tags$strong("Summarize by:"),
-                 choices = c("Run Proportions", "Run Proportions by Month")
-               )
-             ))
+               selectInput("data_classification", "Data Classification:",
+                           choices = c("Field", "Lab"))
+             ),
+             div(
+               style = "min-width: 200px;",
+               selectInput("plot_type", "Plot Type:",
+                           choices = c("Time Series", "Bar Plot"))
+             )
+           )
          ),
 
          # === Hidden Modal Overlay ===
@@ -133,20 +138,20 @@ tabPanel("Water Quality",
            style = "display:none; position:fixed; top:0; left:0; width:100%; height:100%; background-color:rgba(0, 0, 0, 0.5); z-index:999;",
            onclick = "document.getElementById('instructions_modal').style.display='none';
                document.getElementById('modal_overlay').style.display='none';"
-         ),
+           ),
          tags$div(
            id = "instructions_modal",
            style = "display:none; position:fixed; z-index:1000; left:50%; top:50%; transform:translate(-50%, -50%); background-color:white; padding:20px; border:1px solid #ccc; box-shadow:0px 4px 8px rgba(0,0,0,0.2); width: 500px;",
            tags$div(
              style = "text-align:right;",
              tags$button("Close",
-                         onclick = "document.getElementById('instructions_modal').style.display='none';
+             onclick = "document.getElementById('instructions_modal').style.display='none';
                              document.getElementById('modal_overlay').style.display='none';",
                          style = "background:none; border:none; color:#007BFF; font-weight:bold; cursor:pointer;")
-           ),
+             ),
            tags$h4("Instructions"),
            tags$p("Filter the data by time and space or view all data. You can filter by monitoring location either by selecting the name in the dropdown menu or by selecting the location of interest in the map. If you would like to use the map as a filter please select Map Filter")
-         ),
+           ),
 
          # === Map and Floating Plot Panel ===
          fluidRow(
@@ -155,9 +160,9 @@ tabPanel("Water Quality",
              leafletOutput("wq_map", height = "600px")),
            column(width = 8,
                   # uiOutput("wq_dynamic_plot")
-                  "wq_dynamic_plot_placeholder"
-           ))
-),
+                  "wq_dynamic_plot_placeholder")
+           )
+         ),
 
          #
          #   mainPanel(
@@ -206,7 +211,7 @@ tabPanel("Genetics",
                selectInput(
                  inputId = "location_filter",
                  label = tags$strong("Filter by Location:"),
-                 choices = c("All Locations", sort(unique(run_designation_percent$map_label))),
+                 choices = c("All Locations", sort(unique(run_designation$map_label))),
                  selected = "All Locations"
                  )
                ),
