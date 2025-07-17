@@ -246,26 +246,33 @@ output$wq_map <- renderLeaflet({
     })
 
 # adding reactive to zoom into selected site
-observeEvent(input$location_filter_wq, {
-  req(input$location_filter_wq)
+  observeEvent(input$location_filter_wq, {
+    req(input$location_filter_wq)
 
-    if (input$location_filter_wq == "All Locations") {
-      leafletProxy("wq_map") |>
-        clearGroup("highlight") |>
-        fitBounds(
-          lng1 = min(wq_metadata$longitude, na.rm = TRUE),
-          lat1 = min(wq_metadata$latitude, na.rm = TRUE),
-          lng2 = max(wq_metadata$longitude, na.rm = TRUE),
-          lat2 = max(wq_metadata$latitude, na.rm = TRUE)
-          )
+    # option of either selecting "All Locations" OR specific locations
+    if ("All Locations" %in% input$location_filter_wq && length(input$location_filter_wq) > 1) {
+      updateSelectInput(
+        session,
+        "location_filter_wq",
+        selected = setdiff(input$location_filter_wq, "All Locations")
+      )
       return()
     }
 
-    selected_station <- wq_metadata[wq_metadata$station_id == input$location_filter_wq, ]
-    req(nrow(selected_station) == 1)
+    selected_station <- wq_metadata[wq_metadata$station_id %in% input$location_filter_wq, ]
+    req(nrow(selected_station) > 0)
+    # Automatically remove "All Locations" if any other site is selected
+    if ("All Locations" %in% input$location_filter_wq && length(input$location_filter_wq) > 1) {
+      updated_selection <- setdiff(input$location_filter_wq, "All Locations")
+      updateSelectInput(session, "location_filter_wq", selected = updated_selection)
+      return()
+    }
+
+    bbox <- sf::st_bbox(selected_station)
 
     leafletProxy("wq_map") |>
       clearGroup("highlight") |>
+      clearPopups() |>
       addCircleMarkers(
         data = selected_station,
         lat = ~latitude,
@@ -276,7 +283,9 @@ observeEvent(input$location_filter_wq, {
         weight = 2,
         fillOpacity = 0.9,
         group = "highlight",
-        label = ~paste("Selected:", status, station_type, "Station")) |>
+        label = ~paste("Selected:", status, station_type, "Station")
+      ) |>
+      fitBounds(bbox["xmin"], bbox["ymin"], bbox["xmax"], bbox["ymax"]) |>
       addPopups(
         lng = selected_station$longitude,
         lat = selected_station$latitude,
@@ -285,10 +294,9 @@ observeEvent(input$location_filter_wq, {
           "<b>Status:</b> ", selected_station$status, "<br/>",
           "<b>Type:</b> ", selected_station$station_type, "<br/>",
           "<b>Start Date:</b> ", selected_station$start_date, "<br/>",
-          "<b>End Date:</b> ", selected_station$end_date)) |>
-      setView(lng = selected_station$longitude,
-              lat = selected_station$latitude,
-              zoom = 11)
+          "<b>End Date:</b> ", selected_station$end_date
+        )
+      )
     })
 
 # zoom & highlight when map marker is clicked
@@ -297,7 +305,10 @@ observeEvent(input$wq_map_marker_click, {
   req(clicked_id)
 
   # Optional: keep dropdown in sync
-  updateSelectInput(session, "location_filter_wq", selected = clicked_id)
+  current <- setdiff(input$location_filter_wq, "All Locations")
+  new_selection <- union(current, clicked_id)
+  updateSelectInput(session, "location_filter_wq", selected = new_selection)
+
 
   selected_station <- wq_metadata[wq_metadata$station_id == clicked_id, ]
   req(nrow(selected_station) == 1)
@@ -318,6 +329,6 @@ observeEvent(input$wq_map_marker_click, {
     setView(lng = selected_station$longitude,
             lat = selected_station$latitude,
             zoom = 11)
-})
+  })
 }
 

@@ -55,7 +55,8 @@ tabPanel("Water Quality",
                  label = tags$strong("Filter by Location:"),
                  choices = c("All Locations" = "All Locations",
                              setNames(wq_metadata$station_id, wq_metadata$station_description)),
-                 selected = "All Locations"
+                 selected = "All Locations",
+                 multiple = TRUE
                )
                ),
 
