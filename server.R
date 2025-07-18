@@ -119,7 +119,7 @@ server <- function(input, output, session) {
     }
   })
 
-  output$genetics_plot_month <- renderPlot({
+  output$genetics_plot_month <- renderPlotly({
     req(input$plot_type1 == "Run Proportions by Month" | input$plot_type2 == "Run Proportions by Month")
 
     if (input$which_view == "Map Filter" & is.null(input$genetics_map_marker_click)) {
@@ -142,33 +142,34 @@ server <- function(input, output, session) {
           hjust = 0.5
         ) +
         theme_void()
+    } else if (n_distinct(genetics_filtered_data_month()$map_label) > 1) {
+      p <- ggplot(genetics_filtered_data_month(),
+                           aes(x = sample_event, y = run_percent, fill = run_name,
+                               text = paste("n = ", count))) +
+        geom_bar(stat = "identity", position = "stack") +
+        scale_fill_viridis_d(option = "D") +
+        scale_y_continuous(breaks = seq(0, 100, by = 20)) +
+        theme_minimal() +
+        labs(fill = "", x = "Sample Event", y = "Percent") +
+        facet_wrap(~map_label)
     } else {
-      plot1 <- ggplot(genetics_filtered_data_month(),
-                      aes(x = sample_event, y = run_percent, fill = run_name)) +
+      p <- ggplot(genetics_filtered_data_month(),
+                  aes(x = sample_event, y = run_percent, fill = run_name,
+                      text = paste("n = ", count))) +
         geom_bar(stat = "identity", position = "stack") +
         scale_fill_viridis_d(option = "D") +
         scale_y_continuous(breaks = seq(0, 100, by = 20)) +
         theme_minimal() +
         labs(fill = "", x = "Sample Event", y = "Percent")
-      plot2 <- ggplot(genetics_filtered_data_month(),
-                      aes(x = sample_event, y = count, color = run_name)) +
-        geom_point(size = 4) +
-        scale_color_viridis_d(option = "D") +
-        scale_x_continuous(breaks = 1:20) +
-        scale_y_continuous(breaks = 1:11) +
-        theme_minimal() +
-        guides(color = "none") +
-        labs(fill = "", x = "Sample Event", y = "Sample Count")
-
-      plot1 / plot2
     }
+    ggplotly(p, tooltip = "text")
   })
 
-  output$genetics_plot_year <- renderPlot({
+  output$genetics_plot_year <- renderPlotly({
     req(input$plot_type1 == "Run Proportions" | input$plot_type2 == "Run Proportions" )
 
     if (input$which_view == "Map Filter" & is.null(input$genetics_map_marker_click)) {
-      ggplot() +
+     p <- ggplot() +
         annotate("text", x = 0.5, y = 0.5, label = "Click on a Sampling Location\nin Map View to Populate Plot",
                  size = 6, hjust = 0.5, vjust = 0.5) +
         theme_void() +
@@ -177,32 +178,47 @@ server <- function(input, output, session) {
         )
 
     } else if (nrow(genetics_filtered_data_year()) == 0) {
-      ggplot() +
+      p <- ggplot() +
         annotate(
           "text",
           x = 0.5,
           y = 0.5,
+          text = "",
           label = "No data available",
           size = 6,
           hjust = 0.5
         ) +
         theme_void()
-    } else {
-      genetics_filtered_data_year() |>
-        ggplot(aes(x = run_name, y = run_percent)) +
+    } else if (n_distinct(genetics_filtered_data_year()$map_label) > 1) {
+       p <- genetics_filtered_data_year() |>
+        ggplot(aes(x = run_name, y = run_percent,
+                   text = paste("n = ", count))) +
         geom_bar(stat = "identity", fill = "#9986A5") +
-        geom_text(aes(label = paste0("n=", count), y = 3), size = 3) +
+        theme_minimal() +
+        labs(x = "",
+             y = "Percent") +
+        facet_wrap(~map_label)
+    } else {
+      p <- genetics_filtered_data_year() |>
+        ggplot(aes(x = run_name, y = run_percent,
+                   text = paste("n = ", count))) +
+        geom_bar(stat = "identity", fill = "#9986A5") +
         theme_minimal() +
         labs(x = "",
              y = "Percent")
     }
+    ggplotly(p, tooltip = "text")
   })
 
   output$genetics_dynamic_plot <- renderUI({
-    if (input$plot_type1 == "Run Proportions" | input$plot_type2 == "Run Proportions") {
-      plotOutput("genetics_plot_year", height = "600px")
-    } else {
-      plotOutput("genetics_plot_month", height = "600px")
+    if (input$which_view == "Dropdown Filter" & input$plot_type1 == "Run Proportions") {
+      plotlyOutput("genetics_plot_year", height = "600px")
+    } else if (input$which_view == "Dropdown Filter" & input$plot_type1 == "Run Proportions by Month") {
+      plotlyOutput("genetics_plot_month", height = "600px")
+    } else if (input$which_view == "Map Filter" & input$plot_type2 == "Run Proportions") {
+      plotlyOutput("genetics_plot_year", height = "600px")
+    } else if (input$which_view == "Map Filter" & input$plot_type2 == "Run Proportions by Month") {
+      plotlyOutput("genetics_plot_month", height = "600px")
     }
   })
 

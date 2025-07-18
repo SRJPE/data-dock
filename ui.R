@@ -213,7 +213,8 @@ tabPanel("Genetics",
                  inputId = "location_filter",
                  label = tags$strong("Filter by Location:"),
                  choices = c("All Locations", sort(unique(run_designation$map_label))),
-                 selected = "All Locations"
+                 selected = "All Locations",
+                 multiple = TRUE
                  )
                ),
              div(
