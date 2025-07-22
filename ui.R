@@ -26,26 +26,8 @@ tabPanel("Water Quality",
          fluidRow(
            column(
              width = 12,
-             tags$div(
-               style = "margin-bottom: 10px;",
-               tags$strong("Choose how to filter the data:"),
-               tags$span(
-                 class = "help-icon",
-                 shiny::icon("question-circle"),
-                 style = "cursor: pointer; color: #007BFF; margin-left: 5px;",
-                 onclick = "document.getElementById('instructions_modal').style.display='block';
-                     document.getElementById('modal_overlay').style.display='block';"),
-               radioButtons(
-                 inputId = "which_view_wq",
-                 label = NULL,
-                 choices = c("Dropdown Filter", "Map Filter"),
-                 inline = TRUE,
-                 selected = "Dropdown Filter")
-               )
              )
            ),
-         conditionalPanel(
-           condition = "input.which_view_wq == 'Dropdown Filter'",
            div(
              style = "display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 10px;",
              div(
@@ -94,7 +76,6 @@ tabPanel("Water Quality",
            selectInput("plot_type", "Plot Type:",
                        choices = c("Time Series", "Bar Plot"))
            )
-         )
          ),
 
          # --- Map Filter Panel ---
