@@ -35,11 +35,15 @@ tabPanel("Water Quality",
                selectInput(
                  inputId = "location_filter_wq",
                  label = tags$strong("Filter by Location:"),
-                 choices = c("All Locations" = "All Locations",
-                             setNames(wq_metadata$station_id, wq_metadata$station_description)),
+                 choices = c(
+                   "All Locations" = "All Locations",
+                   setNames(
+                     wq_metadata$station_id[order(wq_metadata$station_description)],
+                     wq_metadata$station_description[order(wq_metadata$station_description)])
+                   ),
                  selected = "All Locations",
-                 multiple = TRUE
-               )
+                 multiple = TRUE,
+                 selectize = TRUE)
                ),
 
              #TODO confirm that we will no longer use the sites

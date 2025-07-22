@@ -119,7 +119,7 @@ server <- function(input, output, session) {
     }
   })
 
-  output$genetics_plot_month <- renderPlotly({
+  output$genetics_plot_month <- renderPlot({
     req(input$plot_type1 == "Run Proportions by Month" | input$plot_type2 == "Run Proportions by Month")
 
     if (input$which_view == "Map Filter" & is.null(input$genetics_map_marker_click)) {
@@ -142,34 +142,33 @@ server <- function(input, output, session) {
           hjust = 0.5
         ) +
         theme_void()
-    } else if (n_distinct(genetics_filtered_data_month()$map_label) > 1) {
-      p <- ggplot(genetics_filtered_data_month(),
-                           aes(x = sample_event, y = run_percent, fill = run_name,
-                               text = paste("n = ", count))) +
-        geom_bar(stat = "identity", position = "stack") +
-        scale_fill_viridis_d(option = "D") +
-        scale_y_continuous(breaks = seq(0, 100, by = 20)) +
-        theme_minimal() +
-        labs(fill = "", x = "Sample Event", y = "Percent") +
-        facet_wrap(~map_label)
     } else {
-      p <- ggplot(genetics_filtered_data_month(),
-                  aes(x = sample_event, y = run_percent, fill = run_name,
-                      text = paste("n = ", count))) +
+      plot1 <- ggplot(genetics_filtered_data_month(),
+                      aes(x = sample_event, y = run_percent, fill = run_name)) +
         geom_bar(stat = "identity", position = "stack") +
         scale_fill_viridis_d(option = "D") +
         scale_y_continuous(breaks = seq(0, 100, by = 20)) +
         theme_minimal() +
         labs(fill = "", x = "Sample Event", y = "Percent")
+      plot2 <- ggplot(genetics_filtered_data_month(),
+                      aes(x = sample_event, y = count, color = run_name)) +
+        geom_point(size = 4) +
+        scale_color_viridis_d(option = "D") +
+        scale_x_continuous(breaks = 1:20) +
+        scale_y_continuous(breaks = 1:11) +
+        theme_minimal() +
+        guides(color = "none") +
+        labs(fill = "", x = "Sample Event", y = "Sample Count")
+
+      plot1 / plot2
     }
-    ggplotly(p, tooltip = "text")
   })
 
-  output$genetics_plot_year <- renderPlotly({
+  output$genetics_plot_year <- renderPlot({
     req(input$plot_type1 == "Run Proportions" | input$plot_type2 == "Run Proportions" )
 
     if (input$which_view == "Map Filter" & is.null(input$genetics_map_marker_click)) {
-     p <- ggplot() +
+      ggplot() +
         annotate("text", x = 0.5, y = 0.5, label = "Click on a Sampling Location\nin Map View to Populate Plot",
                  size = 6, hjust = 0.5, vjust = 0.5) +
         theme_void() +
@@ -178,47 +177,32 @@ server <- function(input, output, session) {
         )
 
     } else if (nrow(genetics_filtered_data_year()) == 0) {
-      p <- ggplot() +
+      ggplot() +
         annotate(
           "text",
           x = 0.5,
           y = 0.5,
-          text = "",
           label = "No data available",
           size = 6,
           hjust = 0.5
         ) +
         theme_void()
-    } else if (n_distinct(genetics_filtered_data_year()$map_label) > 1) {
-       p <- genetics_filtered_data_year() |>
-        ggplot(aes(x = run_name, y = run_percent,
-                   text = paste("n = ", count))) +
-        geom_bar(stat = "identity", fill = "#9986A5") +
-        theme_minimal() +
-        labs(x = "",
-             y = "Percent") +
-        facet_wrap(~map_label)
     } else {
-      p <- genetics_filtered_data_year() |>
-        ggplot(aes(x = run_name, y = run_percent,
-                   text = paste("n = ", count))) +
+      genetics_filtered_data_year() |>
+        ggplot(aes(x = run_name, y = run_percent)) +
         geom_bar(stat = "identity", fill = "#9986A5") +
+        geom_text(aes(label = paste0("n=", count), y = 3), size = 3) +
         theme_minimal() +
         labs(x = "",
              y = "Percent")
     }
-    ggplotly(p, tooltip = "text")
   })
 
   output$genetics_dynamic_plot <- renderUI({
-    if (input$which_view == "Dropdown Filter" & input$plot_type1 == "Run Proportions") {
-      plotlyOutput("genetics_plot_year", height = "600px")
-    } else if (input$which_view == "Dropdown Filter" & input$plot_type1 == "Run Proportions by Month") {
-      plotlyOutput("genetics_plot_month", height = "600px")
-    } else if (input$which_view == "Map Filter" & input$plot_type2 == "Run Proportions") {
-      plotlyOutput("genetics_plot_year", height = "600px")
-    } else if (input$which_view == "Map Filter" & input$plot_type2 == "Run Proportions by Month") {
-      plotlyOutput("genetics_plot_month", height = "600px")
+    if (input$plot_type1 == "Run Proportions" | input$plot_type2 == "Run Proportions") {
+      plotOutput("genetics_plot_year", height = "600px")
+    } else {
+      plotOutput("genetics_plot_month", height = "600px")
     }
   })
 
@@ -246,7 +230,7 @@ output$wq_map <- renderLeaflet({
       weight = 1,
       color = "black",
       fillOpacity = 0.7,
-      fillColor = ~ifelse(status == "Active", "#1b9e77", "#d95f02"),  # green vs orange
+      fillColor = ~ifelse(status == "Active", "#1b9e77", "#d95f02"),
       popup = ~paste0(
         "<b>", station_description, "</b><br/>",
         "<b>Status:</b> ", status, "<br/>",
@@ -265,28 +249,34 @@ output$wq_map <- renderLeaflet({
   observeEvent(input$location_filter_wq, {
     req(input$location_filter_wq)
 
-    # option of either selecting "All Locations" OR specific locations
+    # If "All Locations" is selected (and only it), reset the map
+    if (identical(input$location_filter_wq, "All Locations")) {
+      leafletProxy("wq_map") |>
+        clearGroup("highlight") |>
+        clearPopups() |>
+        fitBounds(
+          lng1 = min(wq_metadata$longitude, na.rm = TRUE),
+          lat1 = min(wq_metadata$latitude, na.rm = TRUE),
+          lng2 = max(wq_metadata$longitude, na.rm = TRUE),
+          lat2 = max(wq_metadata$latitude, na.rm = TRUE))
+      return()
+    }
+
+    # If "All Locations" is selected alongside others, remove it from the selection
     if ("All Locations" %in% input$location_filter_wq && length(input$location_filter_wq) > 1) {
       updateSelectInput(
         session,
         "location_filter_wq",
-        selected = setdiff(input$location_filter_wq, "All Locations")
-      )
+        selected = setdiff(input$location_filter_wq, "All Locations"))
       return()
     }
 
+    # Filter selected stations
     selected_station <- wq_metadata[wq_metadata$station_id %in% input$location_filter_wq, ]
     req(nrow(selected_station) > 0)
-    # Automatically remove "All Locations" if any other site is selected
-    if ("All Locations" %in% input$location_filter_wq && length(input$location_filter_wq) > 1) {
-      updated_selection <- setdiff(input$location_filter_wq, "All Locations")
-      updateSelectInput(session, "location_filter_wq", selected = updated_selection)
-      return()
-    }
-
     bbox <- sf::st_bbox(selected_station)
 
-    leafletProxy("wq_map") |>
+    map <- leafletProxy("wq_map") |>
       clearGroup("highlight") |>
       clearPopups() |>
       addCircleMarkers(
@@ -299,21 +289,41 @@ output$wq_map <- renderLeaflet({
         weight = 2,
         fillOpacity = 0.9,
         group = "highlight",
-        label = ~paste("Selected:", status, station_type, "Station")
-      ) |>
-      fitBounds(bbox["xmin"], bbox["ymin"], bbox["xmax"], bbox["ymax"]) |>
-      addPopups(
-        lng = selected_station$longitude,
-        lat = selected_station$latitude,
-        popup = paste0(
-          "<b>", selected_station$station_description, "</b><br/>",
-          "<b>Status:</b> ", selected_station$status, "<br/>",
-          "<b>Type:</b> ", selected_station$station_type, "<br/>",
-          "<b>Start Date:</b> ", selected_station$start_date, "<br/>",
-          "<b>End Date:</b> ", selected_station$end_date
-        )
-      )
+        label = ~paste("Selected:", status, station_type, "Station"))
+
+    # Apply different zoom logic depending on number of selected sites
+    if (nrow(selected_station) == 1) {
+      map |>
+        setView(
+          lng = selected_station$longitude,
+          lat = selected_station$latitude,
+          zoom = 11
+        ) |>
+        addPopups(
+          lng = selected_station$longitude,
+          lat = selected_station$latitude,
+          popup = paste0(
+            "<b>", selected_station$station_description, "</b><br/>",
+            "<b>Status:</b> ", selected_station$status, "<br/>",
+            "<b>Type:</b> ", selected_station$station_type, "<br/>",
+            "<b>Start Date:</b> ", selected_station$start_date, "<br/>",
+            "<b>End Date:</b> ", selected_station$end_date))
+      } else {
+
+        map |>
+          fitBounds(bbox["xmin"], bbox["ymin"], bbox["xmax"], bbox["ymax"]) |>
+          addPopups(
+            lng = selected_station$longitude,
+            lat = selected_station$latitude,
+            popup = paste0(
+              "<b>", selected_station$station_description, "</b><br/>",
+              "<b>Status:</b> ", selected_station$status, "<br/>",
+              "<b>Type:</b> ", selected_station$station_type, "<br/>",
+              "<b>Start Date:</b> ", selected_station$start_date, "<br/>",
+              "<b>End Date:</b> ", selected_station$end_date))
+      }
     })
+
 
 # zoom & highlight when map marker is clicked
 observeEvent(input$wq_map_marker_click, {
@@ -324,7 +334,6 @@ observeEvent(input$wq_map_marker_click, {
   current <- setdiff(input$location_filter_wq, "All Locations")
   new_selection <- union(current, clicked_id)
   updateSelectInput(session, "location_filter_wq", selected = new_selection)
-
 
   selected_station <- wq_metadata[wq_metadata$station_id == clicked_id, ]
   req(nrow(selected_station) == 1)
@@ -345,6 +354,6 @@ observeEvent(input$wq_map_marker_click, {
     setView(lng = selected_station$longitude,
             lat = selected_station$latitude,
             zoom = 11)
-  })
+})
 }
 
