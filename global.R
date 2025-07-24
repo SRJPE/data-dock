@@ -145,3 +145,8 @@ wq_metadata <- readxl::read_xlsx("data-raw/station_metadata.xlsx") |>
 coords <- sf::st_coordinates(wq_metadata)
 wq_metadata$longitude <- coords[, 1]
 wq_metadata$latitude <- coords[, 2]
+
+# water quality data draft ----
+wq_data_raw <- read_csv("data-raw/EMP_DWQ_Data_2020-2023_draft.csv") |>
+  clean_names() |>
+  glimpse()

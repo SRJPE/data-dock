@@ -47,6 +47,17 @@ server <- function(input, output, session) {
     return(click$id)
   })
 
+  observeEvent(input$location_filter, {
+    if ("All Locations" %in% input$location_filter && length(input$location_filter) > 1) {
+      updateSelectInput(
+        session,
+        "location_filter",
+        selected = setdiff(input$location_filter, "All Locations")
+      )
+    }
+  })
+
+
   # Types of data:
   # 1. Summarize run percent by sample event/date - option a. summarize across locations, option b. facet plot and treat each location separate
   # currently using option a.
@@ -54,7 +65,8 @@ server <- function(input, output, session) {
   # currently using option a.
 
   genetics_filtered_data_month <- reactive({
-    if(input$which_view == "Map Filter") {
+    if (!is.null(input$genetics_map_marker_click)) {
+
       run_designation |>
         filter(map_label %in% click_marker(),
                year >= input$year_range2[1],
@@ -64,7 +76,8 @@ server <- function(input, output, session) {
         group_by(map_label, year, sample_event) |>
         mutate(total_sample = sum(count),
                run_percent = (count / total_sample) * 100)
-    } else if (input$which_view == "Dropdown Filter" & input$location_filter != "All Locations") {
+    } else if (!is.null(input$location_filter) && !"All Locations" %in% input$location_filter) {
+
       run_designation |>
         filter(map_label %in% input$location_filter,
                year >= input$year_range1[1],
