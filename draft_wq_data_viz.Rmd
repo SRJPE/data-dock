@@ -1,0 +1,156 @@
+---
+title: "draft water quality visualizations"
+date: "`r Sys.Date()`"
+output: html_document
+editor_options: 
+  markdown: 
+    wrap: 72
+  chunk_output_type: console
+---
+
+```{r include=FALSE}
+library(DBI)
+library(tidyverse)
+library(leaflet)
+library(dplyr)
+library(sf)
+#library(gridExtra)
+library(patchwork)
+library(colorBlindness)
+library(plotly)
+
+wq_data <- read_csv("data-raw/EMP_DWQ_Data_2020-2023_draft.csv") |>
+  clean_names() |>
+  mutate(date = mdy(date),
+         value = as.numeric(value)) |> 
+  glimpse()
+
+wq_metadata <- readxl::read_xlsx("data-raw/station_metadata.xlsx") # pulling this for reference
+```
+
+#TODO how do we identify lab vs field data?
+
+```{r echo=FALSE}
+# idea to have the analyte selection first, then user can add 1-multiple stations
+ggplot(wq_data |> 
+         filter(analyte == "Dissolved Calcium"), 
+       aes(x = date, y = value, color = station_id)) +
+  geom_line(alpha = 0.6) +
+  labs(title = "Dissolved Calcium Over Time by Station",
+       y = "Concentration",
+       x = "Date") +
+  theme_minimal()
+
+ggplot(wq_data |> 
+         filter(analyte == "Dissolved Bromide"), 
+       aes(x = date, y = value, color = station_id)) +
+  geom_line(alpha = 0.6) +
+  labs(title = "Dissolved Bromide Over Time by Station",
+       y = "Concentration",
+       x = "Date") +
+  theme_minimal()
+
+# same idea but plotty
+plot_1 <- ggplot(wq_data |> 
+              filter(analyte == "Wind Velocity",
+                     station_id %in% c("C10A", "D10", "D28A", "D41")), # drop down will allow to add more/less sites
+            aes(x = date, y = value, color = station_id)) +
+  geom_line() +
+  labs(title = "Wind Velocity Over Time by Station")
+
+ggplotly(plot_1)
+
+```
+
+```{r echo=FALSE}
+wq_data |> 
+  filter(!is.na(value)) |> 
+  ggplot(aes(x = analyte, y = value)) +
+  geom_boxplot() +
+  scale_y_log10() +  # if data is skewed
+  labs(title = "Distribution of Values by Analyte", y = "Value (log scale)") +
+  coord_flip() +
+  theme_minimal()
+```
+```{r echo=FALSE}
+wq_data |> 
+  filter(analyte == "Dissolved Orthophosphate") |> 
+  ggplot(aes(x = reorder(station_id, value, median, na.rm = TRUE),
+             y = value)) +
+  geom_boxplot(outlier.shape = NA) +
+  coord_flip() +
+  labs(title = "Distribution of Dissolved Orthophosphate by Station",
+       x = "Station",
+       y = "Dissolved Orthophosphate Concentration") +
+  theme_minimal()
+
+
+wq_data |> 
+  filter(analyte == "(Bottom) Turbidity") |> 
+  ggplot(aes(x = reorder(station_id, value, median, na.rm = TRUE),
+             y = value)) +
+  geom_boxplot(outlier.shape = NA) + # what is this doing?
+  coord_flip() +
+  labs(title = "Distribution of (Bottom) Turbidity by Station",
+       x = "Station",
+       y = "(Bottom) Turbidity Concentration") +
+  theme_minimal()
+```
+
+```{r echo=FALSE}
+# wq_data |> 
+#   filter(analyte == "Wind Velocity") |> 
+#   mutate(year = year(date)) |> 
+#   group_by(station_id, year) |> 
+#   summarize(median_val = median(value, na.rm = TRUE), .groups = "drop") |> 
+#   ggplot(aes(x = factor(year), y = station_id, fill = median_val)) +
+#   geom_tile() +
+#   scale_fill_viridis_c(option = "C", na.value = "gray90") +
+#   labs(title = "Median Wind Velocity by Station and Year",
+#        x = "Year",
+#        y = "Station",
+#        fill = "Median") +
+#   theme_minimal()
+
+```
+
+```{r}
+# wq_data |> 
+#   filter(analyte %in% c("Water Temperature", "pH", "Turbidity")) |> 
+#   ggplot(aes(x = station_id, y = value)) +
+#   geom_boxplot(outlier.shape = NA) +
+#   facet_wrap(~analyte, scales = "free_y") +
+#   coord_flip() +
+#   labs(title = "Analyte Distributions by Station") +
+#   theme_minimal()
+
+```
+
+```{r}
+# wq_data |>
+#   filter(analyte == "Wind Velocity",
+#          station_id %in% c("D19", "D8", "C10A"),
+#          lubridate::year(date) %in% 2018:2023) |>
+#   group_by(station_id) |>
+#   summarize(median_value = median(value, na.rm = TRUE), .groups = "drop") |>
+#   ggplot(aes(x = reorder(station_id, median_value), y = median_value)) +
+#   geom_col(fill = "steelblue") +
+#   coord_flip() +
+#   labs(title = "Median Nitrate Concentration by Station (2018–2023)",
+#        x = "Station", y = "Median Value") +
+#   theme_minimal()
+# 
+# wq_data |>
+#   filter(analyte == "Wind Velocity",
+#          lubridate::year(date) %in% 2018:2023) |>
+#   count(station_id) |>
+#   ggplot(aes(x = reorder(station_id, n), y = n)) +
+#   geom_col(fill = "darkgreen") +
+#   coord_flip() +
+#   labs(title = "Sample Count by Station for Nitrate (2018–2023)",
+#        x = "Station", y = "Number of Samples") +
+#   theme_minimal()
+
+
+```
+
