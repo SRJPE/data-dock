@@ -18,14 +18,34 @@ library(sf)
 library(patchwork)
 library(colorBlindness)
 library(plotly)
+library(janitor)
 
 wq_data <- read_csv("data-raw/EMP_DWQ_Data_2020-2023_draft.csv") |>
   clean_names() |>
   mutate(date = mdy(date),
-         value = as.numeric(value)) |> 
+         value = as.numeric(value)) |>
+  filter(!analyte %in% c("Rain", "Sky Conditions", "Latitude", "Longitude")) |>
   glimpse()
 
-wq_metadata <- readxl::read_xlsx("data-raw/station_metadata.xlsx") # pulling this for reference
+# Notes - there is an analyte that is "Latitude" with negative values
+# analyte - "Sky conditions", "Rain" - non-numeric (will filter those out for now)
+# for the station/site names - metadata contains "station_description", should that be used as the "location" - also note that there are instances when station_description is the same in more than one station (e.g. San Joaquin River near Vernalis is the site_description of both station_id C10 and C10A). 
+# 4 stations have "variable" on the lat/long fields
+
+wq_metadata_raw <- readxl::read_xlsx("data-raw/station_metadata.xlsx") |> clean_names() # pulling this for reference
+
+# for those station_descriptions that are identical, we will add the word "historical" to differentiate 
+wq_metadata <- wq_metadata_raw |> 
+  group_by(station_description) |>
+  mutate(station_description = case_when(
+    n() > 1 & status == "Inactive" ~ paste0(station_description, " - Historical"),
+    TRUE ~ station_description)) |>
+  ungroup()
+
+wq_data_test <- wq_data_raw |> 
+  left_join(wq_metadata |> select(station_id, station_description), # note that none of the actual data has "historical sites"
+            by = "station_id") 
+
 ```
 
 #TODO how do we identify lab vs field data?
@@ -36,6 +56,7 @@ ggplot(wq_data |>
          filter(analyte == "Dissolved Calcium"), 
        aes(x = date, y = value, color = station_id)) +
   geom_line(alpha = 0.6) +
+  facet_wrap(~year(date), scales = "free")
   labs(title = "Dissolved Calcium Over Time by Station",
        y = "Concentration",
        x = "Date") +
@@ -71,8 +92,19 @@ wq_data |>
   labs(title = "Distribution of Values by Analyte", y = "Value (log scale)") +
   coord_flip() +
   theme_minimal()
+
+wq_data |> 
+  filter(!is.na(value)) |> 
+  ggplot(aes(x = analyte, y = value)) +
+  geom_boxplot() +
+  scale_y_log10() +  # if data is skewed
+  labs(title = "Distribution of Values by Analyte", y = "Value (log scale)") +
+  coord_flip() +
+  theme_minimal()
 ```
+
 ```{r echo=FALSE}
+# if interest on looking at one analyte in particular across different sites
 wq_data |> 
   filter(analyte == "Dissolved Orthophosphate") |> 
   ggplot(aes(x = reorder(station_id, value, median, na.rm = TRUE),
@@ -84,6 +116,7 @@ wq_data |>
        y = "Dissolved Orthophosphate Concentration") +
   theme_minimal()
 
+#use plot above and add a facet warp for multiple analytes - consider unit 
 
 wq_data |> 
   filter(analyte == "(Bottom) Turbidity") |> 
@@ -127,29 +160,67 @@ wq_data |>
 ```
 
 ```{r}
-# wq_data |>
-#   filter(analyte == "Wind Velocity",
-#          station_id %in% c("D19", "D8", "C10A"),
-#          lubridate::year(date) %in% 2018:2023) |>
-#   group_by(station_id) |>
-#   summarize(median_value = median(value, na.rm = TRUE), .groups = "drop") |>
-#   ggplot(aes(x = reorder(station_id, median_value), y = median_value)) +
-#   geom_col(fill = "steelblue") +
-#   coord_flip() +
-#   labs(title = "Median Nitrate Concentration by Station (2018–2023)",
-#        x = "Station", y = "Median Value") +
-#   theme_minimal()
-# 
-# wq_data |>
-#   filter(analyte == "Wind Velocity",
-#          lubridate::year(date) %in% 2018:2023) |>
-#   count(station_id) |>
-#   ggplot(aes(x = reorder(station_id, n), y = n)) +
-#   geom_col(fill = "darkgreen") +
-#   coord_flip() +
-#   labs(title = "Sample Count by Station for Nitrate (2018–2023)",
-#        x = "Station", y = "Number of Samples") +
-#   theme_minimal()
+wq_data |>
+  filter(analyte == "Wind Velocity",
+         station_id %in% c("D19", "D8", "C10A"),
+         lubridate::year(date) %in% 2018:2023) |>
+  group_by(station_id) |>
+  summarize(median_value = median(value, na.rm = TRUE), .groups = "drop") |>
+  ggplot(aes(x = reorder(station_id, median_value), y = median_value)) +
+  geom_col(fill = "steelblue") +
+  coord_flip() +
+  labs(title = "Median Nitrate Concentration by Station (2018–2023)",
+       x = "Station", y = "Median Value") +
+  theme_minimal()
+
+wq_data |>
+  filter(analyte == "Wind Velocity",
+         lubridate::year(date) %in% 2018:2023) |>
+  count(station_id) |>
+  ggplot(aes(x = reorder(station_id, n), y = n)) +
+  geom_col(fill = "darkgreen") +
+  coord_flip() +
+  labs(title = "Sample Count by Station for Nitrate (2018–2023)",
+       x = "Station", y = "Number of Samples") +
+  theme_minimal()
+
+```
+
+```{r}
+# Separate data for plotting:
+detected <- wq_data_test |> filter(detection_status == "Detected")
+nondetected <- wq_data_test |> filter(detection_status == "Not Detected")
+
+
+wq_data_test <- wq_data |> 
+  mutate(plot_value = case_when(
+    detection_status == "Detected" ~ value,
+    detection_status == "Not Detected" ~ mdl,  # or mdl
+    TRUE ~ NA_real_
+  )) |> 
+  filter(station_id %in% c("C10", "C3A", "D6", "NZ325"))
+
+ggplot(wq_data_test, aes(x = date, y = plot_value, color = station_id)) +
+  geom_line() +
+  geom_point(aes(shape = detection_status), size = 3) +
+  scale_shape_manual(values = c("Detected" = 16, "Not Detected" = 1)) +
+  labs(title = "Suisun and Grizzly Bays",
+       y = "Concentration",
+       x = "Date",
+       shape = "Detection Status") +
+  theme_minimal()
+
+# Adds a tick mark below 0 for non-detects
+ggplot() +
+  geom_line(data = detected, aes(x = date, y = value, color = station_id)) +
+  geom_point(data = detected, aes(x = date, y = value, color = station_id)) +
+
+  geom_point(data = nondetected, 
+             aes(x = date, y = -0.01, color = station_id), 
+             shape = 4, size = 2) +  # shape = X mark
+  scale_y_continuous(limits = c(-0.02, NA)) +
+  labs(title = "NDs Shown Below Axis", y = "Concentration") +
+  theme_minimal()
 
 
 ```
