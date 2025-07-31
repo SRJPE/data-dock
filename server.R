@@ -221,6 +221,17 @@ server <- function(input, output, session) {
 
 # Water Quality  Map --------------------------------------------------------------
 
+  observe({
+    updateSelectizeInput(
+      session,
+      inputId = "analyte",
+      choices = sort(unique(wq_data$analyte)),
+      selected = character(0),
+      server = TRUE
+    )
+  })
+
+
 output$wq_map <- renderLeaflet({
   leaflet() |>
     addMapPane("Lines-Habitat", zIndex = 430) |>
@@ -368,5 +379,61 @@ observeEvent(input$wq_map_marker_click, {
             lat = selected_station$latitude,
             zoom = 11)
 })
+
+filtered_wq_data <- reactive({
+  req(input$analyte, input$year_range)
+
+  data <- wq_data |>
+    filter(
+      analyte == input$analyte,
+      # data_classification == input$data_classification,
+      lubridate::year(date) >= input$year_range[1],
+      lubridate::year(date) <= input$year_range[2]
+    )
+
+  if (!is.null(input$location_filter_wq) && !"All Locations" %in% input$location_filter_wq) {
+    data <- data |> filter(station_id %in% input$location_filter_wq)
+  }
+
+  data
+})
+
+output$wq_dynamic_plot <- renderPlotly({
+  req(input$analyte)
+  req(!is.null(input$location_filter_wq) && length(input$location_filter_wq) > 0)
+
+  df <- filtered_wq_data()
+  if (nrow(df) == 0) {
+    return(plotly_empty(type = "scatter", mode = "lines") |>
+             layout(title = "No data available for current selection."))
+  }
+
+  df <- df |> arrange(station_description, date)
+
+  p <- if (input$plot_type == "Time Series") {
+    ggplot(df |> filter(!is.na(value)), aes(x = date, y = value, color = station_description)) +
+      geom_line() +
+      geom_point(size = 1, alpha = 0.6) +
+      labs(
+        title = paste(input$analyte, "Over Time"),
+        x = "Date",
+        y = "Value",
+        color = "Location"
+      )
+  } else {
+    ggplot(df, aes(x = station_description, y = value, fill = station_description)) +
+      geom_boxplot(outlier.shape = NA) +
+      coord_flip() +
+      labs(
+        title = paste("Distribution of", input$analyte),
+        x = "Location",
+        y = "Value"
+      )
+  }
+
+  ggplotly(p)
+})
+
+
 }
 

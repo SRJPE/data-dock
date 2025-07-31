@@ -36,12 +36,11 @@ ui <- fluidPage(
                    inputId = "location_filter_wq",
                    label = tags$strong("Filter by Location:"),
                    choices = c(
-                     "All Locations" = "All Locations",
                      setNames(
                        wq_metadata$station_id[order(wq_metadata$station_description)],
                        wq_metadata$station_description[order(wq_metadata$station_description)])
                    ),
-                   selected = "All Locations",
+                   selected = NULL,
                    multiple = TRUE,
                    selectize = TRUE)
                ),
@@ -65,16 +64,19 @@ ui <- fluidPage(
                ),
                div(
                  style = "min-width: 200px;",
-                 selectInput("analyte", "Analyte:",
-                             choices = c("Specific Conductance", "Turbidity",
-                                         "Dissolved Ammonia", "Chlorophyll a",
-                                         "Dissolved Nitrate + Nitrite", "Total Phosphorus"))
+                 selectizeInput(
+                   inputId = "analyte",
+                   label = "Analyte:",
+                   choices = NULL,
+                   selected = NULL,
+                   options = list(placeholder = "Select an analyte")
+                 )
                ),
-               div(
-                 style = "min-width: 200px;",
-                 selectInput("data_classification", "Data Classification:",
-                             choices = c("Field", "Lab"))
-               ),
+               # div(
+               #   style = "min-width: 200px;",
+               #   selectInput("data_classification", "Data Classification:",
+               #               choices = c("Field", "Lab"))
+               # ),
                div(
                  style = "min-width: 200px;",
                  selectInput("plot_type", "Plot Type:",
@@ -98,18 +100,19 @@ ui <- fluidPage(
                      step = 1,
                      sep = "")
                  ),
-                 div(
-                   style = "min-width: 200px;",
-                   selectInput("analyte", "Analyte:",
-                               choices = c("Specific Conductance", "Turbidity",
-                                           "Dissolved Ammonia", "Chlorophyll a",
-                                           "Dissolved Nitrate + Nitrite", "Total Phosphorus"))
-                 ),
-                 div(
-                   style = "min-width: 200px;",
-                   selectInput("data_classification", "Data Classification:",
-                               choices = c("Field", "Lab"))
-                 ),
+                 # div(
+                 #   style = "min-width: 200px;",
+                 #   selectInput("analyte", "Analyte:",
+                 #               choices = setNames(
+                 #                 wq_data$analyte[order(wq_data$analyte)],
+                 #                 wq_data$analyte[order(wq_data$analyte)]),
+                 #               selected = NULL)
+                 # ),
+                 # div(
+                 #   style = "min-width: 200px;",
+                 #   selectInput("data_classification", "Data Classification:",
+                 #               choices = c("Field", "Lab"))
+                 # ),
                  div(
                    style = "min-width: 200px;",
                    selectInput("plot_type", "Plot Type:",
@@ -146,7 +149,8 @@ ui <- fluidPage(
                  leafletOutput("wq_map", height = "600px")),
                column(width = 8,
                       # uiOutput("wq_dynamic_plot")
-                      "wq_dynamic_plot_placeholder")
+                      plotlyOutput("wq_dynamic_plot", height = "600px")
+               )
              )
     ),
 
