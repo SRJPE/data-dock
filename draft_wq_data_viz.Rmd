@@ -101,6 +101,23 @@ wq_data |>
   labs(title = "Distribution of Values by Analyte", y = "Value (log scale)") +
   coord_flip() +
   theme_minimal()
+
+#ploty 
+
+plot_2 <- wq_data |> 
+  filter(!is.na(value)) |> 
+  ggplot(aes(x = analyte, y = value)) +
+  geom_boxplot() +
+  scale_y_log10() +  # if data is skewed
+  labs(
+    title = "Distribution of Values by Analyte",
+    y = "Value (log scale)"
+  ) +
+  coord_flip() +
+  theme_minimal()
+
+ggplotly(plot_2)
+
 ```
 
 ```{r echo=FALSE}

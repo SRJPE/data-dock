@@ -164,4 +164,12 @@ left_join(wq_metadata |>  st_drop_geometry() |> select(station_id, station_descr
   st_drop_geometry() |>
   mutate(date = mdy(date),
          value = as.numeric(value)) |>
+  filter(!is.na(station_description)) |>
   glimpse()
+
+# station_id == LSZ6, LSZ2, LSZ2-SJR, LSZ6-SJR are not in the metadata
+# was planning on using analyte lat/long to assign location. however, it is inconsistent across same station_id
+#
+wq_data_missing_location <- wq_data |>
+  filter(station_id %in% c("LSZ6", "LSZ2", "LSZ2-SJR", "LSZ6-SJR"),
+         analyte %in% c("Latitude", "Longitude"))

@@ -80,7 +80,7 @@ ui <- fluidPage(
                div(
                  style = "min-width: 200px;",
                  selectInput("plot_type", "Plot Type:",
-                             choices = c("Time Series", "Bar Plot"))
+                             choices = c("Time Series", "Box Plot"))
                )
              ),
 
@@ -116,7 +116,7 @@ ui <- fluidPage(
                  div(
                    style = "min-width: 200px;",
                    selectInput("plot_type", "Plot Type:",
-                               choices = c("Time Series", "Bar Plot"))
+                               choices = c("Time Series", "Box Plot"))
                  )
                )
              ),

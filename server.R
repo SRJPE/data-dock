@@ -256,11 +256,13 @@ output$wq_map <- renderLeaflet({
       fillOpacity = 0.7,
       fillColor = ~ifelse(status == "Active", "black", "gray"),
       popup = ~paste0(
-        "<b>", station_description, "</b><br/>",
-        "<b>Status:</b> ", status, "<br/>",
-        "<b>Station Type:</b> ", station_type, "<br/>",
-        "<b>Start Date:</b> ", start_date, "<br/>",
-        "<b>End Date:</b> ", end_date)
+        "<b>", station_description, "</b><br/>"
+        # ,
+        # "<b>Status:</b> ", status, "<br/>",
+        # "<b>Station Type:</b> ", station_type, "<br/>",
+        # "<b>Start Date:</b> ", start_date, "<br/>",
+        # "<b>End Date:</b> ", end_date
+        )
       )|>
     addLegend(
       position = "bottomright",
@@ -334,11 +336,13 @@ output$wq_map <- renderLeaflet({
           lng = selected_station$longitude,
           lat = selected_station$latitude,
           popup = paste0(
-            "<b>", selected_station$station_description, "</b><br/>",
-            "<b>Status:</b> ", selected_station$status, "<br/>",
-            "<b>Type:</b> ", selected_station$station_type, "<br/>",
-            "<b>Start Date:</b> ", selected_station$start_date, "<br/>",
-            "<b>End Date:</b> ", selected_station$end_date))
+            "<b>", selected_station$station_description, "</b><br/>"
+            # ,
+            # "<b>Status:</b> ", selected_station$status, "<br/>",
+            # "<b>Type:</b> ", selected_station$station_type, "<br/>",
+            # "<b>Start Date:</b> ", selected_station$start_date, "<br/>",
+            # "<b>End Date:</b> ", selected_station$end_date
+            ))
       } else {
 
         map |>
@@ -347,11 +351,13 @@ output$wq_map <- renderLeaflet({
             lng = selected_station$longitude,
             lat = selected_station$latitude,
             popup = paste0(
-              "<b>", selected_station$station_description, "</b><br/>",
-              "<b>Status:</b> ", selected_station$status, "<br/>",
-              "<b>Type:</b> ", selected_station$station_type, "<br/>",
-              "<b>Start Date:</b> ", selected_station$start_date, "<br/>",
-              "<b>End Date:</b> ", selected_station$end_date))
+              "<b>", selected_station$station_description, "</b><br/>"
+              # ,
+              # "<b>Status:</b> ", selected_station$status, "<br/>",
+              # "<b>Type:</b> ", selected_station$station_type, "<br/>",
+              # "<b>Start Date:</b> ", selected_station$start_date, "<br/>",
+              # "<b>End Date:</b> ", selected_station$end_date
+              ))
       }
     })
 
@@ -417,30 +423,30 @@ output$wq_dynamic_plot <- renderPlotly({
 
   df <- df |> arrange(station_description, date)
 
+  # plot options so far
   p <- if (input$plot_type == "Time Series") {
     ggplot(df |> filter(!is.na(value)), aes(x = date, y = value, color = station_description)) +
       geom_line() +
       geom_point(size = 1, alpha = 0.6) +
-      labs(
-        title = paste(input$analyte, "Over Time"),
-        x = "Date",
-        y = "Value",
-        color = "Location"
-      )
-  } else {
-    ggplot(df, aes(x = station_description, y = value, fill = station_description)) +
-      geom_boxplot(outlier.shape = NA) +
-      coord_flip() +
-      labs(
-        title = paste("Distribution of", input$analyte),
-        x = "Location",
-        y = "Value"
-      )
-  }
+      labs(title = paste(input$analyte, "Over Time"),
+           x = "Date",
+           y = "Value",
+           color = "Location")
+    } else if (input$plot_type == "Box Plot") {
+      ggplot(df |> filter(!is.na(value)), aes(x = station_description, y = value, fill = station_description)) +
+        geom_boxplot(outlier.shape = NA) +
+        coord_flip() +
+        scale_y_log10() +
+        labs(title = paste("Distribution of", input$analyte),
+             x = "Location",
+             y = "Value (log scale)")
+      } else {
+        return(NULL)
+        }
 
   ggplotly(p)
-})
 
+})
 
 }
 
