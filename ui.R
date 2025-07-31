@@ -58,7 +58,7 @@ ui <- fluidPage(
                  sliderInput("year_range", "Year Range (update min and max years):",
                              min = 2020,
                              max = 2025,
-                             value = c(2020, 2022),
+                             value = c(2020, 2025),
                              step = 1,
                              sep = "")
                ),
@@ -96,7 +96,7 @@ ui <- fluidPage(
                      label = tags$strong("Year Range:"),
                      min = 2020,
                      max = 2025,
-                     value = c(2020, 2024),
+                     value = c(2020, 2025),
                      step = 1,
                      sep = "")
                  ),

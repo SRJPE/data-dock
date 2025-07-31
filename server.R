@@ -254,14 +254,21 @@ output$wq_map <- renderLeaflet({
       weight = 1,
       color = "black",
       fillOpacity = 0.7,
-      fillColor = ~ifelse(status == "Active", "#1b9e77", "#d95f02"),
+      fillColor = ~ifelse(status == "Active", "black", "gray"),
       popup = ~paste0(
         "<b>", station_description, "</b><br/>",
         "<b>Status:</b> ", status, "<br/>",
         "<b>Station Type:</b> ", station_type, "<br/>",
         "<b>Start Date:</b> ", start_date, "<br/>",
         "<b>End Date:</b> ", end_date)
-      )
+      )|>
+    addLegend(
+      position = "bottomright",
+      colors = c("black", "gray"),
+      labels = c("Active Station", "Inactive Station"),
+      title = "Station Status",
+      opacity = 0.7
+    )
   })
 
   click_marker_wq <- eventReactive(input$wq_map_marker_click, {
