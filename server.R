@@ -235,9 +235,16 @@ server <- function(input, output, session) {
 output$wq_map <- renderLeaflet({
   leaflet() |>
     addMapPane("Lines-Habitat", zIndex = 430) |>
-    addTiles(
-      urlTemplate = "https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}",
-      attribution = 'Basemap © Esri, GEBCO, NOAA, CHS, etc.') |>
+    # addTiles(
+    #   urlTemplate = "https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}",
+    #   attribution = 'Basemap © Esri, GEBCO, NOAA, CHS, etc.') |>
+    addProviderTiles("Esri.WorldImagery", group = "Satellite") |>
+    addTiles(urlTemplate = "https://server.arcgisonline.com/ArcGIS/rest/services/Satellite/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}",
+             attribution = 'Basemap © Esri, GEBCO, NOAA, CHS, etc.',
+             group = "Satellite") |>
+    # option to add layer control to toggle (?)
+    # addLayersControl(baseGroups = c("Satellite", "Ocean"),
+    #   options = layersControlOptions(collapsed = FALSE)) |>
     addPolylines(
       data = salmonid_habitat_extents,
       label = ~lapply(river, htmltools::HTML),
