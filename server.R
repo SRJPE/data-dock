@@ -317,7 +317,7 @@ output$wq_map <- renderLeaflet({
         lat = ~latitude,
         lng = ~longitude,
         radius = 10,
-        fillColor = "red",
+        fillColor = "#7E2954",
         color = "white",
         weight = 2,
         fillOpacity = 0.9,
@@ -382,7 +382,7 @@ observeEvent(input$wq_map_marker_click, {
       lat = ~latitude,
       lng = ~longitude,
       radius = 10,
-      fillColor = "red",
+      fillColor = "#7E2954",
       color = "white",
       weight = 2,
       fillOpacity = 0.9,
@@ -428,18 +428,21 @@ output$wq_dynamic_plot <- renderPlotly({
     ggplot(df |> filter(!is.na(value)), aes(x = date, y = value, color = station_description)) +
       geom_line() +
       geom_point(size = 1, alpha = 0.6) +
-      labs(title = paste(input$analyte, "Over Time"),
-           x = "Date",
-           y = "Value",
-           color = "Location")
+      labs(
+           x = "",
+           y = input$analyte,
+           color = "") +
+      theme_minimal()
     } else if (input$plot_type == "Box Plot") {
       ggplot(df |> filter(!is.na(value)), aes(x = station_description, y = value, fill = station_description)) +
         geom_boxplot(outlier.shape = NA) +
         coord_flip() +
-        scale_y_log10() +
-        labs(title = paste("Distribution of", input$analyte),
-             x = "Location",
-             y = "Value (log scale)")
+        #scale_y_log10() +
+        labs(
+             x = "",
+             y = input$analyte,
+             fill = "") +
+        theme_minimal()
       } else {
         return(NULL)
         }
