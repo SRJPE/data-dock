@@ -248,7 +248,7 @@ output$wq_map <- renderLeaflet({
     addCircleMarkers(
       data = wq_metadata,
       layerId = ~station_id,
-      label = ~paste(station_description),
+      label = ~paste(station_id, "-", station_description),
       radius = 6,
       stroke = TRUE,
       weight = 1,
@@ -256,7 +256,7 @@ output$wq_map <- renderLeaflet({
       fillOpacity = 0.7,
       fillColor = ~ifelse(status == "Active", "black", "gray"),
       popup = ~paste0(
-        "<b>", station_description, "</b><br/>"
+        "<b>", station_id, "</b><br/>", station_description
         # ,
         # "<b>Status:</b> ", status, "<br/>",
         # "<b>Station Type:</b> ", station_type, "<br/>",
@@ -322,7 +322,7 @@ output$wq_map <- renderLeaflet({
         weight = 2,
         fillOpacity = 0.9,
         group = "highlight",
-        label = ~paste("Selected:", status, station_type, "Station"))
+        label = ~paste("Selected:", station_id, station_description))
 
     # Apply different zoom logic depending on number of selected sites
     if (nrow(selected_station) == 1) {
@@ -331,33 +331,11 @@ output$wq_map <- renderLeaflet({
           lng = selected_station$longitude,
           lat = selected_station$latitude,
           zoom = 11
-        ) |>
-        addPopups(
-          lng = selected_station$longitude,
-          lat = selected_station$latitude,
-          popup = paste0(
-            "<b>", selected_station$station_description, "</b><br/>"
-            # ,
-            # "<b>Status:</b> ", selected_station$status, "<br/>",
-            # "<b>Type:</b> ", selected_station$station_type, "<br/>",
-            # "<b>Start Date:</b> ", selected_station$start_date, "<br/>",
-            # "<b>End Date:</b> ", selected_station$end_date
-            ))
+        )
       } else {
 
         map |>
-          fitBounds(bbox["xmin"], bbox["ymin"], bbox["xmax"], bbox["ymax"]) |>
-          addPopups(
-            lng = selected_station$longitude,
-            lat = selected_station$latitude,
-            popup = paste0(
-              "<b>", selected_station$station_description, "</b><br/>"
-              # ,
-              # "<b>Status:</b> ", selected_station$status, "<br/>",
-              # "<b>Type:</b> ", selected_station$station_type, "<br/>",
-              # "<b>Start Date:</b> ", selected_station$start_date, "<br/>",
-              # "<b>End Date:</b> ", selected_station$end_date
-              ))
+          fitBounds(bbox["xmin"], bbox["ymin"], bbox["xmax"], bbox["ymax"])
       }
     })
 
@@ -425,7 +403,7 @@ output$wq_dynamic_plot <- renderPlotly({
 
   # plot options so far
   p <- if (input$plot_type == "Time Series") {
-    ggplot(df |> filter(!is.na(value)), aes(x = date, y = value, color = station_description)) +
+    ggplot(df |> filter(!is.na(value)), aes(x = date, y = value, color = station_id)) +
       geom_line() +
       geom_point(size = 1, alpha = 0.6) +
       labs(
@@ -434,9 +412,9 @@ output$wq_dynamic_plot <- renderPlotly({
            color = "") +
       theme_minimal()
     } else if (input$plot_type == "Box Plot") {
-      ggplot(df |> filter(!is.na(value)), aes(x = station_description, y = value, fill = station_description)) +
+      ggplot(df |> filter(!is.na(value)), aes(x = station_id, y = value, fill = station_description)) +
         geom_boxplot(outlier.shape = NA) +
-        coord_flip() +
+        # coord_flip() +
         #scale_y_log10() +
         labs(
              x = "",
