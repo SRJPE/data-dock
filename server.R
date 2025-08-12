@@ -442,7 +442,8 @@ output$wq_dynamic_plot <- renderPlotly({
              x = "",
              y = input$analyte,
              fill = "") +
-        theme_minimal()
+        theme_minimal() +
+        theme(legend.position = "none")
       } else {
         return(NULL)
         }
