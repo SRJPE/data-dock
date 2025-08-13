@@ -69,6 +69,7 @@ ui <- fluidPage(
                    label = "Analyte:",
                    choices = NULL,
                    selected = NULL,
+                   multiple = TRUE,
                    options = list(placeholder = "Select an analyte")
                  )
                ),

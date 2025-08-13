@@ -340,43 +340,32 @@ output$wq_map <- renderLeaflet({
     })
 
 
-# zoom & highlight when map marker is clicked
+# toggle selection when a marker is clicked
 observeEvent(input$wq_map_marker_click, {
-  clicked_id <- input$wq_map_marker_click$id
-  req(clicked_id)
+  id <- input$wq_map_marker_click$id
+  req(id)
 
-  # Optional: keep dropdown in sync
-  current <- setdiff(input$location_filter_wq, "All Locations")
-  new_selection <- union(current, clicked_id)
-  updateSelectInput(session, "location_filter_wq", selected = new_selection)
+  # current selection (handle NULL safely)
+  current <- input$location_filter_wq
+  if (is.null(current)) current <- character(0)
 
-  selected_station <- wq_metadata[wq_metadata$station_id == clicked_id, ]
-  req(nrow(selected_station) == 1)
+  # toggle logic
+  if (id %in% current) {
+    new_sel <- setdiff(current, id)
+  } else {
+    new_sel <- union(current, id)
+  }
 
-  leafletProxy("wq_map") |>
-    clearGroup("highlight") |>
-    addCircleMarkers(
-      data = selected_station,
-      lat = ~latitude,
-      lng = ~longitude,
-      radius = 10,
-      fillColor = "#7E2954",
-      color = "white",
-      weight = 2,
-      fillOpacity = 0.9,
-      group = "highlight",
-      label = ~paste("<b>Selected:</b>", station_description)) |>
-    setView(lng = selected_station$longitude,
-            lat = selected_station$latitude,
-            zoom = 11)
+  updateSelectInput(session, "location_filter_wq", selected = new_sel)
 })
 
+
 filtered_wq_data <- reactive({
-  req(input$analyte, input$year_range)
+  req(input$analyte, length(input$analyte) > 0, input$year_range)
 
   data <- wq_data |>
     filter(
-      analyte == input$analyte,
+      analyte %in% input$analyte,
       # data_classification == input$data_classification,
       lubridate::year(date) >= input$year_range[1],
       lubridate::year(date) <= input$year_range[2]
@@ -390,8 +379,8 @@ filtered_wq_data <- reactive({
 })
 
 output$wq_dynamic_plot <- renderPlotly({
-  req(input$analyte)
   req(!is.null(input$location_filter_wq) && length(input$location_filter_wq) > 0)
+  req(input$analyte, length(input$analyte) > 0)
 
   df <- filtered_wq_data()
   if (nrow(df) == 0) {
@@ -399,32 +388,34 @@ output$wq_dynamic_plot <- renderPlotly({
              layout(title = "No data available for current selection."))
   }
 
-  df <- df |> arrange(station_description, date)
+  plot_type <- as.character(input$plot_type)[1]
+  y_lab <- if (length(input$analyte) == 1) input$analyte[[1]] else "Value"
 
-  # plot options so far
-  p <- if (input$plot_type == "Time Series") {
-    ggplot(df |> filter(!is.na(value)), aes(x = date, y = value, color = station_id)) +
+  df <- df |> arrange(analyte, station_description, date)
+
+  if (plot_type == "Time Series") {
+    p <- ggplot(
+      df |> dplyr::filter(!is.na(value)),
+      aes(x = date, y = value, color = station_id)) +
       geom_line() +
       geom_point(size = 1, alpha = 0.6) +
-      labs(
-           x = "",
-           y = input$analyte,
-           color = "") +
+      facet_wrap(~ analyte, scales = "free_y", ncol = 2) +
+      labs(x = "", y = y_lab, color = "Station") +
       theme_minimal()
-    } else if (input$plot_type == "Box Plot") {
-      ggplot(df |> filter(!is.na(value)), aes(x = station_id, y = value, fill = station_description)) +
-        geom_boxplot(outlier.shape = NA) +
-        # coord_flip() +
-        #scale_y_log10() +
-        labs(
-             x = "",
-             y = input$analyte,
-             fill = "") +
-        theme_minimal() +
-        theme(legend.position = "none")
-      } else {
-        return(NULL)
-        }
+
+  } else if (plot_type == "Box Plot") {
+    p <- ggplot(
+      df |> dplyr::filter(!is.na(value)),
+      aes(x = station_id, y = value, fill = station_id)) +
+      geom_boxplot(outlier.shape = NA) +
+      facet_wrap(~ analyte, scales = "free_y", ncol = 2) +
+      labs(x = "", y = y_lab, fill = "Station") +
+      theme_minimal() +
+      theme(legend.position = "none")
+
+  } else {
+    return(NULL)
+  }
 
   ggplotly(p)
 
