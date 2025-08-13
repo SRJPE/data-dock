@@ -20,8 +20,11 @@ library(colorBlindness)
 library(plotly)
 library(janitor)
 
-wq_data <- read_csv("data-raw/EMP_DWQ_Data_2020-2023_draft.csv") |>
-  clean_names() |>
+wq_data_raw <- read_csv("data-raw/EMP_DWQ_Data_2020-2023_draft.csv") |>
+  clean_names() |> 
+  mutate(date = mdy(date))
+
+wq_data <- wq_data_raw |>
   mutate(date = mdy(date),
          value = as.numeric(value)) |>
   filter(!analyte %in% c("Rain", "Sky Conditions", "Latitude", "Longitude")) |>
@@ -240,5 +243,73 @@ ggplot() +
   theme_minimal()
 
 
+```
+
+Draft non-numerical analytes
+
+```{r echo=FALSE}
+# wq_data_raw |> 
+#   filter(analyte %in% c("Rain", "Sky Conditions")) |> 
+  
+  
+chr_analytes <- c("Sky Conditions", "Rain")
+
+wq_chr <- wq_data_raw |>
+  filter(analyte %in% chr_analytes, !is.na(value)) |>
+  mutate(month = floor_date(date, "month"))
+
+# Find the modal category per station-month (break ties by first seen)
+mode_per_month <- wq_chr |>  
+  count(analyte, station_id, month, value, name = "n") |>
+  group_by(analyte, station_id, month) |>
+  slice_max(n, with_ties = FALSE) |>   # if ties, pick one deterministically
+  ungroup()
+
+ggplot(mode_per_month, aes(x = month, y = station_id, fill = value)) +
+  geom_tile() +
+  facet_wrap(~ analyte, ncol = 1, scales = "free_y") +
+  scale_fill_brewer(palette = "Set3", na.translate = FALSE) +
+  labs(
+    title = "Modal Category by Station and Month",
+    x = "Month",
+    y = "Station",
+    fill = "Most Frequent") +
+  theme_minimal() +
+  theme(axis.text.y = element_text(size = 8),
+        panel.grid = element_blank())
+  
+p_heatmap <- ggplot(mode_per_month, aes(x = month, y = station_id, fill = value)) +
+  geom_tile() +
+  facet_wrap(~ analyte, ncol = 1, scales = "free_y") +
+  scale_fill_brewer(palette = "Set3", na.translate = FALSE) +
+  labs(title = "Modal Category by Station and Month",
+       x = "Month",
+       y = "Station",
+       fill = "Most Frequent") +
+  theme_minimal() +
+  theme(axis.text.y = element_text(size = 8),
+        panel.grid = element_blank())
+
+ggplotly(p_heatmap, tooltip = c("x", "y", "fill"))
+  
+```
+
+
+Below is finer resolution/granularity. however it is challanging to see all data
+
+```{r echo=FALSE}
+p_heatmap_2 <- ggplot(wq_chr, aes(x = date, y = station_id, fill = value)) +
+  geom_tile() +
+  facet_wrap(~ analyte, ncol = 1, scales = "free_y") +
+  scale_fill_brewer(palette = "Set3", na.translate = FALSE) +
+  labs(title = "Categorical Values Over Time",
+       x = "Date",
+       y = "Station",
+       fill = "Category") +
+  theme_minimal() +
+  theme(axis.text.y = element_text(size = 8),
+        panel.grid = element_blank())
+
+ggplotly(p_heatmap_2, tooltip = c("x", "y", "fill"))
 ```
 
