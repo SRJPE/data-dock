@@ -35,7 +35,7 @@ wq_data <- wq_data_raw |>
 # for the station/site names - metadata contains "station_description", should that be used as the "location" - also note that there are instances when station_description is the same in more than one station (e.g. San Joaquin River near Vernalis is the site_description of both station_id C10 and C10A). 
 # 4 stations have "variable" on the lat/long fields
 
-wq_metadata_raw <- readxl::read_xlsx("data-raw/station_metadata.xlsx") |> clean_names() # pulling this for reference
+wq_metadata_raw <- readxl::read_xlsx("data-raw/metadata_files/station_metadata.xlsx") |> clean_names() # pulling this for reference
 
 # for those station_descriptions that are identical, we will add the word "historical" to differentiate 
 wq_metadata <- wq_metadata_raw |> 
@@ -258,7 +258,7 @@ wq_chr <- wq_data_raw |>
   filter(analyte %in% chr_analytes, !is.na(value)) |>
   mutate(month = floor_date(date, "month"))
 
-# Find the modal category per station-month (break ties by first seen)
+# modal category per station-month (break ties by first seen)
 mode_per_month <- wq_chr |>  
   count(analyte, station_id, month, value, name = "n") |>
   group_by(analyte, station_id, month) |>
@@ -291,6 +291,10 @@ p_heatmap <- ggplot(mode_per_month, aes(x = month, y = station_id, fill = value)
         panel.grid = element_blank())
 
 ggplotly(p_heatmap, tooltip = c("x", "y", "fill"))
+
+#TODO draft another heatmap plot:
+# x days of year, Y-axis year. Facet by station 
+# color pallet to be "continuous"
   
 ```
 
@@ -311,5 +315,115 @@ p_heatmap_2 <- ggplot(wq_chr, aes(x = date, y = station_id, fill = value)) +
         panel.grid = element_blank())
 
 ggplotly(p_heatmap_2, tooltip = c("x", "y", "fill"))
+```
+
+
+Plots for Non detect samples 
+
+  - plotting all data to test functionality
+
+```{r echo=FALSE}
+# test function
+wq_raw_data <- read_csv("data-raw/EMP_DWQ_Data_2020-2023_draft.csv") |> clean_names() |>
+  mutate(date = mdy(date),
+         month = month(date),
+         value = as.numeric(value)) |> 
+  glimpse()
+
+#testing the function with all data - braking it into segments
+df_segment <- wq_raw_data |> 
+  dplyr::filter(detection_status == 'Not detected') |> 
+  mutate(value = as.numeric(mrl)) |> glimpse()
+
+# segment 1 - vertical
+plot_segment_1 <- ggplot2::geom_segment(data = df_segment,
+                      mapping = ggplot2::aes(x = month,
+                                             xend = month,
+                                             y = 0,
+                                             yend = value,
+                                             color = station_id),
+                      linewidth = 0.6,
+                      lty = 5 )
+
+# segment 2 - horizontal 
+plot_segment_2 <- ggplot2::geom_segment(
+  data = df_segment,
+  mapping = ggplot2::aes(x = month - 0.2,
+                         xend = month + 0.2,
+                         y = value,
+                         yend = value,
+                         color = station_id),
+  linewidth = 0.6,
+  lineend = 'square')
+
+# plotting both segments
+ggplot() +
+  plot_segment_1 +
+  plot_segment_2
+```
+
+  - filtering just a couple of analytes and sites 
+
+```{r echo=FALSE}
+# testing for a couple of analytes and stations
+filtered_df_segment <- df_segment |> 
+  filter(analyte %in% c("Chlorophyll a", "Dissolved Ammonia"),
+         station_id %in% c("D8", "P8", "D19")) 
+  
+plot_filtered_1 <- ggplot2::geom_segment(data = filtered_df_segment,
+                      mapping = ggplot2::aes(x = month,
+                                             xend = month,
+                                             y = 0,
+                                             yend = value,
+                                             color = station_id),
+                      linewidth = 0.6,
+                      lty = 5 )
+
+
+    # Horizontal segment geom
+plot_filtered_2 <- ggplot2::geom_segment(
+  data = filtered_df_segment,
+  mapping = ggplot2::aes(x = month - 0.2,
+                         xend = month + 0.2,
+                         y = value,
+                         yend = value,
+                         color = station_id),
+  linewidth = 0.6,
+  lineend = 'square')
+
+test_non_detects <- ggplot() +
+  plot_filtered_1 +
+  plot_filtered_2
+
+ggplotly(test_non_detects)
+```
+
+
+```{r echo=FALSE}
+#re-working function
+blw_rl_geom = function(df, color_by = 'station_id') {
+  df_segment <- df %>% dplyr::filter(detection_status == 'Not detected')
+  
+  list(
+    ggplot2::geom_segment(data = df_segment,
+                      mapping = ggplot2::aes(x = month,
+                                             xend = month,
+                                             y = 0,
+                                             yend = value,
+                                             color = station_id),
+                      linewidth = 0.6,
+                      lty = 5 ),
+    ggplot2::geom_segment(
+  data = df_segment,
+  mapping = ggplot2::aes(x = month - 0.2,
+                         xend = month + 0.2,
+                         y = value,
+                         yend = value,
+                         color = station_id),
+  linewidth = 0.6,
+  lineend = 'square')
+  )
+}
+
 ```
 

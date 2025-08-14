@@ -135,7 +135,7 @@ run_designation_percent <- run_designation |>
 
 # water quality location metadata
 
-wq_metadata_raw <- readxl::read_xlsx("data-raw/station_metadata.xlsx") |>
+wq_metadata_raw <- readxl::read_xlsx("data-raw/metadata_files/station_metadata.xlsx") |>
   clean_names() |>
   filter(latitude != "variable") |> # these data entries do not have lat/long, so I am leaving them out for now
   st_as_sf(coords = c("longitude", "latitude"), crs = 4326)

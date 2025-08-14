@@ -394,11 +394,29 @@ output$wq_dynamic_plot <- renderPlotly({
   df <- df |> arrange(analyte, station_description, date)
 
   if (plot_type == "Time Series") {
+    # non-detects
+    nd <- df |>
+      dplyr::filter(detection_status == "Not detected") |>
+      dplyr::mutate(nd_height = dplyr::case_when(
+        reports_to == "MDL" ~ as.numeric(mdl),
+        reports_to == "MRL" ~ as.numeric(mrl),
+        TRUE ~ NA_real_)) |>
+      dplyr::filter(!is.na(nd_height)) |>
+      dplyr::mutate(x_minus = date - lubridate::days(10),
+                    x_plus  = date + lubridate::days(10))
+
     p <- ggplot(
       df |> dplyr::filter(!is.na(value)),
       aes(x = date, y = value, color = station_id)) +
       geom_line() +
       geom_point(size = 1, alpha = 0.6) +
+      # non-detect
+      geom_segment(data = nd,
+                   aes(x = date, xend = date, y = 0, yend = nd_height, color = station_id),
+                   linewidth = 0.6, linetype = 5, inherit.aes = FALSE) +
+      geom_segment( data = nd,
+                    aes(x = x_minus, xend = x_plus, y = nd_height, yend = nd_height, color = station_id),
+                    linewidth = 0.6, lineend = "square", inherit.aes = FALSE) +
       facet_wrap(~ analyte, scales = "free_y", ncol = 2) +
       labs(x = "", y = y_lab, color = "Station") +
       theme_minimal()
