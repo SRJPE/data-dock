@@ -1,0 +1,69 @@
+﻿Observed Property ID,Data Class,Result Unit,Lab: Analysis Method
+Total Dissolved Solids,Lab Data,mg/L,Std Method 2540 C;Total Dissolved Solids Dried at 180 degC;Standard Methods
+Dissolved Silica,Lab Data,mg/L,EPA 200.7;Determination of Metals and Trace Elements in Water and Wastes by Inductively Coupled Plasma-Atomic Emission Spectrometry;EPA Methods
+Chlorophyll a,Lab Data,ug/L,Std Method 10200 H;Spectrophotometric Determination of Chlorophyll;Standard Methods
+Pheophytin a,Lab Data,ug/L,Std Method 10200 H;Spectrophotometric Determination of Chlorophyll;Standard Methods
+Dissolved Chloride,Lab Data,mg/L,EPA 300.0;Determination of Inorganic Anions by Ion Chromatography;EPA Methods
+Dissolved Calcium,Lab Data,mg/L,EPA 200.7;Determination of Metals and Trace Elements in Water and Wastes by Inductively Coupled Plasma-Atomic Emission Spectrometry;EPA Methods
+Total Alkalinity,Lab Data,mg/L,Std Method 2320 B;Alkalinity by Titration;Standard Methods
+Dissolved Ammonia,Lab Data,mg/L,EPA 350.1;Ammonia by Automated Colorimetry;EPA Methods
+Dissolved Nitrate + Nitrite,Lab Data,mg/L,"Std Method 4500-NO3-, F;Nitrate by Automated Cadmium Reduction Method;Standard Methods"
+Dissolved Organic Nitrogen,Lab Data,mg/L,EPA 351.2/EPA 350.1;Calculation of Dissolved Organic Nitrogen from Total Kjeldahl Nitrogen by Semi-Automated Colorimetry and Ammonia by Automated Colorimetry;EPA Methods
+Total Phosphorus,Lab Data,mg/L,EPA 365.4;Phosphorus by Automated Colorimetry;EPA Methods
+Total Kjeldahl Nitrogen,Lab Data,mg/L,EPA 351.2;Determination of Total Kjeldahl Nitrogen by Semi-Automated Colorimetry;EPA Methods
+Dissolved Orthophosphate,Lab Data,mg/L,EPA 365.1;Phosphorus (all forms) by Semi-Automated Colorimetry;EPA Methods
+Dissolved Organic Carbon,Lab Data,mg/L,Std Method 5310 C (D);Total Organic Carbon by Persulfate-UV or Heated-Persulfate Oxidation Method;Standard Methods
+Total Organic Carbon,Lab Data,mg/L,Std Method 5310 C (T);Total Organic Carbon by Persulfate-UV or Heated-Persulfate Oxidation Method;Standard Methods
+Total Suspended Solids,Lab Data,mg/L,Std Method 2540 D;Total Suspended Solids Dried at 103-105 degC;Standard Methods
+Volatile Suspended Solids,Lab Data,mg/L,Std Method 2540 E;Fixed and Volatile Solids Ignited at 550 degC;Standard Methods
+Dissolved Bromide,Lab Data,mg/L,EPA 300.0;Determination of Inorganic Anions by Ion Chromatography;EPA Methods
+(Bottom) Chlorophyll Fluorescence RFU,Field Data,RFU,
+(Bottom) Chlorophyll Fluorescence ug/L,Field Data,ug/L,
+(Bottom) Dissolved Oxygen % Saturation,Field Data,% Saturation,ASTM Method D888-09-C;Dissolved Oxygen in Water by Instrumental Probe Procedure (Luminescence-Based Sensor);ASTM International
+(Bottom) Dissolved Oxygen mg/L,Field Data,mg/L,ASTM Method D888-09-C;Dissolved Oxygen in Water by Instrumental Probe Procedure (Luminescence-Based Sensor);ASTM International
+(Bottom) pH,Field Data,unitless,EPA 150.1;pH in Water by Electrometric Method;EPA Methods
+(Bottom) Specific Conductance,Field Data,uS/cm,EPA 120.1;Conductance by Conductivity Meter;EPA Methods
+(Bottom) Turbidity,Field Data,FNU,EPA 180.1;Turbidity by Turbidimeter;EPA Methods
+(Bottom) Water Temperature,Field Data,degC,EPA 170.1;Temperature by Thermometer;EPA Methods
+Air Temperature,Field Data,degF,
+Chlorophyll Fluorescence RFU,Field Data,RFU,
+Chlorophyll Fluorescence ug/L,Field Data,ug/L,
+Dissolved Oxygen % Saturation,Field Data,% Saturation,ASTM Method D888-09-C;Dissolved Oxygen in Water by Instrumental Probe Procedure (Luminescence-Based Sensor);ASTM International
+Dissolved Oxygen mg/L,Field Data,mg/L,ASTM Method D888-09-C;Dissolved Oxygen in Water by Instrumental Probe Procedure (Luminescence-Based Sensor);ASTM International
+MVI,Field Data,,
+Latitude,Field Data,decimal degrees,
+pH,Field Data,unitless,EPA 150.1;pH in Water by Electrometric Method;EPA Methods
+Secchi Depth,Field Data,cm,
+Specific Conductance,Field Data,uS/cm,EPA 120.1;Conductance by Conductivity Meter;EPA Methods
+Turbidity,Field Data,FNU,EPA 180.1;Turbidity by Turbidimeter;EPA Methods
+Water Depth,Field Data,feet,
+Water Temperature,Field Data,degC,EPA 170.1;Temperature by Thermometer;EPA Methods
+Longitude,Field Data,decimal degrees,
+Wind Velocity,Field Data,mph,
+Churn Bucket ID,Lab Data,,
+Filter Container ID,Lab Data,,
+Sky Conditions,Field Data,,
+Wave Scale,Field Data,,
+Rain,Field Data,,
+Water Temperature,Field Data,degC,EPA 170.1;Temperature by Thermometer;EPA Methods
+Specific Conductance,Field Data,uS/cm,EPA 120.1;Conductance by Conductivity Meter;EPA Methods
+pH,Field Data,unitless,EPA 150.1;pH in Water by Electrometric Method;EPA Methods
+Turbidity,Field Data,FNU,EPA 180.1;Turbidity by Turbidimeter;EPA Methods
+Chlorophyll Fluorescence ug/L,Field Data,ug/L,
+Chlorophyll Fluorescence RFU,Field Data,RFU,
+Dissolved Oxygen mg/L,Field Data,mg/L,
+Dissolved Oxygen % Saturation,Field Data,% Saturation,
+(Bottom) Water Temperature,Field Data,degC,EPA 170.1;Temperature by Thermometer;EPA Methods
+(Bottom) Specific Conductance,Field Data,uS/cm,EPA 120.1;Conductance by Conductivity Meter;EPA Methods
+(Bottom) pH,Field Data,unitless,EPA 150.1;pH in Water by Electrometric Method;EPA Methods
+(Bottom) Turbidity,Field Data,FNU,EPA 180.1;Turbidity by Turbidimeter;EPA Methods
+(Bottom) Chlorophyll Fluorescence ug/L,Field Data,ug/L,
+(Bottom) Chlorophyll Fluorescence RFU,Field Data,RFU,
+(Bottom) Dissolved Oxygen mg/L,Field Data,mg/L,
+(Bottom) Dissolved Oxygen % Saturation,Field Data,% Saturation,
+Churn Bucket ID,Lab Data,,
+Air Temperature,Field Data,degF,
+Wind Velocity,Field Data,mph,
+Wave Scale,Field Data,,
+Microcystis aeruginosa,Field Data,,
+Water Depth,Field Data,feet,

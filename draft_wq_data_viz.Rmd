@@ -20,10 +20,12 @@ library(colorBlindness)
 library(plotly)
 library(janitor)
 
-wq_data <- read_csv("data-raw/EMP_DWQ_Data_2020-2023_draft.csv") |>
-  clean_names() |>
-  mutate(date = mdy(date),
-         value = as.numeric(value)) |>
+wq_data_raw <- read_csv("data-raw/EMP_DWQ_Data_2020-2023_draft.csv") |>
+  clean_names() |> 
+  mutate(date = mdy(date))
+
+wq_data <- wq_data_raw |>
+  mutate(value = as.numeric(value)) |>
   filter(!analyte %in% c("Rain", "Sky Conditions", "Latitude", "Longitude")) |>
   glimpse()
 
@@ -32,7 +34,7 @@ wq_data <- read_csv("data-raw/EMP_DWQ_Data_2020-2023_draft.csv") |>
 # for the station/site names - metadata contains "station_description", should that be used as the "location" - also note that there are instances when station_description is the same in more than one station (e.g. San Joaquin River near Vernalis is the site_description of both station_id C10 and C10A). 
 # 4 stations have "variable" on the lat/long fields
 
-wq_metadata_raw <- readxl::read_xlsx("data-raw/station_metadata.xlsx") |> clean_names() # pulling this for reference
+wq_metadata_raw <- readxl::read_xlsx("data-raw/metadata_files/station_metadata.xlsx") |> clean_names() # pulling this for reference
 
 # for those station_descriptions that are identical, we will add the word "historical" to differentiate 
 wq_metadata <- wq_metadata_raw |> 
@@ -48,7 +50,7 @@ wq_data_test <- wq_data_raw |>
 
 ```
 
-#TODO how do we identify lab vs field data?
+### Time Series Plot
 
 ```{r echo=FALSE}
 # idea to have the analyte selection first, then user can add 1-multiple stations
@@ -56,7 +58,7 @@ ggplot(wq_data |>
          filter(analyte == "Dissolved Calcium"), 
        aes(x = date, y = value, color = station_id)) +
   geom_line(alpha = 0.6) +
-  facet_wrap(~year(date), scales = "free")
+  facet_wrap(~year(date), scales = "free") +
   labs(title = "Dissolved Calcium Over Time by Station",
        y = "Concentration",
        x = "Date") +
@@ -82,6 +84,8 @@ plot_1 <- ggplot(wq_data |>
 ggplotly(plot_1)
 
 ```
+
+### Box Plot
 
 ```{r echo=FALSE}
 wq_data |> 
@@ -176,6 +180,8 @@ wq_data |>
 
 ```
 
+### Bar Plot - (we will not be using these)
+
 ```{r}
 wq_data |>
   filter(analyte == "Wind Velocity",
@@ -238,7 +244,265 @@ ggplot() +
   scale_y_continuous(limits = c(-0.02, NA)) +
   labs(title = "NDs Shown Below Axis", y = "Concentration") +
   theme_minimal()
+```
 
+### Heatmap: non-numerical analytes
+
+```{r echo=FALSE}
+weather_palette     <- c(
+  "Sunny"         = "#CCE4EA", 
+  "Partly Cloudy" = "#3D8394",  
+  "Cloudy"        = "#224953", 
+  "Foggy"         = "#415D62",  
+  "Overcast"      = "#708090")
+
+rain_palette     <- c(
+  "Heavy"  = "#07079D", 
+  "Medium" = "#3636F7",  
+  "Light"  = "#6262F8", 
+  "None"   = "#BABAFC")
+
+chr_palette <- c( rain_palette, weather_palette)
+chr_analytes <- c("Sky Conditions", "Rain")
+
+wq_chr <- wq_data_raw |>
+  filter(analyte %in% chr_analytes, !is.na(value)) |>
+  mutate(month = floor_date(date, "month"))
+
+# modal category per station-month (break ties by first seen)
+mode_per_month <- wq_chr |>  
+  count(analyte, station_id, month, value, name = "n") |>
+  group_by(analyte, station_id, month) |>
+  slice_max(n, with_ties = FALSE) |>   # if ties, pick one deterministically
+  ungroup()
+
+  
+p_heatmap <- ggplot(mode_per_month, aes(x = month, y = station_id, fill = value)) +
+  geom_tile() +
+  facet_wrap(~ analyte, ncol = 1, scales = "free_y") +
+  scale_fill_manual(values = chr_palette, na.translate = FALSE) +
+  labs(title = "Modal Category by Station and Month",
+       x = "Month",
+       y = "Station",
+       fill = "Most Frequent") +
+  theme_minimal() +
+  theme(axis.text.y = element_text(size = 8),
+        panel.grid = element_blank())
+
+ggplotly(p_heatmap, tooltip = c("x", "y", "fill"))
+
+#TODO - I couldn't figure out how to separate the legend to be split between either "rain" or "sky conditions"
+ 
+```
+
+```{r echo=FALSE}
+#same as above - separating analytes
+# Subset Rain data
+rain_data <- mode_per_month |> filter(analyte == "Rain")
+
+# Subset Sky Conditions data
+weather_data <- mode_per_month |> filter(analyte == "Sky Conditions")
+
+# Rain plot
+p_rain <- ggplot(rain_data, aes(x = month, y = station_id, fill = value)) +
+  geom_tile() +
+  scale_fill_manual(values = rain_palette, na.translate = FALSE) +
+  labs(title = "Rain – Modal Category by Station and Month",
+       x = "Month",
+       y = "Station",
+       fill = "Rain Level") +
+  theme_minimal() +
+  theme(axis.text.y = element_text(size = 8),
+        panel.grid = element_blank())
+
+# Sky Conditions plot
+p_weather <- ggplot(weather_data, aes(x = month, y = station_id, fill = value)) +
+  geom_tile() +
+  scale_fill_manual(values = weather_palette, na.translate = FALSE) +
+  labs(title = "Sky Conditions – Modal Category by Station and Month",
+       x = "Month",
+       y = "Station",
+       fill = "Sky Condition") +
+  theme_minimal() +
+  theme(axis.text.y = element_text(size = 8),
+        panel.grid = element_blank())
+
+
+ggplotly(p_rain, tooltip = c("x", "y", "fill"))
+ggplotly(p_weather, tooltip = c("x", "y", "fill"))
+
+```
+
+
+Below is finer resolution/granularity. however it is challenging to see all data
+
+```{r echo=FALSE}
+ggplotly(wq_chr |> 
+           ggplot(aes(x = date, y = station_id, fill = value)) +
+  geom_tile() +
+  facet_wrap(~ analyte, ncol = 1, scales = "free_y") +
+  scale_fill_manual(values = chr_palette) +
+  labs(title = "Categorical Values Over Time",
+       x = "Date",
+       y = "Station",
+       fill = "Category") +
+  theme_minimal() +
+  theme(axis.text.y = element_text(size = 8),
+        panel.grid = element_blank()))
+```
+
+
+```{r echo=FALSE}
+
+# weather_palette <- c(
+#   "Sunny"         = "#EDD972", 
+#   "Partly Cloudy" = "#ADD8E6",  
+#   "Cloudy"        = "#B0C4DE", 
+#   "Foggy"         = "#D3D3D3",  
+#   "Overcast"      = "#708090")
+
+weather_palette     <- c(
+  "Sunny"         = "#CCE4EA", 
+  "Partly Cloudy" = "#3D8394",  
+  "Cloudy"        = "#224953", 
+  "Foggy"         = "#415D62",  
+  "Overcast"      = "#708090")
+  
+
+ggplotly(wq_chr |> filter(analyte == "Sky Conditions" & station_id %in% c("C10", "D41", "D22", "C9")) |>
+  mutate(month = month(date),
+         day = day(date),
+         year = year(date),
+         value = factor(value, levels = c("Sunny", "Partly Cloudy", "Cloudy", "Foggy", "Overcast"))) |> 
+  ggplot(aes(x = day, y = year, fill = value)) +
+   geom_tile() +
+  facet_wrap(~ station_id, ncol = 1, scales = "free_y") +
+  scale_fill_manual(values = weather_palette))
+
+rain_palette     <- c(
+  "Heavy"  = "#07079D", 
+  "Medium" = "#3636F7",  
+  "Light"  = "#6262F8", 
+  "None"   = "#BABAFC")
+
+ggplotly(wq_chr |> filter(analyte == "Rain" & station_id %in% c("C10", "D41", "D22", "C9")) |>  
+  mutate(month = month(date),
+         day = day(date),
+         year = year(date),
+         value = factor(value, levels = c("Heavy", "Medium", "Light", "None"))) |>
+  ggplot(aes(x = day, y = year, fill = value)) +
+   geom_tile() +
+  facet_wrap(~ station_id, ncol = 1, scales = "free_y") +
+  scale_fill_manual(values = rain_palette))
+```
+
+
+### Non detect samples 
+
+  - plotting all data to test functionality
+
+```{r echo=FALSE}
+# test function
+wq_raw_data <- read_csv("data-raw/EMP_DWQ_Data_2020-2023_draft.csv") |> clean_names() |>
+  mutate(date = mdy(date),
+         month = month(date),
+         value = as.numeric(value)) |> 
+  glimpse()
+
+#testing the function with all data - braking it into segments
+df_segment <- wq_raw_data |> 
+  dplyr::filter(detection_status == 'Not detected') |> 
+  mutate(value = as.numeric(mrl)) |> glimpse()
+
+# segment 1 - vertical
+plot_segment_1 <- ggplot2::geom_segment(data = df_segment,
+                      mapping = ggplot2::aes(x = month,
+                                             xend = month,
+                                             y = 0,
+                                             yend = value,
+                                             color = station_id),
+                      linewidth = 0.6,
+                      lty = 5 )
+
+# segment 2 - horizontal 
+plot_segment_2 <- ggplot2::geom_segment(
+  data = df_segment,
+  mapping = ggplot2::aes(x = month - 0.2,
+                         xend = month + 0.2,
+                         y = value,
+                         yend = value,
+                         color = station_id),
+  linewidth = 0.6,
+  lineend = 'square')
+
+# plotting both segments
+ggplot() +
+  plot_segment_1 +
+  plot_segment_2
+```
+
+  - filtering just a couple of analytes and sites 
+
+```{r echo=FALSE}
+# testing for a couple of analytes and stations
+filtered_df_segment <- df_segment |> 
+  filter(analyte %in% c("Chlorophyll a", "Dissolved Ammonia"),
+         station_id %in% c("D8", "P8", "D19")) 
+  
+plot_filtered_1 <- ggplot2::geom_segment(data = filtered_df_segment,
+                      mapping = ggplot2::aes(x = month,
+                                             xend = month,
+                                             y = 0,
+                                             yend = value,
+                                             color = station_id),
+                      linewidth = 0.6,
+                      lty = 5 )
+
+
+    # Horizontal segment geom
+plot_filtered_2 <- ggplot2::geom_segment(
+  data = filtered_df_segment,
+  mapping = ggplot2::aes(x = month - 0.2,
+                         xend = month + 0.2,
+                         y = value,
+                         yend = value,
+                         color = station_id),
+  linewidth = 0.6,
+  lineend = 'square')
+
+test_non_detects <- ggplot() +
+  plot_filtered_1 +
+  plot_filtered_2
+
+ggplotly(test_non_detects)
+```
+
+
+```{r echo=FALSE}
+#re-working function
+blw_rl_geom = function(df, color_by = 'station_id') {
+  df_segment <- df %>% dplyr::filter(detection_status == 'Not detected')
+  
+  list(
+    ggplot2::geom_segment(data = df_segment,
+                      mapping = ggplot2::aes(x = month,
+                                             xend = month,
+                                             y = 0,
+                                             yend = value,
+                                             color = station_id),
+                      linewidth = 0.6,
+                      lty = 5 ),
+    ggplot2::geom_segment(
+  data = df_segment,
+  mapping = ggplot2::aes(x = month - 0.2,
+                         xend = month + 0.2,
+                         y = value,
+                         yend = value,
+                         color = station_id),
+  linewidth = 0.6,
+  lineend = 'square')
+  )
+}
 
 ```
 
