@@ -146,6 +146,7 @@ wq_metadata <- wq_metadata_raw |>
     n() > 1 & status == "Inactive" ~ paste0(station_description, " - Historical"),
     TRUE ~ station_description)) |>
   ungroup() |>
+  mutate(station_id_name = paste(station_id, "-", station_description)) |>
   glimpse()
 
 # adding lat/long fields for zooming functionality
@@ -164,7 +165,12 @@ left_join(wq_metadata |>  st_drop_geometry() |> select(station_id, station_descr
   st_drop_geometry() |>
   mutate(date = mdy(date),
          value = as.numeric(value)) |>
-  filter(!is.na(station_description)) |>
+  filter(!is.na(station_description),
+         analyte != "Latitude",
+         analyte != "Longitude",
+         analyte != "Rain",
+         analyte != "Sky Conditions") |>
+  mutate(station_id_name = paste(station_id, "-", station_description)) |>
   glimpse()
 
 # station_id == LSZ6, LSZ2, LSZ2-SJR, LSZ6-SJR are not in the metadata

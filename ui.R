@@ -37,8 +37,11 @@ ui <- fluidPage(
                    label = tags$strong("Filter by Location:"),
                    choices = c(
                      setNames(
-                       wq_metadata$station_id[order(wq_metadata$station_description)],
-                       wq_metadata$station_description[order(wq_metadata$station_description)])
+                       # wq_metadata$station_id[order(wq_metadata$station_description)],
+                       # wq_metadata$station_description[order(wq_metadata$station_description)]
+                       wq_metadata$station_id_name[order(wq_metadata$station_id_name)],
+                       wq_metadata$station_id_name[order(wq_metadata$station_id_name)]
+                       )
                    ),
                    selected = NULL,
                    multiple = TRUE,

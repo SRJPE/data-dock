@@ -247,7 +247,7 @@ output$wq_map <- renderLeaflet({
       weight = 1.5) |>
     addCircleMarkers(
       data = wq_metadata,
-      layerId = ~station_id,
+      layerId = ~station_id_name,
       label = ~paste(station_id, "-", station_description),
       radius = 6,
       stroke = TRUE,
@@ -305,7 +305,7 @@ output$wq_map <- renderLeaflet({
     }
 
     # Filter selected stations
-    selected_station <- wq_metadata[wq_metadata$station_id %in% input$location_filter_wq, ]
+    selected_station <- wq_metadata[wq_metadata$station_id_name %in% input$location_filter_wq, ]
     req(nrow(selected_station) > 0)
     bbox <- sf::st_bbox(selected_station)
 
@@ -372,7 +372,7 @@ filtered_wq_data <- reactive({
     )
 
   if (!is.null(input$location_filter_wq) && !"All Locations" %in% input$location_filter_wq) {
-    data <- data |> filter(station_id %in% input$location_filter_wq)
+    data <- data |> filter(station_id_name %in% input$location_filter_wq)
   }
 
   data
@@ -391,37 +391,59 @@ output$wq_dynamic_plot <- renderPlotly({
   plot_type <- as.character(input$plot_type)[1]
   y_lab <- if (length(input$analyte) == 1) input$analyte[[1]] else "Value"
 
-  df <- df |> arrange(analyte, station_description, date)
+  df <- df |> arrange(analyte, station_id_name, date)
 
   if (plot_type == "Time Series") {
-    # non-detects
-    nd <- df |>
-      dplyr::filter(detection_status == "Not detected") |>
-      dplyr::mutate(nd_height = dplyr::case_when(
-        reports_to == "MDL" ~ as.numeric(mdl),
-        reports_to == "MRL" ~ as.numeric(mrl),
-        TRUE ~ NA_real_)) |>
-      dplyr::filter(!is.na(nd_height)) |>
-      dplyr::mutate(x_minus = date - lubridate::days(10),
-                    x_plus  = date + lubridate::days(10))
+    # split detected vs non-detected from the SAME df
+    detected <- df %>%
+      dplyr::filter(!is.na(value) &
+                      !(tolower(trimws(detection_status)) %in% c("not detected","not detected.")))
 
-    p <- ggplot(
-      df |> dplyr::filter(!is.na(value)),
-      aes(x = date, y = value, color = station_id)) +
-      geom_line() +
-      geom_point(size = 1, alpha = 0.6) +
-      # non-detect
-      geom_segment(data = nd,
-                   aes(x = date, xend = date, y = 0, yend = nd_height, color = station_id),
-                   linewidth = 0.6, linetype = 5, inherit.aes = FALSE) +
-      geom_segment( data = nd,
-                    aes(x = x_minus, xend = x_plus, y = nd_height, yend = nd_height, color = station_id),
-                    linewidth = 0.6, lineend = "square", inherit.aes = FALSE) +
+    nd <- df %>%
+      dplyr::filter(tolower(trimws(detection_status)) %in% c("not detected","not detected.")) %>%
+      dplyr::mutate(
+        nd_height = dplyr::case_when(
+          reports_to == "MDL" ~ as.numeric(mdl),
+          reports_to == "MRL" ~ as.numeric(mrl),
+          TRUE ~ NA_real_
+        )
+      ) %>%
+      dplyr::filter(!is.na(nd_height)) %>%
+      dplyr::mutate(
+        x_minus = date - lubridate::days(10),
+        x_plus  = date + lubridate::days(10)
+      )
+
+    # base plot on FULL df so facets exist even if only ND rows are present
+    p <- ggplot(df, aes(x = date)) +
       facet_wrap(~ analyte, scales = "free_y", ncol = 2) +
-      labs(x = "", y = y_lab, color = "Station") +
+      labs(x = "", y = y_lab, color = "Location") +
       theme_minimal()
 
-  } else if (plot_type == "Box Plot") {
+    # add detected lines/points if present
+    if (nrow(detected) > 0) {
+      p <- p +
+        geom_line(data = detected, aes(y = value, color = station_id_name)) +
+        geom_point(data = detected, aes(y = value, color = station_id_name),
+                   size = 1, alpha = 0.6)
+    }
+
+    # add ND markers if present
+    if (nrow(nd) > 0) {
+      p <- p +
+        geom_segment(
+          data = nd,
+          aes(x = date, xend = date, y = 0, yend = nd_height, color = station_id_name),
+          linewidth = 0.6, linetype = 5, inherit.aes = FALSE
+        ) +
+        geom_segment(
+          data = nd,
+          aes(x = x_minus, xend = x_plus, y = nd_height, yend = nd_height, color = station_id_name),
+          linewidth = 0.6, lineend = "square", inherit.aes = FALSE
+        )
+    }
+  }
+  else if (plot_type == "Box Plot") {
     p <- ggplot(
       df |> dplyr::filter(!is.na(value)),
       aes(x = station_id, y = value, fill = station_id)) +
