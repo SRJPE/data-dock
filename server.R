@@ -416,7 +416,7 @@ output$wq_dynamic_plot <- renderPlotly({
 
     # base plot on FULL df so facets exist even if only ND rows are present
     p <- ggplot(df, aes(x = date)) +
-      facet_wrap(~ analyte, scales = "free_y", ncol = 2) +
+      facet_wrap(~ analyte, scales = "free_y", ncol = 1) +
       labs(x = "", y = y_lab, color = "Location") +
       theme_minimal()
 
