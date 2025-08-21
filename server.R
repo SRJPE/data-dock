@@ -449,7 +449,7 @@ output$wq_dynamic_plot <- renderPlotly({
       aes(x = station_id, y = value, fill = station_id)) +
       geom_boxplot(outlier.shape = NA) +
       facet_wrap(~ analyte, scales = "free_y", ncol = 2) +
-      labs(x = "", y = y_lab, fill = "Station") +
+      labs(x = "", y = "value", fill = "Station") +
       theme_minimal() +
       theme(legend.position = "none")
 
