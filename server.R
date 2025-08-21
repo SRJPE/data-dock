@@ -383,6 +383,11 @@ output$wq_dynamic_plot <- renderPlotly({
   req(input$analyte, length(input$analyte) > 0)
 
   df <- filtered_wq_data()
+  if (n_distinct(df$analyte) > 8) {
+    validate(
+      need(FALSE, "Too many analytes selected. Please select 8 or fewer.")
+    )
+  }
   if (nrow(df) == 0) {
     return(plotly_empty(type = "scatter", mode = "lines") |>
              layout(title = "No data available for current selection."))
@@ -395,24 +400,20 @@ output$wq_dynamic_plot <- renderPlotly({
 
   if (plot_type == "Time Series") {
     # split detected vs non-detected from the SAME df
-    detected <- df %>%
+    detected <- df |>
       dplyr::filter(!is.na(value) &
                       !(tolower(trimws(detection_status)) %in% c("not detected","not detected.")))
 
-    nd <- df %>%
-      dplyr::filter(tolower(trimws(detection_status)) %in% c("not detected","not detected.")) %>%
-      dplyr::mutate(
-        nd_height = dplyr::case_when(
-          reports_to == "MDL" ~ as.numeric(mdl),
-          reports_to == "MRL" ~ as.numeric(mrl),
-          TRUE ~ NA_real_
-        )
-      ) %>%
-      dplyr::filter(!is.na(nd_height)) %>%
+    nd <- df |>
+      dplyr::filter(tolower(trimws(detection_status)) %in% c("not detected","not detected.")) |>
+      dplyr::mutate(nd_height = dplyr::case_when(
+        reports_to == "MDL" ~ as.numeric(mdl),
+        reports_to == "MRL" ~ as.numeric(mrl),
+        TRUE ~ NA_real_)) |>
+      dplyr::filter(!is.na(nd_height)) |>
       dplyr::mutate(
         x_minus = date - lubridate::days(10),
-        x_plus  = date + lubridate::days(10)
-      )
+        x_plus  = date + lubridate::days(10))
 
     # base plot on FULL df so facets exist even if only ND rows are present
     p <- ggplot(df, aes(x = date)) +
