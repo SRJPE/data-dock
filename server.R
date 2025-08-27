@@ -378,11 +378,33 @@ filtered_wq_data <- reactive({
   data
 })
 
+wq_missing_sites <- reactiveVal(character(0)) # filtering so message works
+
 output$wq_dynamic_plot <- renderPlotly({
   req(!is.null(input$location_filter_wq) && length(input$location_filter_wq) > 0)
   req(input$analyte, length(input$analyte) > 0)
 
   df <- filtered_wq_data()
+
+  selected_locs <- input$location_filter_wq %||% character(0)
+
+  present_locs <- sort(unique(df$station_id_name))
+  missing_locs <- setdiff(selected_locs, present_locs)
+
+  prev_missing <- wq_missing_sites()
+  new_missing  <- setdiff(missing_locs, prev_missing)
+
+  if (length(new_missing) > 0) {
+    showNotification(
+      paste0("No data for selected analyte(s) at: ",
+             paste(new_missing, collapse = ", ")),
+      type = "warning", duration = 6
+    )
+  }
+
+  # update the tracker (so sites with data don't trigger, and new missing will)
+  wq_missing_sites(missing_locs)
+
   if (n_distinct(df$analyte) > 8) {
     validate(
       need(FALSE, "Too many analytes selected. Please select 8 or fewer.")
