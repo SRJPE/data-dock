@@ -227,138 +227,115 @@ server <- function(input, output, session) {
       inputId = "analyte",
       choices = sort(unique(wq_data$analyte)),
       selected = character(0),
-      server = TRUE
-    )
-  })
-
-
-output$wq_map <- renderLeaflet({
-  leaflet() |>
-    addMapPane("Lines-Habitat", zIndex = 430) |>
-    addTiles(
-      urlTemplate = "https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}",
-      attribution = 'Basemap © Esri, GEBCO, NOAA, CHS, etc.') |>
-    addPolylines(
-      data = salmonid_habitat_extents,
-      label = ~lapply(river, htmltools::HTML),
-      popup = ~river,
-      color = "#5299D9",
-      opacity = 1,
-      weight = 1.5) |>
-    addCircleMarkers(
-      data = wq_metadata,
-      layerId = ~station_id_name,
-      label = ~paste(station_id, "-", station_description),
-      radius = 6,
-      stroke = TRUE,
-      weight = 1,
-      color = "black",
-      fillOpacity = 0.7,
-      fillColor = ~ifelse(status == "Active", "black", "gray"),
-      popup = ~paste0(
-        "<b>", station_id, "</b><br/>", station_description
-        # ,
-        # "<b>Status:</b> ", status, "<br/>",
-        # "<b>Station Type:</b> ", station_type, "<br/>",
-        # "<b>Start Date:</b> ", start_date, "<br/>",
-        # "<b>End Date:</b> ", end_date
-        )
-      )|>
-    addLegend(
-      position = "bottomright",
-      colors = c("black", "gray"),
-      labels = c("Active Station", "Inactive Station"),
-      title = "Station Status",
-      opacity = 0.7
-    )
-  })
-
-  click_marker_wq <- eventReactive(input$wq_map_marker_click, {
-    req(!is.null(input$wq_map_marker_click))
-    input$wq_map_marker_click$id
+      server = TRUE)
     })
-
-# adding reactive to zoom into selected site
-  observeEvent(input$location_filter_wq, {
-    req(input$location_filter_wq)
-
-    # If "All Locations" is selected (and only it), reset the map
-    if (identical(input$location_filter_wq, "All Locations")) {
-      leafletProxy("wq_map") |>
-        clearGroup("highlight") |>
-        clearPopups() |>
-        fitBounds(
-          lng1 = min(wq_metadata$longitude, na.rm = TRUE),
-          lat1 = min(wq_metadata$latitude, na.rm = TRUE),
-          lng2 = max(wq_metadata$longitude, na.rm = TRUE),
-          lat2 = max(wq_metadata$latitude, na.rm = TRUE))
-      return()
-    }
-
-    # If "All Locations" is selected alongside others, remove it from the selection
-    if ("All Locations" %in% input$location_filter_wq && length(input$location_filter_wq) > 1) {
-      updateSelectInput(
-        session,
-        "location_filter_wq",
-        selected = setdiff(input$location_filter_wq, "All Locations"))
-      return()
-    }
-
-    # Filter selected stations
-    selected_station <- wq_metadata[wq_metadata$station_id_name %in% input$location_filter_wq, ]
-    req(nrow(selected_station) > 0)
-    bbox <- sf::st_bbox(selected_station)
-
+# zoom to selection
+  draw_and_zoom_selection <- function(sel_names) {
     map <- leafletProxy("wq_map") |>
       clearGroup("highlight") |>
-      clearPopups() |>
+      clearPopups()
+
+    # if nothing selected, zoom to full extent
+    if (is.null(sel_names) || length(sel_names) == 0) {
+      return(
+        map |> fitBounds(
+          lng1 = min(wq_metadata$longitude, na.rm = TRUE),
+          lat1 = min(wq_metadata$latitude,  na.rm = TRUE),
+          lng2 = max(wq_metadata$longitude, na.rm = TRUE),
+          lat2 = max(wq_metadata$latitude,  na.rm = TRUE)
+          )
+      )
+    }
+
+    selected_station <- subset(wq_metadata, station_id_name %in% sel_names)
+    if (nrow(selected_station) == 0) return(invisible(map))
+
+    # highlight markers
+    map <- map |>
       addCircleMarkers(
         data = selected_station,
-        lat = ~latitude,
-        lng = ~longitude,
+        lat = ~latitude, lng = ~longitude,
         radius = 10,
-        fillColor = "#7E2954",
-        color = "white",
-        weight = 2,
-        fillOpacity = 0.9,
+        fillColor = "#7E2954", color = "white",
+        weight = 2, fillOpacity = 0.9,
         group = "highlight",
-        label = ~paste("Selected:", station_id, station_description))
-
-    # Apply different zoom logic depending on number of selected sites
-    if (nrow(selected_station) == 1) {
-      map |>
-        setView(
-          lng = selected_station$longitude,
-          lat = selected_station$latitude,
-          zoom = 11
+        label = ~paste("Selected:", station_id_name),
+        layerId = ~paste0(station_id_name, "__hi")
         )
-      } else {
 
-        map |>
-          fitBounds(bbox["xmin"], bbox["ymin"], bbox["xmax"], bbox["ymax"])
+    # Zoom logic
+    if (nrow(selected_station) == 1) {
+      map |>  setView(
+        lng = selected_station$longitude[1],
+        lat = selected_station$latitude[1],
+        zoom = 11)
+      } else {
+        map |>  fitBounds(
+          lng1 = min(selected_station$longitude, na.rm = TRUE),
+          lat1 = min(selected_station$latitude,  na.rm = TRUE),
+          lng2 = max(selected_station$longitude, na.rm = TRUE),
+          lat2 = max(selected_station$latitude,  na.rm = TRUE)
+        )
       }
+    }
+
+  output$wq_map <- renderLeaflet({
+    leaflet() |>
+      addMapPane("Lines-Habitat", zIndex = 430) |>
+      addTiles(
+        urlTemplate = "https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}",
+        attribution = 'Basemap © Esri, GEBCO, NOAA, CHS, etc.') |>
+      addPolylines(
+        data = salmonid_habitat_extents,
+        label = ~lapply(river, htmltools::HTML),
+        popup = ~river, color = "#5299D9",
+        opacity = 1, weight = 1.5) |>
+      addCircleMarkers(
+        data    = wq_metadata,
+        layerId = ~station_id_name,
+        label   = ~paste(station_id_name, "-", station_description),
+        radius = 6, stroke = TRUE, weight = 1, color = "black",
+        fillOpacity = 0.7,
+        fillColor = ~ifelse(status == "Active", "black", "gray"),
+        popup = ~paste0("<b>", station_id, "</b><br/>", station_description)
+        ) |>
+      addLegend(
+        position = "bottomright",
+        colors = c("black", "gray"),
+        labels = c("Active Station", "Inactive Station"),
+        title = "Station Status",
+        opacity = 0.7) |>
+      # Initial full-extent view
+      fitBounds(
+        lng1 = min(wq_metadata$longitude, na.rm = TRUE),
+        lat1 = min(wq_metadata$latitude,  na.rm = TRUE),
+        lng2 = max(wq_metadata$longitude, na.rm = TRUE),
+        lat2 = max(wq_metadata$latitude,  na.rm = TRUE)
+        )
     })
 
+  ## when dropdown changes,zoom to ALL selected
+  #TODO fix so that when only one location is selected, de-selection works the same than with many
+  observeEvent(input$wq_map_marker_click, ignoreInit = TRUE, {
+    click <- input$wq_map_marker_click
+    req(!is.null(click), !is.null(click$id))
 
-# toggle selection when a marker is clicked
-observeEvent(input$wq_map_marker_click, {
-  id <- input$wq_map_marker_click$id
-  req(id)
+    # If highlight markers use the "__hi" suffix, normalize it here
+    id_raw <- click$id
+    id     <- sub("__hi$", "", id_raw)
 
-  # current selection (handle NULL safely)
-  current <- input$location_filter_wq
-  if (is.null(current)) current <- character(0)
+    current <- input$location_filter_wq
+    if (is.null(current)) current <- character(0)
 
-  # toggle logic
-  if (id %in% current) {
-    new_sel <- setdiff(current, id)
-  } else {
-    new_sel <- union(current, id)
-  }
+    new_sel <- if (id %in% current) setdiff(current, id) else union(current, id)
 
-  updateSelectInput(session, "location_filter_wq", selected = new_sel)
-})
+    updateSelectInput(session, "location_filter_wq", selected = new_sel)
+  })
 
+  # redraw highlight + zoom on dropdown change
+  observeEvent(input$location_filter_wq, {
+    draw_and_zoom_selection(input$location_filter_wq)
+  }, ignoreInit = TRUE)
 
 filtered_wq_data <- reactive({
   req(input$analyte, length(input$analyte) > 0, input$year_range)
