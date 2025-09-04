@@ -395,54 +395,59 @@ output$wq_dynamic_plot <- renderPlotly({
   plot_type <- as.character(input$plot_type)[1]
   y_lab <- if (length(input$analyte) == 1) input$analyte[[1]] else "Value"
 
-  df <- df |> arrange(analyte, station_id_name, date)
+  # flags + segment ids
+  df <- df |>
+    dplyr::arrange(analyte, station_id_name, date) |>
+    dplyr::group_by(analyte, station_id_name) |>
+    dplyr::mutate(nd_flag = tolower(trimws(detection_status)) %in% c("not detected","not detected."),
+                  seg_id  = cumsum(dplyr::lag(nd_flag, default = FALSE))
+                  ) |>
+    dplyr::ungroup()
 
   if (plot_type == "Time Series") {
-    # split detected vs non-detected from the SAME df
     detected <- df |>
-      dplyr::filter(!is.na(value) &
-                      !(tolower(trimws(detection_status)) %in% c("not detected","not detected.")))
+      dplyr::filter(!is.na(value) & !nd_flag) # splitting detected vs non-detected using the flag
 
     nd <- df |>
-      dplyr::filter(tolower(trimws(detection_status)) %in% c("not detected","not detected.")) |>
+      dplyr::filter(nd_flag) |>
       dplyr::mutate(nd_height = dplyr::case_when(
         reports_to == "MDL" ~ as.numeric(mdl),
         reports_to == "MRL" ~ as.numeric(mrl),
-        TRUE ~ NA_real_)) |>
-      dplyr::filter(!is.na(nd_height)) |>
-      dplyr::mutate(
+        TRUE ~ NA_real_),
         x_minus = date - lubridate::days(10),
-        x_plus  = date + lubridate::days(10))
+        x_plus  = date + lubridate::days(10)
+        ) |>
+      dplyr::filter(!is.na(nd_height))
 
-    # base plot on FULL df so facets exist even if only ND rows are present
+    # base plot so facets exist
     p <- ggplot(df, aes(x = date)) +
       facet_wrap(~ analyte, scales = "free_y", ncol = 1) +
       labs(x = "", y = y_lab, color = "Location") +
       theme_minimal()
 
-    # add detected lines/points if present
+    # lines/points for detected ONLY, with group resetting after non-detects
     if (nrow(detected) > 0) {
       p <- p +
-        geom_line(data = detected, aes(y = value, color = station_id_name)) +
-        geom_point(data = detected, aes(y = value, color = station_id_name),
+        geom_line(data = detected,
+                  aes(y = value,
+                      color = station_id_name,
+                      group = interaction(station_id_name, seg_id)), linewidth = 0.6) +
+        geom_point(data = detected,
+                   aes(y = value, color = station_id_name),
                    size = 1, alpha = 0.6)
-    }
+      }
 
-    # add ND markers if present
+    # Non-detect markers (vertical + short horizontal at MDL/MRL)
     if (nrow(nd) > 0) {
       p <- p +
-        geom_segment(
-          data = nd,
-          aes(x = date, xend = date, y = 0, yend = nd_height, color = station_id_name),
-          linewidth = 0.6, linetype = 5, inherit.aes = FALSE
-        ) +
-        geom_segment(
-          data = nd,
-          aes(x = x_minus, xend = x_plus, y = nd_height, yend = nd_height, color = station_id_name),
-          linewidth = 0.6, lineend = "square", inherit.aes = FALSE
-        )
+        geom_segment(data = nd,
+                     aes(x = date, xend = date, y = 0, yend = nd_height, color = station_id_name),
+                     linewidth = 0.6, linetype = 5, inherit.aes = FALSE) +
+        geom_segment(data = nd,
+                     aes(x = x_minus, xend = x_plus, y = nd_height, yend = nd_height, color = station_id_name),
+                     linewidth = 0.6, lineend = "square", inherit.aes = FALSE)
+      }
     }
-  }
   else if (plot_type == "Box Plot") {
     p <- ggplot(
       df |> dplyr::filter(!is.na(value)),
