@@ -290,21 +290,33 @@ server <- function(input, output, session) {
         label = ~lapply(river, htmltools::HTML),
         popup = ~river, color = "#5299D9",
         opacity = 1, weight = 1.5) |>
+      # Active sites (circles)
       addCircleMarkers(
-        data    = wq_metadata,
+        data = subset(wq_metadata, status == "Active"),
         layerId = ~station_id_name,
-        label   = ~paste(station_id_name, "-", station_description),
+        label = ~paste(station_id_name, "-", station_description),
         radius = 6, stroke = TRUE, weight = 1, color = "black",
         fillOpacity = 0.7,
         fillColor = ~site_color,
         popup = ~paste0("<b>", station_id, "</b><br/>", station_description)
-      ) |>
-      addLegend(
-        position = "bottomright",
-        colors = site_pal,
-        labels = names(site_pal),
-        title = "Monitoring Sites",
-        opacity = 0.7 )|>
+        ) |>
+      # Inactive sites (triangles using a custom icon)
+      addMarkers(
+        data = subset(wq_metadata, status == "Inactive"),
+        layerId = ~station_id_name,
+        label = ~paste(station_id_name, "-", station_description),
+        icon = icons(
+          iconUrl = "https://upload.wikimedia.org/wikipedia/commons/3/3c/Black_triangle.svg",
+          iconWidth = 12, iconHeight = 12),
+        popup = ~paste0("<b>", station_id, "</b><br/>", station_description)) |>
+      # Custom legend
+      addControl(html = "<div style='background:white; padding: 10px; border-radius: 5px;'>
+      <b>Station Status</b><br><svg width='20' height='20'>
+      <circle cx='10' cy='10' r='6' stroke='black' stroke-width='1' fill='black' /
+      </svg> Active<br>
+      <svg width='20' height='20'>
+      <polygon points='10,4 4,16 16,16' stroke='black' stroke-width='1' fill='black' />
+      </svg> Inactive</div>", position = "bottomright") |>
       # addCircleMarkers(
       #   data    = wq_metadata,
       #   layerId = ~station_id_name,
@@ -329,8 +341,6 @@ server <- function(input, output, session) {
         )
     })
 
-  ## when dropdown changes,zoom to ALL selected
-  #TODO fix so that when only one location is selected, de-selection works the same than with many
   observeEvent(input$wq_map_marker_click, ignoreInit = TRUE, {
     click <- input$wq_map_marker_click
     req(!is.null(click), !is.null(click$id))
