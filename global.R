@@ -17,6 +17,8 @@ library(sf)
 library(DBI)
 library(patchwork)
 library(janitor)
+library(colorspace)
+
 
 
 # Colors ------------------------------------------------------------------
@@ -146,8 +148,33 @@ wq_metadata <- wq_metadata_raw |>
     n() > 1 & status == "Inactive" ~ paste0(station_description, " - Historical"),
     TRUE ~ station_description)) |>
   ungroup() |>
-  mutate(station_id_name = paste(station_id, "-", station_description)) |>
+  mutate(station_id_name = paste(station_id, "-", station_description),
+         region = case_when(station_id %in% c("NZ002", "NZ004") ~ "Carquinez",
+                            station_id %in% c("D16", "D19", "D26", "D28A") ~ "Central Delta",
+                            station_id %in% c("D4", "D10", "D12", "D22") ~ "Confluence",
+                            station_id %in% c("C3A", "NZ068") ~ "North Delta",
+                            station_id %in% c("D41", "D41A", "NZ325") ~ "San Pablo Bay",
+                            station_id %in% c("C9", "C10A", "MD10A", "P8") ~ "South Delta",
+                            station_id %in% c("D6", "D7", "D8") ~ "Suisun and Grizzly Bays",
+                            station_id %in% c("NZ032", "NZS42") ~ "Suisun Marsh",
+                            T ~ NA)) |>
   glimpse()
+
+# tol_muted <- qualitative_hcl(
+#   n = length(unique(wq_metadata$region)),
+#   palette = "Tol Muted"
+# )
+
+#TODO figure out if region should be assigned to those that are not currently grouped on EMP site
+site_pal <- setNames(tol_muted, sort(unique(wq_metadata$region)))
+
+wq_metadata <- wq_metadata |>
+  mutate(site_color = ifelse(
+    status == "Active",
+    site_pal[region], lighten(site_pal[region], amount = 1))) |>
+  # filter(!is.na(region)) |>
+  glimpse()
+
 
 # adding lat/long fields for zooming functionality
 coords <- sf::st_coordinates(wq_metadata)

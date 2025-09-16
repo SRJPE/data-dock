@@ -296,15 +296,30 @@ server <- function(input, output, session) {
         label   = ~paste(station_id_name, "-", station_description),
         radius = 6, stroke = TRUE, weight = 1, color = "black",
         fillOpacity = 0.7,
-        fillColor = ~ifelse(status == "Active", "black", "gray"),
+        fillColor = ~site_color,
         popup = ~paste0("<b>", station_id, "</b><br/>", station_description)
-        ) |>
+      ) |>
       addLegend(
         position = "bottomright",
-        colors = c("black", "gray"),
-        labels = c("Active Station", "Inactive Station"),
-        title = "Station Status",
-        opacity = 0.7) |>
+        colors = site_pal,
+        labels = names(site_pal),
+        title = "Monitoring Sites",
+        opacity = 0.7 )|>
+      # addCircleMarkers(
+      #   data    = wq_metadata,
+      #   layerId = ~station_id_name,
+      #   label   = ~paste(station_id_name, "-", station_description),
+      #   radius = 6, stroke = TRUE, weight = 1, color = "black",
+      #   fillOpacity = 0.7,
+      #   fillColor = ~ifelse(status == "Active", "black", "gray"),
+      #   popup = ~paste0("<b>", station_id, "</b><br/>", station_description)
+      # ) |>
+      # addLegend(
+      #   position = "bottomright",
+      #   colors = c("black", "gray"),
+      #   labels = c("Active Station", "Inactive Station"),
+      #   title = "Station Status",
+      #   opacity = 0.7) |>
       # Initial full-extent view
       fitBounds(
         lng1 = min(wq_metadata$longitude, na.rm = TRUE),
