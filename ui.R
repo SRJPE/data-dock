@@ -88,6 +88,7 @@ ui <- fluidPage(
                )
              ),
 
+
              # --- Map Filter Panel ---
              conditionalPanel(
                condition = "input.which_view_wq == 'Map Filter'",
@@ -154,7 +155,8 @@ ui <- fluidPage(
                column(width = 8,
                       # uiOutput("wq_dynamic_plot")
                       plotlyOutput("wq_dynamic_plot", height = "600px")
-               )
+               ),
+               downloadButton("download_wq_csv", "Download selected data")
              )
     ),
 

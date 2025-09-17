@@ -380,6 +380,16 @@ filtered_wq_data <- reactive({
   data
 })
 
+output$download_wq_csv <- downloadHandler(
+  filename = function() {
+    paste0("water_quality_", Sys.Date(), ".csv")
+  },
+  content = function(file) {
+    df <- filtered_wq_data()
+    readr::write_csv(df, file)
+  }
+)
+
 wq_missing_sites <- reactiveVal(character(0)) # filtering so message works
 
 output$wq_dynamic_plot <- renderPlotly({
