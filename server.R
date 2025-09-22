@@ -309,29 +309,21 @@ server <- function(input, output, session) {
           iconUrl = "https://upload.wikimedia.org/wikipedia/commons/3/3c/Black_triangle.svg",
           iconWidth = 12, iconHeight = 12),
         popup = ~paste0("<b>", station_id, "</b><br/>", station_description)) |>
-      # Custom legend
-      addControl(html = "<div style='background:white; padding: 10px; border-radius: 5px;'>
-      <b>Station Status</b><br><svg width='20' height='20'>
-      <circle cx='10' cy='10' r='6' stroke='black' stroke-width='1' fill='black' /
-      </svg> Active<br>
-      <svg width='20' height='20'>
-      <polygon points='10,4 4,16 16,16' stroke='black' stroke-width='1' fill='black' />
-      </svg> Inactive</div>", position = "bottomright") |>
-      # addCircleMarkers(
-      #   data    = wq_metadata,
-      #   layerId = ~station_id_name,
-      #   label   = ~paste(station_id_name, "-", station_description),
-      #   radius = 6, stroke = TRUE, weight = 1, color = "black",
-      #   fillOpacity = 0.7,
-      #   fillColor = ~ifelse(status == "Active", "black", "gray"),
-      #   popup = ~paste0("<b>", station_id, "</b><br/>", station_description)
-      # ) |>
-      # addLegend(
-      #   position = "bottomright",
-      #   colors = c("black", "gray"),
-      #   labels = c("Active Station", "Inactive Station"),
-      #   title = "Station Status",
-      #   opacity = 0.7) |>
+      addCircleMarkers(
+        data    = wq_metadata,
+        layerId = ~station_id_name,
+        label   = ~paste(station_id_name, "-", station_description),
+        radius = 6, stroke = TRUE, weight = 1, color = "black",
+        fillOpacity = 0.7,
+        fillColor = ~ifelse(status == "Active", "black", "gray"),
+        popup = ~paste0("<b>", station_id, "</b><br/>", station_description)
+      ) |>
+      addLegend(
+        position = "bottomright",
+        colors = c("black", "gray"),
+        labels = c("Active Station", "Inactive Station"),
+        title = "Station Status",
+        opacity = 0.7) |>
       # Initial full-extent view
       fitBounds(
         lng1 = min(wq_metadata$longitude, na.rm = TRUE),
