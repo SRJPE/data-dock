@@ -293,6 +293,18 @@ ui <- fluidPage(
                       ))
              ),
 
+## Download Tab -------------------------------------------------------
+
+    tabPanel("Download Data",
+             tabsetPanel(
+               tabPanel("Data Repositories",
+                        h4("Data Access"),
+                        p("Information about data sources...")
+               )
+             )
+             ),
+
+
     ## Resources Tab -------------------------------------------------------
     tabPanel("Resources",
              tabsetPanel(
