@@ -153,7 +153,11 @@ ui <- fluidPage(
                       leafletOutput("wq_map", height = "600px")
                       ),
                column(width = 8,
-                      plotlyOutput("wq_dynamic_plot", height = "600px")
+                      plotlyOutput("wq_dynamic_plot", height = "600px"),
+                      tags$p(
+                        "Note: Vertical dashed lines with a short horizontal cap indicate non-detect values.
+      Their height corresponds to the reporting limit (MDL/MRL).",
+                        style = "font-size: 0.9em; font-style: italic; color: #555; margin-top:5px;")
                       )
                ),
              fluidRow(
