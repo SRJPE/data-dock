@@ -160,7 +160,13 @@ ui <- fluidPage(
                column(width = 12,
                       div(style = "margin-top: 20px; text-align: right;",
                           downloadBttn("download_wq_csv", "Download Selected Data",
-                                       style = "unite", color = "primary", size = "sm"))
+                                       style = "unite", color = "primary", size = "sm"),
+                          tags$p(
+                            tags$span("Download the data currently selected in the map and filters."),
+                            tags$br(),
+                            tags$span("For custom queries, visit the Download tab."),
+                            style = "margin-bottom: 5px; font-style: italic; color: #555;")
+                          )
                       )
                )
              ),
