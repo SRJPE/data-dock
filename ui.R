@@ -149,17 +149,21 @@ ui <- fluidPage(
 
              # === Map and Floating Plot Panel ===
              fluidRow(
-               column(
-                 width = 4,
-                 leafletOutput("wq_map", height = "600px")),
+               column(width = 4,
+                      leafletOutput("wq_map", height = "600px")
+                      ),
                column(width = 8,
-                      # uiOutput("wq_dynamic_plot")
                       plotlyOutput("wq_dynamic_plot", height = "600px")
+                      )
                ),
-               downloadButton("download_wq_csv", "Download selected data")
-             )
-    ),
-
+             fluidRow(
+               column(width = 12,
+                      div(style = "margin-top: 20px; text-align: right;",
+                          downloadBttn("download_wq_csv", "Download Selected Data",
+                                       style = "unite", color = "primary", size = "sm"))
+                      )
+               )
+             ),
     #
     #   mainPanel(
     #     tabsetPanel(
