@@ -579,3 +579,15 @@ output$wq_dynamic_plot <- renderPlotly({
 
 }
 
+
+# Download tab  --------------------------------------------------------------
+
+# observe({
+#   updateSelectizeInput(
+#     session,
+#     inputId = "analyte_download",
+#     choices = sort(unique(wq_data$analyte)),
+#     selected = character(0),
+#     server = TRUE)
+# })
+
