@@ -306,8 +306,8 @@ ui <- fluidPage(
                       uiOutput("genetics_dynamic_plot")
                       ))
              ),
-    ## Download Tab -------------------------------------------------------
-
+    # ## Download Tab -------------------------------------------------------
+    #
     tabPanel("Download Data",
              fluidRow(
                column(
@@ -323,8 +323,6 @@ ui <- fluidPage(
                    label = tags$strong("Filter by Location:"),
                    choices = c(
                      setNames(
-                       # wq_metadata$station_id[order(wq_metadata$station_description)],
-                       # wq_metadata$station_description[order(wq_metadata$station_description)]
                        wq_metadata$station_id_name[order(wq_metadata$station_id_name)],
                        wq_metadata$station_id_name[order(wq_metadata$station_id_name)]
                      )
@@ -334,14 +332,6 @@ ui <- fluidPage(
                    selectize = TRUE)
                ),
 
-               #TODO confirm that we will no longer use the sites
-               # sidebarLayout(
-               #   sidebarPanel(
-               #     h4("Controls"),
-               #     selectInput("region", "Region/site:",
-               #                 choices = c("Carquinez", "Central Delta", "Confluence",
-               #                             "North Delta", "San Pablo Bay", "South Delta",
-               #                             "Suisun and Grizzly Bays", "Suisun Marsh")),
                div(
                  style = "min-width: 250px;",
                  sliderInput("year_range", "Year Range (update min and max years):",
@@ -368,19 +358,6 @@ ui <- fluidPage(
                  )
                ),
              ),
-             fluidRow(
-               column(width = 12,
-                      div(style = "margin-top: 20px; text-align: center;",
-                          downloadBttn("download_wq_csv", "Download Selected Data",
-                                       style = "unite", color = "primary", size = "lg"),
-                          tags$p(
-                            tags$span("Download the data currently selected in the map and filters."),
-                            tags$br(),
-                            tags$span("Data will be downloaded in .csv format."),
-                            style = "margin-bottom: 5px; font-style: italic; color: #555;")
-                      )
-               )
-             )
     ), #TODO perhaps add a table that shows selected data?
 
 
