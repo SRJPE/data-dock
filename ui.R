@@ -4,6 +4,7 @@ library(leaflet)
 ui <- fluidPage(
   navbarPage(
     "Genetics and Discrete Water Quality Pilot Dashboard",
+    id = "navbar",
 
     ## Overview Tab --------------------------------------------------------
     tabPanel("Overview",
@@ -306,59 +307,40 @@ ui <- fluidPage(
                       uiOutput("genetics_dynamic_plot")
                       ))
              ),
-    # ## Download Tab -------------------------------------------------------
-    #
-    tabPanel("Download Data",
-             fluidRow(
-               column(
-                 width = 12,
-               )
-             ),
-             div(
-               style = "display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 10px;",
-               div(
-                 style = "min-width: 200px;",
-                 selectInput(
-                   inputId = "location_filter_wq",
-                   label = tags$strong("Filter by Location:"),
-                   choices = c(
-                     setNames(
-                       wq_metadata$station_id_name[order(wq_metadata$station_id_name)],
-                       wq_metadata$station_id_name[order(wq_metadata$station_id_name)]
-                     )
-                   ),
-                   selected = NULL,
-                   multiple = TRUE,
-                   selectize = TRUE)
-               ),
 
-               div(
-                 style = "min-width: 250px;",
-                 sliderInput("year_range", "Year Range (update min and max years):",
-                             min = 2020,
-                             max = 2025,
-                             value = c(2020, 2025),
-                             step = 1,
-                             sep = "")
-               ),
-               div(
-                 style = "min-width: 200px;",
-                 selectizeInput(
-                   inputId = "analyte_download",
-                   label = "Analyte:",
-                   choices = c(
-                     setNames(
-                       wq_data$analyte[order(wq_data$analyte)], #TODO eventually move this to server to improve performance
-                       wq_data$analyte[order(wq_data$analyte)]
-                     )
-                   ),
-                   selected = NULL,
-                   multiple = TRUE,
-                   options = list(placeholder = "Select an analyte")
-                 )
-               ),
+    # ## Download Tab -------------------------------------------------------
+
+    tabPanel("Download Data",
+             div(
+               style = "display:flex; gap:20px; align-items:flex-end; flex-wrap:wrap;",
+               selectInput("location_filter_dl", "Filter by Location:",
+                           choices = wq_metadata$station_id_name,
+                           multiple = TRUE),
+               sliderInput("year_range_dl", "Year Range:",
+                           min = 2020, max = 2025, value = c(2020, 2025), step = 1),
+               selectizeInput("analyte_download", "Analyte:",
+                              choices = sort(unique(wq_data$analyte)),
+                              multiple = TRUE,
+                              options = list(placeholder = "Select analyte"))
              ),
-    ), #TODO perhaps add a table that shows selected data?
+             fluidRow(
+               column(12,
+                      div(style = "margin-top:20px; text-align:center;",
+                          downloadBttn("download_wq_csv_dl", "Download Selected Data",
+                                       style = "unite", color = "primary", size = "lg"),
+                          tags$p("Download the data you select on this tab.",
+                                 tags$br(),
+                                 "Files are exported as .csv.",
+                                 style = "font-style: italic; color: #555;")
+                      )
+               )
+             )
+    ),
+
+
+
+
+     #TODO perhaps add a table that shows selected data?
 
 
     ## Resources Tab -------------------------------------------------------

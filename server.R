@@ -577,17 +577,63 @@ output$wq_dynamic_plot <- renderPlotly({
 
 })
 
-}
-
 
 # Download tab  --------------------------------------------------------------
+# sync Water Quality selections to Download tab
+observeEvent(input$navbar, {
+  if (input$navbar == "Download Data") {
+    updateSelectInput(session, "location_filter_dl",
+                      selected = input$location_filter_wq)
+    updateSliderInput(session, "year_range_dl",
+                      value = input$year_range)
+    updateSelectizeInput(session, "analyte_download",
+                         selected = input$analyte)
+  }
+})
 
-# observe({
-#   updateSelectizeInput(
-#     session,
-#     inputId = "analyte_download",
-#     choices = sort(unique(wq_data$analyte)),
-#     selected = character(0),
-#     server = TRUE)
-# })
+# shared filtering logic
+filter_wq_data <- function(locations, years, analytes) {
+  out <- wq_data |>
+    dplyr::filter(
+      lubridate::year(date) >= years[1],
+      lubridate::year(date) <= years[2]
+    )
 
+  if (!is.null(locations) && length(locations) > 0) {
+    out <- out |> dplyr::filter(station_id_name %in% locations)
+  }
+
+  if (!is.null(analytes) && length(analytes) > 0) {
+    out <- out |> dplyr::filter(analyte %in% analytes)
+  }
+
+  out
+}
+
+# reactives for both tabs
+wq_download_data <- reactive({
+  filter_wq_data(input$location_filter_wq,
+                 input$year_range,
+                 input$analyte)
+})
+
+dl_download_data <- reactive({
+  filter_wq_data(input$location_filter_dl,
+                 input$year_range_dl,
+                 input$analyte_download)
+})
+
+# shared download handler function
+make_download_handler <- function(data_fun) {
+  downloadHandler(
+    filename = function() paste0("water_quality_", Sys.Date(), ".csv"),
+    content = function(file) {
+      readr::write_csv(data_fun(), file)
+    }
+  )
+}
+
+# assign to outputs
+output$download_wq_csv    <- make_download_handler(wq_download_data)
+output$download_wq_csv_dl <- make_download_handler(dl_download_data)
+}
