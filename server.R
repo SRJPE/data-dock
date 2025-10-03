@@ -592,7 +592,7 @@ observeEvent(input$navbar, {
 })
 
 # shared filtering logic
-filter_wq_data <- function(locations, years, analytes) {
+filter_wq_data <- function(locations, years, analytes, include_weather = FALSE) {
   out <- wq_data |>
     dplyr::filter(
       lubridate::year(date) >= years[1],
@@ -603,8 +603,20 @@ filter_wq_data <- function(locations, years, analytes) {
     out <- out |> dplyr::filter(station_id_name %in% locations)
   }
 
+  # handle analytes
   if (!is.null(analytes) && length(analytes) > 0) {
     out <- out |> dplyr::filter(analyte %in% analytes)
+  }
+
+  # add weather analytes if requested
+  if (include_weather) {
+    weather <- wq_data |>
+      dplyr::filter(
+        analyte %in% c("Rain", "Sky Conditions"),
+        lubridate::year(date) >= years[1],
+        lubridate::year(date) <= years[2]
+      )
+    out <- dplyr::bind_rows(out, weather)
   }
 
   out
@@ -614,13 +626,15 @@ filter_wq_data <- function(locations, years, analytes) {
 wq_download_data <- reactive({
   filter_wq_data(input$location_filter_wq,
                  input$year_range,
-                 input$analyte)
+                 input$analyte,
+                 include_weather = input$include_weather)
 })
 
 dl_download_data <- reactive({
   filter_wq_data(input$location_filter_dl,
                  input$year_range_dl,
-                 input$analyte_download)
+                 input$analyte_download,
+                 include_weather = input$include_weather)
 })
 
 # shared download handler function
@@ -635,5 +649,17 @@ make_download_handler <- function(data_fun) {
 
 # assign to outputs
 output$download_wq_csv    <- make_download_handler(wq_download_data)
-output$download_wq_csv_dl <- make_download_handler(dl_download_data)
+output$dl_preview_table <- DT::renderDataTable({
+  req(dl_download_data())
+
+  dl_download_data() |>
+    dplyr::select(date, station_id_name, analyte, value, unit) |>
+    DT::datatable(
+      options = list(
+        pageLength = 10,
+        scrollX = TRUE
+      )
+    )
+})
 }
+

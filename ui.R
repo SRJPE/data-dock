@@ -308,8 +308,7 @@ ui <- fluidPage(
                       ))
              ),
 
-    # ## Download Tab -------------------------------------------------------
-
+    ## Download Tab -------------------------------------------------------
     tabPanel("Download Data",
              div(
                style = "display:flex; gap:20px; align-items:flex-end; flex-wrap:wrap;",
@@ -325,6 +324,10 @@ ui <- fluidPage(
                               multiple = TRUE,
                               options = list(placeholder = "Select analyte"))
              ),
+             checkboxInput(
+               inputId = "include_weather",
+               label = "Include weather condition analytes (Rain, Sky Conditions)",
+               value = FALSE),
              fluidRow(
                column(12,
                       div(style = "margin-top:20px; text-align:center;",
@@ -334,13 +337,17 @@ ui <- fluidPage(
                                  tags$br(),
                                  "Files are exported as .csv.",
                                  style = "font-style: italic; color: #555;")
+                          )
                       )
+               ),
+             fluidRow(
+               column(
+                 width = 12,
+                 h4("Preview of Selected Data"),
+                 DT::dataTableOutput("dl_preview_table")
+                 )
                )
-             )
-    ),
-
-     #TODO perhaps add a table that shows selected data?
-
+             ),
 
     ## Resources Tab -------------------------------------------------------
     tabPanel("Resources",
