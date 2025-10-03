@@ -317,7 +317,9 @@ ui <- fluidPage(
                            choices = wq_metadata$station_id_name,
                            multiple = TRUE),
                sliderInput("year_range_dl", "Year Range:",
-                           min = 2020, max = 2025, value = c(2020, 2025), step = 1),
+                           min = 2020, max = 2025, value = c(2020, 2025),
+                           step = 1,
+                           sep = ""),
                selectizeInput("analyte_download", "Analyte:",
                               choices = sort(unique(wq_data$analyte)),
                               multiple = TRUE,
@@ -336,9 +338,6 @@ ui <- fluidPage(
                )
              )
     ),
-
-
-
 
      #TODO perhaps add a table that shows selected data?
 
