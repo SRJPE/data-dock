@@ -648,7 +648,8 @@ make_download_handler <- function(data_fun) {
 }
 
 # assign to outputs
-output$download_wq_csv    <- make_download_handler(wq_download_data)
+output$download_wq_csv_dl <- make_download_handler(dl_download_data)
+
 output$dl_preview_table <- DT::renderDataTable({
   req(dl_download_data())
 

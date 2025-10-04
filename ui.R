@@ -324,10 +324,14 @@ ui <- fluidPage(
                               multiple = TRUE,
                               options = list(placeholder = "Select analyte"))
              ),
-             checkboxInput(
-               inputId = "include_weather",
-               label = "Include weather condition analytes (Rain, Sky Conditions)",
-               value = FALSE),
+             div(
+               style = "min-width: 200px; margin-top: 20px;",
+               checkboxInput(
+                 inputId = "include_weather",
+                 label = "Include weather condition analytes (Rain, Sky Conditions)",
+                 value = FALSE
+               )
+             ),
              fluidRow(
                column(12,
                       div(style = "margin-top:20px; text-align:center;",
