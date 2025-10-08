@@ -610,15 +610,41 @@ filter_wq_data <- function(locations, years, analytes, include_weather = FALSE) 
 
   # add weather analytes if requested
   if (include_weather) {
-    weather <- wq_data |>
+    weather <- wq_quality_weather |>
       dplyr::filter(
         analyte %in% c("Rain", "Sky Conditions"),
         lubridate::year(date) >= years[1],
         lubridate::year(date) <= years[2]
       )
-    out <- dplyr::bind_rows(out, weather)
-  }
 
+    # same location filtering to weather data
+    if (!is.null(locations) && length(locations) > 0) {
+      weather <- weather |> dplyr::filter(station_id_name %in% locations)
+    }
+
+    if (nrow(weather) == 0) {
+      showNotification(
+        "No weather data (Rain or Sky Conditions) available for the selected site(s) and year(s).",
+        type = "message",
+        duration = 6
+      )
+    } else {
+
+      weather <- weather |>
+        dplyr::mutate(
+          value_text = value,
+          value = NA_real_
+        )
+
+      out <- out |> #TODO figure out a way to rename value_text on export so all values show (numeric/character)
+        dplyr::mutate(
+          value_text = as.character(value)
+        )
+
+
+    out <- dplyr::bind_rows(out, weather)
+    }
+  }
   out
 }
 

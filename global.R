@@ -188,11 +188,11 @@ wq_data_raw <- read_csv("data-raw/EMP_DWQ_Data_2020-2023_draft.csv") |>
 wq_data_joined <- wq_data_raw |>
 left_join(wq_metadata |>  st_drop_geometry() |> select(station_id, station_description),
           by = "station_id") |>
-  st_drop_geometry() |>
-  mutate(date = mdy(date),
-         value = as.numeric(value))
+  st_drop_geometry()
 
 wq_data <- wq_data_joined |>
+  mutate(date = mdy(date),
+         value = as.numeric(value)) |>
   filter(!is.na(station_description),
          analyte != "Latitude",
          analyte != "Longitude",
@@ -224,4 +224,6 @@ wq_data_missing_location <- wq_data |>
 
 # weather analytes
 wq_quality_weather <- wq_data_joined |>
-  filter(analyte %in% c("Rain", "Sky Conditions"))
+  filter(analyte %in% c("Rain", "Sky Conditions")) |>
+  mutate(station_id_name = paste(station_id, "-", station_description),
+         date = mdy(date))
