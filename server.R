@@ -227,138 +227,132 @@ server <- function(input, output, session) {
       inputId = "analyte",
       choices = sort(unique(wq_data$analyte)),
       selected = character(0),
-      server = TRUE
-    )
-  })
-
-
-output$wq_map <- renderLeaflet({
-  leaflet() |>
-    addMapPane("Lines-Habitat", zIndex = 430) |>
-    addTiles(
-      urlTemplate = "https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}",
-      attribution = 'Basemap © Esri, GEBCO, NOAA, CHS, etc.') |>
-    addPolylines(
-      data = salmonid_habitat_extents,
-      label = ~lapply(river, htmltools::HTML),
-      popup = ~river,
-      color = "#5299D9",
-      opacity = 1,
-      weight = 1.5) |>
-    addCircleMarkers(
-      data = wq_metadata,
-      layerId = ~station_id_name,
-      label = ~paste(station_id, "-", station_description),
-      radius = 6,
-      stroke = TRUE,
-      weight = 1,
-      color = "black",
-      fillOpacity = 0.7,
-      fillColor = ~ifelse(status == "Active", "black", "gray"),
-      popup = ~paste0(
-        "<b>", station_id, "</b><br/>", station_description
-        # ,
-        # "<b>Status:</b> ", status, "<br/>",
-        # "<b>Station Type:</b> ", station_type, "<br/>",
-        # "<b>Start Date:</b> ", start_date, "<br/>",
-        # "<b>End Date:</b> ", end_date
-        )
-      )|>
-    addLegend(
-      position = "bottomright",
-      colors = c("black", "gray"),
-      labels = c("Active Station", "Inactive Station"),
-      title = "Station Status",
-      opacity = 0.7
-    )
-  })
-
-  click_marker_wq <- eventReactive(input$wq_map_marker_click, {
-    req(!is.null(input$wq_map_marker_click))
-    input$wq_map_marker_click$id
+      server = TRUE)
     })
-
-# adding reactive to zoom into selected site
-  observeEvent(input$location_filter_wq, {
-    req(input$location_filter_wq)
-
-    # If "All Locations" is selected (and only it), reset the map
-    if (identical(input$location_filter_wq, "All Locations")) {
-      leafletProxy("wq_map") |>
-        clearGroup("highlight") |>
-        clearPopups() |>
-        fitBounds(
-          lng1 = min(wq_metadata$longitude, na.rm = TRUE),
-          lat1 = min(wq_metadata$latitude, na.rm = TRUE),
-          lng2 = max(wq_metadata$longitude, na.rm = TRUE),
-          lat2 = max(wq_metadata$latitude, na.rm = TRUE))
-      return()
-    }
-
-    # If "All Locations" is selected alongside others, remove it from the selection
-    if ("All Locations" %in% input$location_filter_wq && length(input$location_filter_wq) > 1) {
-      updateSelectInput(
-        session,
-        "location_filter_wq",
-        selected = setdiff(input$location_filter_wq, "All Locations"))
-      return()
-    }
-
-    # Filter selected stations
-    selected_station <- wq_metadata[wq_metadata$station_id_name %in% input$location_filter_wq, ]
-    req(nrow(selected_station) > 0)
-    bbox <- sf::st_bbox(selected_station)
-
+# zoom to selection
+  draw_and_zoom_selection <- function(sel_names) {
     map <- leafletProxy("wq_map") |>
       clearGroup("highlight") |>
-      clearPopups() |>
+      clearPopups()
+
+    # if nothing selected, zoom to full extent
+    if (is.null(sel_names) || length(sel_names) == 0) {
+      return(
+        map |> fitBounds(
+          lng1 = min(wq_metadata$longitude, na.rm = TRUE),
+          lat1 = min(wq_metadata$latitude,  na.rm = TRUE),
+          lng2 = max(wq_metadata$longitude, na.rm = TRUE),
+          lat2 = max(wq_metadata$latitude,  na.rm = TRUE)
+          )
+      )
+    }
+
+    selected_station <- subset(wq_metadata, station_id_name %in% sel_names)
+    if (nrow(selected_station) == 0) return(invisible(map))
+
+    # highlight markers
+    map <- map |>
       addCircleMarkers(
         data = selected_station,
-        lat = ~latitude,
-        lng = ~longitude,
+        lat = ~latitude, lng = ~longitude,
         radius = 10,
-        fillColor = "#7E2954",
-        color = "white",
-        weight = 2,
-        fillOpacity = 0.9,
+        fillColor = "#7E2954", color = "white",
+        weight = 2, fillOpacity = 0.9,
         group = "highlight",
-        label = ~paste("Selected:", station_id, station_description))
-
-    # Apply different zoom logic depending on number of selected sites
-    if (nrow(selected_station) == 1) {
-      map |>
-        setView(
-          lng = selected_station$longitude,
-          lat = selected_station$latitude,
-          zoom = 11
+        label = ~paste("Selected:", station_id_name),
+        layerId = ~paste0(station_id_name, "__hi")
         )
-      } else {
 
-        map |>
-          fitBounds(bbox["xmin"], bbox["ymin"], bbox["xmax"], bbox["ymax"])
+    # Zoom logic
+    if (nrow(selected_station) == 1) {
+      map |>  setView(
+        lng = selected_station$longitude[1],
+        lat = selected_station$latitude[1],
+        zoom = 11)
+      } else {
+        map |>  fitBounds(
+          lng1 = min(selected_station$longitude, na.rm = TRUE),
+          lat1 = min(selected_station$latitude,  na.rm = TRUE),
+          lng2 = max(selected_station$longitude, na.rm = TRUE),
+          lat2 = max(selected_station$latitude,  na.rm = TRUE)
+        )
       }
+    }
+
+  output$wq_map <- renderLeaflet({
+    leaflet() |>
+      addMapPane("Lines-Habitat", zIndex = 430) |>
+      addTiles(
+        urlTemplate = "https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}",
+        attribution = 'Basemap © Esri, GEBCO, NOAA, CHS, etc.') |>
+      addPolylines(
+        data = salmonid_habitat_extents,
+        label = ~lapply(river, htmltools::HTML),
+        popup = ~river, color = "#5299D9",
+        opacity = 1, weight = 1.5) |>
+      # Active sites (circles)
+      addCircleMarkers(
+        data = subset(wq_metadata, status == "Active"),
+        layerId = ~station_id_name,
+        label = ~paste(station_id_name, "-", station_description),
+        radius = 6, stroke = TRUE, weight = 1, color = "black",
+        fillOpacity = 0.7,
+        fillColor = ~site_color,
+        popup = ~paste0("<b>", station_id, "</b><br/>", station_description)
+        ) |>
+      # Inactive sites (triangles using a custom icon)
+      addMarkers(
+        data = subset(wq_metadata, status == "Inactive"),
+        layerId = ~station_id_name,
+        label = ~paste(station_id_name, "-", station_description),
+        icon = icons(
+          iconUrl = "https://upload.wikimedia.org/wikipedia/commons/3/3c/Black_triangle.svg",
+          iconWidth = 12, iconHeight = 12),
+        popup = ~paste0("<b>", station_id, "</b><br/>", station_description)) |>
+      addCircleMarkers(
+        data    = wq_metadata,
+        layerId = ~station_id_name,
+        label   = ~paste(station_id_name, "-", station_description),
+        radius = 6, stroke = TRUE, weight = 1, color = "black",
+        fillOpacity = 0.7,
+        fillColor = ~ifelse(status == "Active", "black", "gray"),
+        popup = ~paste0("<b>", station_id, "</b><br/>", station_description)
+      ) |>
+      addLegend(
+        position = "bottomright",
+        colors = c("black", "gray"),
+        labels = c("Active Station", "Inactive Station"),
+        title = "Station Status",
+        opacity = 0.7) |>
+      # Initial full-extent view
+      fitBounds(
+        lng1 = min(wq_metadata$longitude, na.rm = TRUE),
+        lat1 = min(wq_metadata$latitude,  na.rm = TRUE),
+        lng2 = max(wq_metadata$longitude, na.rm = TRUE),
+        lat2 = max(wq_metadata$latitude,  na.rm = TRUE)
+        )
     })
 
+  observeEvent(input$wq_map_marker_click, ignoreInit = TRUE, {
+    click <- input$wq_map_marker_click
+    req(!is.null(click), !is.null(click$id))
 
-# toggle selection when a marker is clicked
-observeEvent(input$wq_map_marker_click, {
-  id <- input$wq_map_marker_click$id
-  req(id)
+    # If highlight markers use the "__hi" suffix, normalize it here
+    id_raw <- click$id
+    id     <- sub("__hi$", "", id_raw)
 
-  # current selection (handle NULL safely)
-  current <- input$location_filter_wq
-  if (is.null(current)) current <- character(0)
+    current <- input$location_filter_wq
+    if (is.null(current)) current <- character(0)
 
-  # toggle logic
-  if (id %in% current) {
-    new_sel <- setdiff(current, id)
-  } else {
-    new_sel <- union(current, id)
-  }
+    new_sel <- if (id %in% current) setdiff(current, id) else union(current, id)
 
-  updateSelectInput(session, "location_filter_wq", selected = new_sel)
-})
+    updateSelectInput(session, "location_filter_wq", selected = new_sel)
+  })
 
+  # redraw highlight + zoom on dropdown change
+  observeEvent(input$location_filter_wq, {
+    draw_and_zoom_selection(input$location_filter_wq)
+  }, ignoreInit = TRUE)
 
 filtered_wq_data <- reactive({
   req(input$analyte, length(input$analyte) > 0, input$year_range)
@@ -378,11 +372,48 @@ filtered_wq_data <- reactive({
   data
 })
 
+output$download_wq_csv <- downloadHandler(
+  filename = function() {
+    paste0("water_quality_", Sys.Date(), ".csv")
+  },
+  content = function(file) {
+    df <- filtered_wq_data()
+    readr::write_csv(df, file)
+  }
+)
+
+wq_missing_sites <- reactiveVal(character(0)) # filtering so message works
+
 output$wq_dynamic_plot <- renderPlotly({
   req(!is.null(input$location_filter_wq) && length(input$location_filter_wq) > 0)
   req(input$analyte, length(input$analyte) > 0)
 
   df <- filtered_wq_data()
+
+  selected_locs <- input$location_filter_wq %||% character(0)
+
+  present_locs <- sort(unique(df$station_id_name))
+  missing_locs <- setdiff(selected_locs, present_locs)
+
+  prev_missing <- wq_missing_sites()
+  new_missing  <- setdiff(missing_locs, prev_missing)
+
+  if (length(new_missing) > 0) {
+    showNotification(
+      paste0("No data for selected analyte(s) at: ",
+             paste(new_missing, collapse = ", ")),
+      type = "warning", duration = 6
+    )
+  }
+
+  # update the tracker (so sites with data don't trigger, and new missing will)
+  wq_missing_sites(missing_locs)
+
+  if (n_distinct(df$analyte) > 8) {
+    validate(
+      need(FALSE, "Too many analytes selected. Please select 8 or fewer.")
+    )
+  }
   if (nrow(df) == 0) {
     return(plotly_empty(type = "scatter", mode = "lines") |>
              layout(title = "No data available for current selection."))
@@ -391,65 +422,150 @@ output$wq_dynamic_plot <- renderPlotly({
   plot_type <- as.character(input$plot_type)[1]
   y_lab <- if (length(input$analyte) == 1) input$analyte[[1]] else "Value"
 
-  df <- df |> arrange(analyte, station_id_name, date)
+
+  # flags + segment ids
+  df <- df |>
+    dplyr::arrange(analyte, station_id_name, date) |>
+    dplyr::group_by(analyte, station_id_name) |>
+    dplyr::mutate(nd_flag = tolower(trimws(detection_status)) %in% c("not detected","not detected."),
+                  seg_id  = cumsum(dplyr::lag(nd_flag, default = FALSE))
+                  ) |>
+    dplyr::ungroup()
+
+  # if (plot_type == "Time Series") {
+  #   detected <- df |>
+  #     dplyr::filter(!is.na(value) & !nd_flag) # splitting detected vs non-detected using the flag
+  #
+  #   nd <- df |>
+  #     dplyr::filter(nd_flag) |>
+  #     dplyr::mutate(nd_height = dplyr::case_when(
+  #       reports_to == "MDL" ~ as.numeric(mdl),
+  #       reports_to == "MRL" ~ as.numeric(mrl),
+  #       TRUE ~ NA_real_),
+  #       x_minus = date - lubridate::days(10),
+  #       x_plus  = date + lubridate::days(10)
+  #       ) |>
+  #     dplyr::filter(!is.na(nd_height))
+  #
+  #   # base plot so facets exist
+  #   p <- ggplot(df, aes(x = date)) +
+  #     facet_wrap(~ analyte, scales = "free_y", ncol = 1) +
+  #     labs(x = "", y = y_lab, color = "Location") +
+  #     theme_minimal()
+  #
+  #
+  #   # lines/points for detected ONLY, with group resetting after non-detects
+  #   if (nrow(detected) > 0) {
+  #     p <- p +
+  #       geom_line(data = detected,
+  #                 aes(y = value,
+  #                     color = station_id_name,
+  #                     group = interaction(station_id_name, seg_id)), linewidth = 0.6) +
+  #       geom_point(data = detected,
+  #                  aes(y = value, color = station_id_name),
+  #                  size = 1, alpha = 0.6)
+  #     }
+  #
+  #   # Non-detect markers (vertical + short horizontal at MDL/MRL)
+  #   if (nrow(nd) > 0) {
+  #     p <- p +
+  #       geom_segment(data = nd,
+  #                    aes(x = date, xend = date, y = 0, yend = nd_height, color = station_id_name),
+  #                    linewidth = 0.6, linetype = 5, inherit.aes = FALSE) +
+  #       geom_segment(data = nd,
+  #                    aes(x = x_minus, xend = x_plus, y = nd_height, yend = nd_height, color = station_id_name),
+  #                    linewidth = 0.6, lineend = "square", inherit.aes = FALSE)
+  #     }
+  #   }
+
+  # normalize unit per analyte
+  unit_lu <- df |>
+    dplyr::filter(!is.na(unit)) |>
+    dplyr::count(analyte, unit, name = "n") |>
+    dplyr::arrange(analyte, dplyr::desc(n)) |>
+    dplyr::group_by(analyte) |>
+    dplyr::slice(1L) |>
+    dplyr::ungroup() |>
+    dplyr::transmute(analyte, unit_label = unit)
+
+  df_plot <- df |>
+    dplyr::left_join(unit_lu, by = "analyte") |>
+    dplyr::mutate(
+      unit_label   = dplyr::coalesce(unit_label, "unit unknown"),
+      analyte_label = paste0(analyte, " (", unit_label, ")")
+    )
+
+
+  df_plot <- df_plot |>
+    dplyr::arrange(analyte, station_id_name, date) |>
+    dplyr::group_by(analyte, station_id_name) |>
+    dplyr::mutate(
+      nd_flag = tolower(trimws(detection_status)) %in% c("not detected","not detected."),
+      seg_id  = cumsum(dplyr::lag(nd_flag, default = FALSE))
+    ) |>
+    dplyr::ungroup()
 
   if (plot_type == "Time Series") {
-    # split detected vs non-detected from the SAME df
-    detected <- df %>%
-      dplyr::filter(!is.na(value) &
-                      !(tolower(trimws(detection_status)) %in% c("not detected","not detected.")))
+    detected <- df_plot |>
+      dplyr::filter(!is.na(value) & !nd_flag)
 
-    nd <- df %>%
-      dplyr::filter(tolower(trimws(detection_status)) %in% c("not detected","not detected.")) %>%
+    nd <- df_plot |>
+      dplyr::filter(nd_flag) |>
       dplyr::mutate(
         nd_height = dplyr::case_when(
           reports_to == "MDL" ~ as.numeric(mdl),
           reports_to == "MRL" ~ as.numeric(mrl),
           TRUE ~ NA_real_
-        )
-      ) %>%
-      dplyr::filter(!is.na(nd_height)) %>%
-      dplyr::mutate(
+        ),
         x_minus = date - lubridate::days(10),
         x_plus  = date + lubridate::days(10)
-      )
+      ) |>
+      dplyr::filter(!is.na(nd_height))
 
-    # base plot on FULL df so facets exist even if only ND rows are present
-    p <- ggplot(df, aes(x = date)) +
-      facet_wrap(~ analyte, scales = "free_y", ncol = 2) +
-      labs(x = "", y = y_lab, color = "Location") +
+    # y-axis label: unit if single analyte; otherwise blank (units are in each panel title)
+    y_axis_lab <- if (dplyr::n_distinct(df_plot$analyte) == 1) {
+      unique(df_plot$unit_label)
+    } else {
+      NULL
+    }
+
+    p <- ggplot(df_plot, aes(x = date)) +
+      facet_wrap(~ analyte_label, scales = "free_y", ncol = 1) +
+      labs(x = "", y = y_axis_lab, color = "Location") +
       theme_minimal()
 
-    # add detected lines/points if present
-    if (nrow(detected) > 0) {
-      p <- p +
-        geom_line(data = detected, aes(y = value, color = station_id_name)) +
-        geom_point(data = detected, aes(y = value, color = station_id_name),
-                   size = 1, alpha = 0.6)
-    }
+    #   # lines/points for detected ONLY, with group resetting after non-detects
+      if (nrow(detected) > 0) {
+        p <- p +
+          geom_line(data = detected,
+                    aes(y = value,
+                        color = station_id_name,
+                        group = interaction(station_id_name, seg_id)), linewidth = 0.6) +
+          geom_point(data = detected,
+                     aes(y = value, color = station_id_name),
+                     size = 1, alpha = 0.6)
+        }
 
-    # add ND markers if present
-    if (nrow(nd) > 0) {
-      p <- p +
-        geom_segment(
-          data = nd,
-          aes(x = date, xend = date, y = 0, yend = nd_height, color = station_id_name),
-          linewidth = 0.6, linetype = 5, inherit.aes = FALSE
-        ) +
-        geom_segment(
-          data = nd,
-          aes(x = x_minus, xend = x_plus, y = nd_height, yend = nd_height, color = station_id_name),
-          linewidth = 0.6, lineend = "square", inherit.aes = FALSE
-        )
-    }
-  }
+      # Non-detect markers (vertical + short horizontal at MDL/MRL)
+      if (nrow(nd) > 0) {
+        p <- p +
+          geom_segment(data = nd,
+                       aes(x = date, xend = date, y = 0, yend = nd_height, color = station_id_name),
+                       linewidth = 0.6, linetype = 5, inherit.aes = FALSE) +
+          geom_segment(data = nd,
+                       aes(x = x_minus, xend = x_plus, y = nd_height, yend = nd_height, color = station_id_name),
+                       linewidth = 0.6, lineend = "square", inherit.aes = FALSE)
+        }
+      }
+
+
   else if (plot_type == "Box Plot") {
     p <- ggplot(
       df |> dplyr::filter(!is.na(value)),
       aes(x = station_id, y = value, fill = station_id)) +
       geom_boxplot(outlier.shape = NA) +
       facet_wrap(~ analyte, scales = "free_y", ncol = 2) +
-      labs(x = "", y = y_lab, fill = "Station") +
+      labs(x = "", y = "value", fill = "Station") +
       theme_minimal() +
       theme(legend.position = "none")
 

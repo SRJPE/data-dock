@@ -88,6 +88,7 @@ ui <- fluidPage(
                )
              ),
 
+
              # --- Map Filter Panel ---
              conditionalPanel(
                condition = "input.which_view_wq == 'Map Filter'",
@@ -148,16 +149,31 @@ ui <- fluidPage(
 
              # === Map and Floating Plot Panel ===
              fluidRow(
-               column(
-                 width = 4,
-                 leafletOutput("wq_map", height = "600px")),
+               column(width = 4,
+                      leafletOutput("wq_map", height = "600px")
+                      ),
                column(width = 8,
-                      # uiOutput("wq_dynamic_plot")
-                      plotlyOutput("wq_dynamic_plot", height = "600px")
+                      plotlyOutput("wq_dynamic_plot", height = "600px"),
+                      tags$p(
+                        "Note: Vertical dashed lines with a short horizontal cap indicate non-detect values.
+      Their height corresponds to the reporting limit (MDL/MRL).",
+                        style = "font-size: 0.9em; font-style: italic; color: #555; margin-top:5px;")
+                      )
+               ),
+             fluidRow(
+               column(width = 12,
+                      div(style = "margin-top: 20px; text-align: right;",
+                          downloadBttn("download_wq_csv", "Download Selected Data",
+                                       style = "unite", color = "primary", size = "sm"),
+                          tags$p(
+                            tags$span("Download the data currently selected in the map and filters."),
+                            tags$br(),
+                            tags$span("For custom queries, visit the Download tab."),
+                            style = "margin-bottom: 5px; font-style: italic; color: #555;")
+                          )
+                      )
                )
-             )
-    ),
-
+             ),
     #
     #   mainPanel(
     #     tabsetPanel(
@@ -290,7 +306,6 @@ ui <- fluidPage(
                       uiOutput("genetics_dynamic_plot")
                       ))
              ),
-
     ## Resources Tab -------------------------------------------------------
     tabPanel("Resources",
              tabsetPanel(
