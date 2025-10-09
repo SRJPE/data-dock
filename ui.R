@@ -292,7 +292,7 @@ ui <- fluidPage(
               HTML("Download the data you’ve selected using the filters on this tab.<br>
         The table below provides a preview only — the exported <code>.csv</code> file will include the complete raw dataset.<br>
         For more information about the data and metadata,
-        <a href='link-to-metadata-file' target='_blank'>click here</a>."),
+        <a href='link-to-metadata-file' target='_blank'>click here</a>."), #TODO add metadata here, if we decide to keep
               style = "font-style: italic; color: #555; text-align: center; margin-top: 10px;",
               tags$br(),
               "Files will be exported as .csv.",
