@@ -271,8 +271,7 @@ ui <- fluidPage(
                style = "min-width: 200px; margin-top: 20px;",
                checkboxInput(
                  inputId = "include_weather",
-                 label = "Include weather condition analytes (Rain, Sky Conditions)", #TODO add a note that
-                 # weather data values will show on export, but not on table
+                 label = "Include weather condition analytes (Rain, Sky Conditions)",
                  value = FALSE)
                ),
              fluidRow(

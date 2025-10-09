@@ -631,23 +631,22 @@ filter_wq_data <- function(locations, years, analytes, include_weather = FALSE) 
     } else {
 
       weather <- weather |>
-        dplyr::mutate(
-          value_text = value,
-          value = NA_real_
-        )
+        dplyr::mutate(value_text = value,
+                      value = NA_real_) |>
+        select(-value) |>
+        mutate(value = as.character(value_text)) |>
+        select(-value_text)
 
-      out <- out |> #TODO figure out a way to rename value_text on export so all values show (numeric/character)
-        dplyr::mutate(
-          value_text = as.character(value)
-        )
+      out <- out |>
+        dplyr::mutate(value = as.character(value))
 
-
-    out <- dplyr::bind_rows(out, weather)
+      out <- dplyr::bind_rows(out, weather)
     }
   }
-  out
-}
 
+  out
+
+}
 # reactives for both tabs
 wq_download_data <- reactive({
   filter_wq_data(input$location_filter_wq,
