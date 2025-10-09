@@ -252,48 +252,68 @@ ui <- fluidPage(
              ),
 
     ## Download Tab -------------------------------------------------------
-    tabPanel("Download Data",
-             div(
-               style = "display:flex; gap:20px; align-items:flex-end; flex-wrap:wrap;",
-               selectInput("location_filter_dl", "Filter by Location:",
-                           choices = wq_metadata$station_id_name,
-                           multiple = TRUE),
-               sliderInput("year_range_dl", "Year Range:",
-                           min = 2020, max = 2025, value = c(2020, 2025),
-                           step = 1,
-                           sep = ""),
-               selectizeInput("analyte_download", "Analyte:",
-                              choices = sort(unique(wq_data$analyte)),
-                              multiple = TRUE,
-                              options = list(placeholder = "Select analyte"))
-               ),
-             div(
-               style = "min-width: 200px; margin-top: 20px;",
-               checkboxInput(
-                 inputId = "include_weather",
-                 label = "Include weather condition analytes (Rain, Sky Conditions)",
-                 value = FALSE)
-               ),
-             fluidRow(
-               column(12,
-                      div(style = "margin-top:20px; text-align:center;",
-                          downloadBttn("download_wq_csv_dl", "Download Selected Data",
-                                       style = "unite", color = "primary", size = "lg"),
-                          tags$p("Download the data you select on this tab.",
-                                 tags$br(),
-                                 "Files are exported as .csv.",
-                                 style = "font-style: italic; color: #555;")
-                          )
-                      )
-               ),
-             fluidRow(
-               column(
-                 width = 12,
-                 h4("Preview of Selected Data"),
-                 DT::dataTableOutput("dl_preview_table")
-                 )
-               )
-             ),
+    tabPanel(
+      "Download Data",
+      sidebarLayout(
+        sidebarPanel(
+          width = 4,
+          h4("Select Data to Download"),
+          tags$hr(),
+          selectInput(
+            "location_filter_dl", "Filter by Location:",
+            choices = wq_metadata$station_id_name,
+            multiple = TRUE),
+          sliderInput(
+            "year_range_dl", "Year Range:",
+            min = 2020, max = 2025,
+            value = c(2020, 2025),
+            step = 1,
+            sep = ""),
+          selectizeInput(
+            "analyte_download", "Analyte:",
+            choices = sort(unique(wq_data$analyte)),
+            multiple = TRUE,
+            options = list(placeholder = "Select analyte")
+            ),
+          checkboxInput(
+            inputId = "include_weather",
+            label = "Include associated weather observations (Rain, Sky Conditions)",
+            value = FALSE),
+          tags$hr(),
+          div(
+            style = "margin-top: 10px; text-align: center;",
+            downloadBttn(
+              "download_wq_csv_dl",
+              "Download Selected Data",
+              style = "unite",
+              color = "primary",
+              size = "lg"),
+            tags$p(
+              HTML("Download the data you’ve selected using the filters on this tab.<br>
+        The table below provides a preview only — the exported <code>.csv</code> file will include the complete raw dataset.<br>
+        For more information about the data and metadata,
+        <a href='link-to-metadata-file' target='_blank'>click here</a>."),
+              style = "font-style: italic; color: #555; text-align: center; margin-top: 10px;",
+              tags$br(),
+              "Files will be exported as .csv.",
+              style = "font-style: italic; color: #555;")
+            )
+          ),
+
+        # Data preview table
+        mainPanel(
+          width = 8,
+          h3("Preview of Selected Data"),
+          tags$p(
+            "This table updates automatically when you change filters in the sidebar.",
+            style = "font-style: italic; color: #555; margin-bottom: 10px;"),
+          div(
+            style = "margin-top: 10px;",
+            DT::dataTableOutput("dl_preview_table")
+            )
+          )
+        )
+      ),
 
     ## Resources Tab -------------------------------------------------------
     tabPanel("Resources",
