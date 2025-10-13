@@ -185,10 +185,12 @@ wq_metadata$latitude <- coords[, 2]
 wq_data_raw <- read_csv("data-raw/EMP_DWQ_Data_2020-2023_draft.csv") |>
   clean_names()
 
-wq_data <- wq_data_raw |>
+wq_data_joined <- wq_data_raw |>
 left_join(wq_metadata |>  st_drop_geometry() |> select(station_id, station_description),
           by = "station_id") |>
-  st_drop_geometry() |>
+  st_drop_geometry()
+
+wq_data <- wq_data_joined |>
   mutate(date = mdy(date),
          value = as.numeric(value)) |>
   filter(!is.na(station_description),
@@ -199,7 +201,8 @@ left_join(wq_metadata |>  st_drop_geometry() |> select(station_id, station_descr
   mutate(station_id_name = paste(station_id, "-", station_description)) |>
   glimpse()
 
-#adding region for color pallet purposes
+#adding region for color pallet purposes -
+#TODO delete this if final desicion is not to use regions
 wq_data_clean <- wq_data |>
   mutate(region =
            case_when(station_id %in% c("NZ002", "NZ004") ~ "Carquinez",
@@ -212,10 +215,15 @@ wq_data_clean <- wq_data |>
                      station_id %in% c("NZ032", "NZS42") ~ "Suisun Marsh",
                      T ~ NA))
 
-
 # station_id == LSZ6, LSZ2, LSZ2-SJR, LSZ6-SJR are not in the metadata
 # was planning on using analyte lat/long to assign location. however, it is inconsistent across same station_id
 #
 wq_data_missing_location <- wq_data |>
   filter(station_id %in% c("LSZ6", "LSZ2", "LSZ2-SJR", "LSZ6-SJR"),
          analyte %in% c("Latitude", "Longitude"))
+
+# weather analytes
+wq_quality_weather <- wq_data_joined |>
+  filter(analyte %in% c("Rain", "Sky Conditions")) |>
+  mutate(station_id_name = paste(station_id, "-", station_description),
+         date = mdy(date))
