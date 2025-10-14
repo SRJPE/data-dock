@@ -204,18 +204,43 @@ server <- function(input, output, session) {
       return(plotly_empty(type = "scatter", mode = "lines") |>
                layout(title = "No data available for current selection."))
     }
+    run_col <- c("Spring" = "#2E2585", "Winter" = "#94CBEC", "Spring/Winter" = "#5DA899", "Fall" = "#7E2954",
+                 "LateFall" = "#C26A77", "Fall/LateFall" = "#9F4A96", "Unknown" = "gray", "Early/Late Heterozygous" = "#DCCD7D")
     if (input$plot_type_g == "Monitoring Year") {
-      plot <- ggplot(df, aes(x = run_name, y = run_percent)) +
-        geom_boxplot(fill = "#9986A5") +
+      # plot <- ggplot(df, aes(x = run_name, y = run_percent)) +
+      #   geom_boxplot(fill = "#9986A5") +
+      #   theme_minimal() +
+      #   facet_wrap( ~ map_label, ncol = 1) +
+      #   labs(x = "", y = "Percent")
+      # sample_event_temp <- run_designation |>
+      #   distinct(map_label, year, sample_event) |>
+      #   arrange(map_label,year, sample_event) |>
+      #   group_by(map_label) |>
+      #   mutate(sample_event2 = row_number())
+      # df <- filtered_g_data() |>
+      #   group_by(year, map_label, sample_event, run_name) |>
+      #   summarize(count = n()) |>
+      #   group_by(year, map_label, sample_event) |>
+      #   mutate(total_sample = sum(count),
+      #          run_percent = (count/total_sample) * 100) |>
+      #   left_join(sample_event_temp)
+      plot <- ggplot(df, aes(x = run_name, y = run_percent, color = year)) +
+        #geom_jitter()+
+        geom_point() +
+        #geom_line() +
         theme_minimal() +
+        scale_color_manual(values = c( "#2E2585", "#94CBEC", "#7E2954","#337538")) +
         facet_wrap( ~ map_label, ncol = 1) +
-        labs(x = "", y = "Percent")
+        labs(x = "", y = "Percent", color = "")
+
     }
 
     if (input$plot_type_g == "Month") {
+
       plot <- ggplot(df, aes(x = sample_event2, y = run_percent, fill = run_name)) +
         geom_bar(stat = "identity", position = "stack") +
-        scale_fill_viridis_d(option = "D") +
+        #scale_fill_viridis_d(option = "D") +
+        scale_fill_manual(values = run_col) +
         scale_y_continuous(breaks = seq(0, 100, by = 20)) +
         theme_minimal() +
         facet_wrap( ~ map_label, ncol = 1) +

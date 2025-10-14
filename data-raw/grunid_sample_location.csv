@@ -1,0 +1,15 @@
+code,location_name,stream_name,description
+CONTROL,control,NA,the location assigned to control samples
+BTC,Battle,Battle Creek,Upper Battle Creek (RM 6.2 above CNFH barrier weir)
+BUT,Butte,Butte Creek,Centerville Head Dam to Western Canal Water District Siphon
+CLR,Clear,Clear Creek,Lower Clear Creek - RM 1.7 and Upper Clear Creek - RM 8.4
+DER,Deer,Deer Creek,RM 9.5 (RM 0 to RM 47)
+MIL,Mill,Mill Creek,RM 5 (RM 0 to RM 51.44)
+DEL,Sac-Delta Entry,Sacramento River,Delta Entry RM 75
+KNL,Sac-KNL,Sacramento River,Knights Landing RM 88.5
+TIS,Sac-Tisdale,Sacramento River,Tisdale RM 119.5
+F61,Feather-RM61,Feather River,"RM 17 (New ""lower"" RST)"
+F17,Feather-RM17,Feather River,"RM 17 (New ""lower"" RST)"
+YUR,Yuba,Yuba River,hallwood trap site
+TEST,Test Location,Testing River,use this sample location for testing purposes
+TEST2,Test Location,Testing River,use this sample location for testing purposes

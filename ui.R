@@ -8,19 +8,8 @@ ui <- fluidPage(
 
     ## Overview Tab --------------------------------------------------------
     tabPanel("Overview",
-             fluidRow(
-               column(6,
-                      h3("What is this project?"),
-                      p("Text explaining project..."),
-                      h3("Dashboard explanation"),
-                      p("Water Quality"),
-                      p("Genetics")
-                      ),
-               column(6,
-                      imageOutput("map", height = "400px")
-                      )
-               )
-             ),
+               tags$iframe(src = "overview.html", style = "height:1200px; width:100%", frameborder = "0")
+               ),
     ## Water Quality Tab ---------------------------------------------------
     tabPanel("Water Quality",
              fluidRow(
