@@ -144,12 +144,12 @@ ui <- fluidPage(
                div(
                  style = "min-width: 200px;",
                  selectInput(
-                   inputId = "location_filter_wq",
+                   inputId = "location_filter_g",
                    label = tags$strong("Filter by Location:"),
                    choices = c(
                      setNames(
-                       run_designation_percent$location_name[order(run_designation_percent$location_name)],
-                       run_designation_percent$location_name[order(run_designation_percent$location_nam)]
+                       run_designation$map_label[order(run_designation$map_label)],
+                       run_designation$map_label[order(run_designation$map_label)]
                      )
                    ),
                    selected = NULL,
@@ -158,51 +158,40 @@ ui <- fluidPage(
                ),
                div(
                  style = "min-width: 250px;",
-                 sliderInput("year_range", "Year Range (update min and max years):",
-                             min = min(run_designation_percent$year),
-                             max = max(run_designation_percent$year),
-                             value = c(min, max),
+                 sliderInput("year_range_g", "Year Range (update min and max years):",
+                             min = as.numeric(min(run_designation$year)),
+                             max = as.numeric(max(run_designation$year)),
+                             value = c(as.numeric(min(run_designation$year)), as.numeric(max(run_designation$year))),
                              step = 1,
                              sep = "")
                ),
                div(
                  style = "min-width: 200px;",
-                 selectizeInput(
-                   inputId = "analyte",
-                   label = "Analyte:",
-                   choices = NULL,
-                   selected = NULL,
-                   multiple = TRUE,
-                   options = list(placeholder = "Select an analyte")
-                 )
-               ),
-               div(
-                 style = "min-width: 200px;",
-                 selectInput("plot_type", "Plot Type:",
-                             choices = c("Time Series", "Box Plot"))
+                 selectInput("plot_type_g", "Summarize data by:",
+                             choices = c("Monitoring Year", "Month"))
                )
              ),
 
              # --- Map Filter Panel ---
              conditionalPanel(
-               condition = "input.which_view_wq == 'Map Filter'",
+               condition = "input.which_view_g == 'Map Filter'",
                div(
                  style = "display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 10px;",
                  div(
                    style = "min-width: 250px;",
                    sliderInput(
-                     inputId = "year_range2",
+                     inputId = "year_range2_g",
                      label = tags$strong("Year Range:"),
-                     min = 2020,
-                     max = 2025,
-                     value = c(2020, 2025),
+                     min = as.numeric(min(run_designation$year)),
+                     max = as.numeric(max(run_designation$year)),
+                     value = c(as.numeric(min(run_designation$year)), as.numeric(max(run_designation$year))),
                      step = 1,
                      sep = "")
                  ),
                  div(
                    style = "min-width: 200px;",
-                   selectInput("plot_type", "Plot Type:",
-                               choices = c("Time Series", "Box Plot"))
+                   selectInput("plot_type_g", "Summarize data by:",
+                               choices = c("Monitoring Year", "Month"))
                  )
                )
              ),
@@ -210,19 +199,18 @@ ui <- fluidPage(
              # === Map and Floating Plot Panel ===
              fluidRow(
                column(width = 4,
-                      leafletOutput("wq_map", height = "600px")
+                      leafletOutput("g_map", height = "600px")
                ),
                column(width = 8,
-                      plotlyOutput("wq_dynamic_plot", height = "600px"),
-                      tags$p("Note: Vertical dashed lines with a short horizontal cap indicate non-detect values.
-                             Their height corresponds to the reporting limit (MDL/MRL).",
+                      plotlyOutput("g_dynamic_plot", height = "600px"),
+                      tags$p("Note: The year is representative of a monitoring year (Nov-May), see [data collection methods](insert link) for more detail.",
                              style = "font-size: 0.9em; font-style: italic; color: #555; margin-top:5px;")
                )
              ),
              fluidRow(
                column(width = 12,
                       div(style = "margin-top: 20px; text-align: right;",
-                          downloadBttn("download_wq_csv", "Download Selected Data",
+                          downloadBttn("download_g_csv", "Download Selected Data",
                                        style = "unite", color = "primary", size = "sm"),
                           tags$p(
                             tags$span("Download the data currently selected in the map and filters."),

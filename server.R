@@ -14,9 +14,58 @@ server <- function(input, output, session) {
                         easyClose = TRUE))
 
 
-  # Genetics Map --------------------------------------------------------------
+# Genetics Map v2 ---------------------------------------------------------
+  # zoom to selection
+  draw_and_zoom_selection_g <- function(sel_names) {
+    map <- leafletProxy("g_map") |>
+      clearGroup("highlight") |>
+      clearPopups()
 
-  output$genetics_map <- renderLeaflet({
+    # if nothing selected, zoom to full extent
+    if (is.null(sel_names) || length(sel_names) == 0) {
+      return(
+        map |> fitBounds(
+          lng1 = min(rst_sites$longitude, na.rm = TRUE),
+          lat1 = min(rst_sites$latitude,  na.rm = TRUE),
+          lng2 = max(rst_sites$longitude, na.rm = TRUE),
+          lat2 = max(rst_sites$latitude,  na.rm = TRUE)
+        )
+      )
+    }
+
+    selected_station_g <- subset(rst_sites, label %in% sel_names)
+    if (nrow(selected_station_g) == 0) return(invisible(map))
+
+    # highlight markers
+    map <- map |>
+      addCircleMarkers(
+        data = selected_station_g,
+        lat = ~latitude, lng = ~longitude,
+        radius = 10,
+        fillColor = "#7E2954", color = "white",
+        weight = 2, fillOpacity = 0.9,
+        group = "highlight",
+        label = ~paste("Selected:", label),
+        layerId = ~paste0(label, "__hi")
+      )
+
+    # Zoom logic
+    if (nrow(selected_station_g) == 1) {
+      map |>  setView(
+        lng = selected_station_g$longitude[1],
+        lat = selected_station_g$latitude[1],
+        zoom = 11)
+    } else {
+      map |>  fitBounds(
+        lng1 = min(selected_station_g$longitude, na.rm = TRUE),
+        lat1 = min(selected_station_g$latitude,  na.rm = TRUE),
+        lng2 = max(selected_station_g$longitude, na.rm = TRUE),
+        lat2 = max(selected_station_g$latitude,  na.rm = TRUE)
+      )
+    }
+  }
+
+  output$g_map <- renderLeaflet({
     leaflet() |>
       addMapPane("Lines-Habitat", zIndex = 430) |>
       addTiles(
@@ -25,199 +74,362 @@ server <- function(input, output, session) {
       addPolylines(
         data = salmonid_habitat_extents,
         label = ~lapply(river, htmltools::HTML),
-        popup = ~river,
-        color = "#5299D9",
-        opacity = 1,
-        weight = 1.5) |>
+        popup = ~river, color = "#5299D9",
+        opacity = 1, weight = 1.5) |>
       addCircleMarkers(
         data = rst_sites,
-        layerId = ~label,  # this enables marker click tracking
-        radius = 6,
-        color = "black",
-        fillOpacity = 0.2,
-        popup = ~label)
-    })
-
-# Genetics Plots ----------------------------------------------------------
-
-  click_marker <- eventReactive(input$genetics_map_marker_click, {
-    req(input$which_view == "Map Filter")
-    click <- input$genetics_map_marker_click
-    print(click)
-    return(click$id)
-  })
-
-  observeEvent(input$location_filter, {
-    if ("All Locations" %in% input$location_filter && length(input$location_filter) > 1) {
-      updateSelectInput(
-        session,
-        "location_filter",
-        selected = setdiff(input$location_filter, "All Locations")
+        layerId = ~label,
+        label = ~label,
+        radius = 6, stroke = TRUE, weight = 1, color = "black",
+        fillOpacity = 0.7,
+        #fillColor = ~site_color,
+        popup = ~label
+      ) |>
+      # Initial full-extent view
+      fitBounds(
+        lng1 = min(rst_sites$longitude, na.rm = TRUE),
+        lat1 = min(rst_sites$latitude,  na.rm = TRUE),
+        lng2 = max(rst_sites$longitude, na.rm = TRUE),
+        lat2 = max(rst_sites$latitude,  na.rm = TRUE)
       )
-    }
   })
 
+  observeEvent(input$g_map_marker_click, ignoreInit = TRUE, {
+    click <- input$g_map_marker_click
+    req(!is.null(click), !is.null(click$id))
 
-  # Types of data:
-  # 1. Summarize run percent by sample event/date - option a. summarize across locations, option b. facet plot and treat each location separate
-  # currently using option a.
-  # 2. Summarize run percent by monitoring year - option a. summarize across locations, option b. facet plot and treat each location separate
-  # currently using option a.
+    # If highlight markers use the "__hi" suffix, normalize it here
+    id_raw <- click$id
+    id     <- sub("__hi$", "", id_raw)
 
-  genetics_filtered_data_month <- reactive({
-    if (!is.null(input$genetics_map_marker_click)) {
+    current <- input$location_filter_g
+    if (is.null(current)) current <- character(0)
 
-      run_designation |>
-        filter(map_label %in% click_marker(),
-               year >= input$year_range2[1],
-               year <= input$year_range2[2]) |>
-        group_by(map_label, sample_event, year, run_name) |>
-        summarize(count = n()) |>
-        group_by(map_label, year, sample_event) |>
-        mutate(total_sample = sum(count),
-               run_percent = (count / total_sample) * 100)
-    } else if (!is.null(input$location_filter) && !"All Locations" %in% input$location_filter) {
+    new_sel <- if (id %in% current) setdiff(current, id) else union(current, id)
 
-      run_designation |>
-        filter(map_label %in% input$location_filter,
-               year >= input$year_range1[1],
-               year <= input$year_range1[2]) |>
-        group_by(map_label, sample_event, year, run_name) |>
-        summarize(count = n()) |>
-        group_by(map_label, year, sample_event) |>
-        mutate(total_sample = sum(count),
-               run_percent = (count / total_sample) * 100)
-    } else {
-      run_designation |>
-        filter(year >= input$year_range1[1],
-               year <= input$year_range1[2]) |>
-        group_by(map_label, sample_event, year, run_name) |>
-        summarize(count = n()) |>
-        group_by(map_label, year, sample_event) |>
-        mutate(total_sample = sum(count),
-               run_percent = (count / total_sample) * 100)
-    }
+    updateSelectInput(session, "location_filter_g", selected = new_sel)
   })
 
-  genetics_filtered_data_year <- reactive({
-    if(input$which_view == "Map Filter") {
-      run_designation |>
-        filter(map_label %in% click_marker(),
-               year >= input$year_range2[1],
-               year <= input$year_range2[2]) |>
-        group_by(map_label, year, run_name) |>
-        summarize(count = n()) |>
-        group_by(map_label, year) |>
-        mutate(total_sample = sum(count),
-               run_percent = (count / total_sample) * 100)
-    } else if (input$which_view == "Dropdown Filter" & input$location_filter != "All Locations") {
-      run_designation |>
-        filter(map_label %in% input$location_filter,
-               year >= input$year_range1[1],
-               year <= input$year_range1[2]) |>
-        group_by(map_label, year, run_name) |>
-        summarize(count = n()) |>
-        group_by(map_label, year) |>
-        mutate(total_sample = sum(count),
-               run_percent = (count / total_sample) * 100)
-    } else {
-      run_designation |>
-        filter(year >= input$year_range1[1],
-               year <= input$year_range1[2]) |>
-        group_by(map_label, year, run_name) |>
-        summarize(count = n()) |>
-        group_by(map_label, year) |>
-        mutate(total_sample = sum(count),
-               run_percent = (count / total_sample) * 100)
+  # redraw highlight + zoom on dropdown change
+  observeEvent(input$location_filter_g, {
+    draw_and_zoom_selection_g(input$location_filter_g)
+  }, ignoreInit = TRUE)
+
+
+# Genetics Plots v2 -------------------------------------------------------
+  filtered_g_data <- reactive({
+    req(input$year_range_g)
+
+    data <- run_designation |>
+      filter(
+        year >= input$year_range_g[1],
+        year <= input$year_range_g[2]
+      )
+
+    if (!is.null(input$location_filter_g) && !"All Locations" %in% input$location_filter_g) {
+      data <- data |> filter(map_label %in% input$location_filter_g)
     }
+
+    data
   })
 
-  output$genetics_plot_month <- renderPlot({
-    req(input$plot_type1 == "Run Proportions by Month" | input$plot_type2 == "Run Proportions by Month")
+  output$download_g_csv <- downloadHandler(
+    filename = function() {
+      paste0("genetics_", Sys.Date(), ".csv")
+    },
+    content = function(file) {
+      df <- filtered_g_data()
+      readr::write_csv(df, file)
+    }
+  )
 
-    if (input$which_view == "Map Filter" & is.null(input$genetics_map_marker_click)) {
-      ggplot() +
-        annotate("text", x = 0.5, y = 0.5, label = "Click on a Sampling Location\nin Map View to Populate Plot",
-                 size = 6, hjust = 0.5, vjust = 0.5) +
-        theme_void() +
-        theme(
-          plot.title = element_text(size = 16, face = "bold", hjust = 0.5)
-        )
+  #wq_missing_sites <- reactiveVal(character(0)) # filtering so message works
 
-   } else if (nrow(genetics_filtered_data_month()) == 0) {
-      ggplot() +
-        annotate(
-          "text",
-          x = 0.5,
-          y = 0.5,
-          label = "No data available",
-          size = 6,
-          hjust = 0.5
-        ) +
-        theme_void()
-    } else {
-      plot1 <- ggplot(genetics_filtered_data_month(),
-                      aes(x = sample_event, y = run_percent, fill = run_name)) +
+  data_for_plot_g <- reactive({
+    if (input$plot_type_g == "Monitoring Year") {
+      df <- filtered_g_data() |>
+        group_by(year, map_label, run_name) |>
+        summarize(count = n()) |>
+        group_by(year, map_label) |>
+        mutate(total_sample = sum(count),
+               run_percent = (count/total_sample) * 100)
+    }
+    if (input$plot_type_g == "Month") {
+      sample_event_temp <- run_designation |>
+        distinct(map_label, year, sample_event) |>
+        arrange(map_label,year, sample_event) |>
+        group_by(map_label) |>
+        mutate(sample_event2 = row_number())
+      df <- filtered_g_data() |>
+        group_by(year, map_label, sample_event, run_name) |>
+        summarize(count = n()) |>
+        group_by(year, map_label, sample_event) |>
+        mutate(total_sample = sum(count),
+               run_percent = (count/total_sample) * 100) |>
+        left_join(sample_event_temp)
+    }
+    df
+  })
+
+  output$g_dynamic_plot <- renderPlotly({
+    req(!is.null(input$location_filter_g) && length(input$location_filter_g) > 0)
+    df <- data_for_plot_g()
+
+#
+#     selected_locs <- input$location_filter_g %||% character(0)
+#
+#     present_locs <- sort(unique(df$location_name))
+#     missing_locs <- setdiff(selected_locs, present_locs)
+#
+#     prev_missing <- g_missing_sites()
+#     new_missing  <- setdiff(missing_locs, prev_missing)
+#
+#     if (length(new_missing) > 0) {
+#       showNotification(
+#         paste0("No data for selected analyte(s) at: ",
+#                paste(new_missing, collapse = ", ")),
+#         type = "warning", duration = 6
+#       )
+#     }
+#
+#     # update the tracker (so sites with data don't trigger, and new missing will)
+#     wq_missing_sites(missing_locs)
+#
+#     if (n_distinct(df$analyte) > 8) {
+#       validate(
+#         need(FALSE, "Too many analytes selected. Please select 8 or fewer.")
+#       )
+#     }
+    if (nrow(df) == 0) {
+      return(plotly_empty(type = "scatter", mode = "lines") |>
+               layout(title = "No data available for current selection."))
+    }
+    if (input$plot_type_g == "Monitoring Year") {
+      plot <- ggplot(df, aes(x = run_name, y = run_percent)) +
+        geom_boxplot(fill = "#9986A5") +
+        theme_minimal() +
+        facet_wrap( ~ map_label, ncol = 1) +
+        labs(x = "", y = "Percent")
+    }
+
+    if (input$plot_type_g == "Month") {
+      plot <- ggplot(df, aes(x = sample_event2, y = run_percent, fill = run_name)) +
         geom_bar(stat = "identity", position = "stack") +
         scale_fill_viridis_d(option = "D") +
         scale_y_continuous(breaks = seq(0, 100, by = 20)) +
         theme_minimal() +
+        facet_wrap( ~ map_label, ncol = 1) +
         labs(fill = "", x = "Sample Event", y = "Percent")
-      plot2 <- ggplot(genetics_filtered_data_month(),
-                      aes(x = sample_event, y = count, color = run_name)) +
-        geom_point(size = 4) +
-        scale_color_viridis_d(option = "D") +
-        scale_x_continuous(breaks = 1:20) +
-        scale_y_continuous(breaks = 1:11) +
-        theme_minimal() +
-        guides(color = "none") +
-        labs(fill = "", x = "Sample Event", y = "Sample Count")
-
-      plot1 / plot2
     }
+    ggplotly(plot)
+
   })
 
-  output$genetics_plot_year <- renderPlot({
-    req(input$plot_type1 == "Run Proportions" | input$plot_type2 == "Run Proportions" )
 
-    if (input$which_view == "Map Filter" & is.null(input$genetics_map_marker_click)) {
-      ggplot() +
-        annotate("text", x = 0.5, y = 0.5, label = "Click on a Sampling Location\nin Map View to Populate Plot",
-                 size = 6, hjust = 0.5, vjust = 0.5) +
-        theme_void() +
-        theme(
-          plot.title = element_text(size = 16, face = "bold", hjust = 0.5)
-        )
+  # Genetics Map --------------------------------------------------------------
 
-    } else if (nrow(genetics_filtered_data_year()) == 0) {
-      ggplot() +
-        annotate(
-          "text",
-          x = 0.5,
-          y = 0.5,
-          label = "No data available",
-          size = 6,
-          hjust = 0.5
-        ) +
-        theme_void()
-    } else {
-      genetics_filtered_data_year() |>
-        ggplot(aes(x = run_name, y = run_percent)) +
-        geom_bar(stat = "identity", fill = "#9986A5") +
-        geom_text(aes(label = paste0("n=", count), y = 3), size = 3) +
-        theme_minimal() +
-        labs(x = "",
-             y = "Percent")
-    }
-  })
+  # output$genetics_map <- renderLeaflet({
+  #   leaflet() |>
+  #     addMapPane("Lines-Habitat", zIndex = 430) |>
+  #     addTiles(
+  #       urlTemplate = "https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}",
+  #       attribution = 'Basemap © Esri, GEBCO, NOAA, CHS, etc.') |>
+  #     addPolylines(
+  #       data = salmonid_habitat_extents,
+  #       label = ~lapply(river, htmltools::HTML),
+  #       popup = ~river,
+  #       color = "#5299D9",
+  #       opacity = 1,
+  #       weight = 1.5) |>
+  #     addCircleMarkers(
+  #       data = rst_sites,
+  #       layerId = ~label,  # this enables marker click tracking
+  #       radius = 6,
+  #       color = "black",
+  #       fillOpacity = 0.2,
+  #       popup = ~label)
+  #   })
 
-  output$genetics_dynamic_plot <- renderUI({
-    if (input$plot_type1 == "Run Proportions" | input$plot_type2 == "Run Proportions") {
-      plotOutput("genetics_plot_year", height = "600px")
-    } else {
-      plotOutput("genetics_plot_month", height = "600px")
-    }
-  })
+# Genetics Plots ----------------------------------------------------------
+
+  # click_marker <- eventReactive(input$genetics_map_marker_click, {
+  #   req(input$which_view_g == "Map Filter")
+  #   click <- input$genetics_map_marker_click
+  #   print(click)
+  #   return(click$id)
+  # })
+  #
+  # observeEvent(input$location_filter_g, {
+  #   if ("All Locations" %in% input$location_filter_g && length(input$location_filter_g) > 1) {
+  #     updateSelectInput(
+  #       session,
+  #       "location_filter_g",
+  #       selected = setdiff(input$location_filter_g, "All Locations")
+  #     )
+  #   }
+  # })
+  #
+  #
+  # # Types of data:
+  # # 1. Summarize run percent by sample event/date - option a. summarize across locations, option b. facet plot and treat each location separate
+  # # currently using option a.
+  # # 2. Summarize run percent by monitoring year - option a. summarize across locations, option b. facet plot and treat each location separate
+  # # currently using option a.
+  #
+  # genetics_filtered_data_month <- reactive({
+  #   if (!is.null(input$genetics_map_marker_click)) {
+  #
+  #     run_designation |>
+  #       filter(map_label %in% click_marker(),
+  #              year >= input$year_range2[1],
+  #              year <= input$year_range2[2]) |>
+  #       group_by(map_label, sample_event, year, run_name) |>
+  #       summarize(count = n()) |>
+  #       group_by(map_label, year, sample_event) |>
+  #       mutate(total_sample = sum(count),
+  #              run_percent = (count / total_sample) * 100)
+  #   } else if (!is.null(input$location_filter) && !"All Locations" %in% input$location_filter) {
+  #
+  #     run_designation |>
+  #       filter(map_label %in% input$location_filter,
+  #              year >= input$year_range1[1],
+  #              year <= input$year_range1[2]) |>
+  #       group_by(map_label, sample_event, year, run_name) |>
+  #       summarize(count = n()) |>
+  #       group_by(map_label, year, sample_event) |>
+  #       mutate(total_sample = sum(count),
+  #              run_percent = (count / total_sample) * 100)
+  #   } else {
+  #     run_designation |>
+  #       filter(year >= input$year_range1[1],
+  #              year <= input$year_range1[2]) |>
+  #       group_by(map_label, sample_event, year, run_name) |>
+  #       summarize(count = n()) |>
+  #       group_by(map_label, year, sample_event) |>
+  #       mutate(total_sample = sum(count),
+  #              run_percent = (count / total_sample) * 100)
+  #   }
+  # })
+  #
+  # genetics_filtered_data_year <- reactive({
+  #   if(input$which_view == "Map Filter") {
+  #     run_designation |>
+  #       filter(map_label %in% click_marker(),
+  #              year >= input$year_range2[1],
+  #              year <= input$year_range2[2]) |>
+  #       group_by(map_label, year, run_name) |>
+  #       summarize(count = n()) |>
+  #       group_by(map_label, year) |>
+  #       mutate(total_sample = sum(count),
+  #              run_percent = (count / total_sample) * 100)
+  #   } else if (input$which_view == "Dropdown Filter" & input$location_filter != "All Locations") {
+  #     run_designation |>
+  #       filter(map_label %in% input$location_filter,
+  #              year >= input$year_range1[1],
+  #              year <= input$year_range1[2]) |>
+  #       group_by(map_label, year, run_name) |>
+  #       summarize(count = n()) |>
+  #       group_by(map_label, year) |>
+  #       mutate(total_sample = sum(count),
+  #              run_percent = (count / total_sample) * 100)
+  #   } else {
+  #     run_designation |>
+  #       filter(year >= input$year_range1[1],
+  #              year <= input$year_range1[2]) |>
+  #       group_by(map_label, year, run_name) |>
+  #       summarize(count = n()) |>
+  #       group_by(map_label, year) |>
+  #       mutate(total_sample = sum(count),
+  #              run_percent = (count / total_sample) * 100)
+  #   }
+  # })
+  #
+  # output$genetics_plot_month <- renderPlot({
+  #   req(input$plot_type1 == "Run Proportions by Month" | input$plot_type2 == "Run Proportions by Month")
+  #
+  #   if (input$which_view == "Map Filter" & is.null(input$genetics_map_marker_click)) {
+  #     ggplot() +
+  #       annotate("text", x = 0.5, y = 0.5, label = "Click on a Sampling Location\nin Map View to Populate Plot",
+  #                size = 6, hjust = 0.5, vjust = 0.5) +
+  #       theme_void() +
+  #       theme(
+  #         plot.title = element_text(size = 16, face = "bold", hjust = 0.5)
+  #       )
+  #
+  #  } else if (nrow(genetics_filtered_data_month()) == 0) {
+  #     ggplot() +
+  #       annotate(
+  #         "text",
+  #         x = 0.5,
+  #         y = 0.5,
+  #         label = "No data available",
+  #         size = 6,
+  #         hjust = 0.5
+  #       ) +
+  #       theme_void()
+  #   } else {
+  #     plot1 <- ggplot(genetics_filtered_data_month(),
+  #                     aes(x = sample_event, y = run_percent, fill = run_name)) +
+  #       geom_bar(stat = "identity", position = "stack") +
+  #       scale_fill_viridis_d(option = "D") +
+  #       scale_y_continuous(breaks = seq(0, 100, by = 20)) +
+  #       theme_minimal() +
+  #       labs(fill = "", x = "Sample Event", y = "Percent")
+  #     plot2 <- ggplot(genetics_filtered_data_month(),
+  #                     aes(x = sample_event, y = count, color = run_name)) +
+  #       geom_point(size = 4) +
+  #       scale_color_viridis_d(option = "D") +
+  #       scale_x_continuous(breaks = 1:20) +
+  #       scale_y_continuous(breaks = 1:11) +
+  #       theme_minimal() +
+  #       guides(color = "none") +
+  #       labs(fill = "", x = "Sample Event", y = "Sample Count")
+  #
+  #     plot1 / plot2
+  #   }
+  # })
+  #
+  # output$genetics_plot_year <- renderPlot({
+  #   req(input$plot_type1 == "Run Proportions" | input$plot_type2 == "Run Proportions" )
+  #
+  #   if (input$which_view == "Map Filter" & is.null(input$genetics_map_marker_click)) {
+  #     ggplot() +
+  #       annotate("text", x = 0.5, y = 0.5, label = "Click on a Sampling Location\nin Map View to Populate Plot",
+  #                size = 6, hjust = 0.5, vjust = 0.5) +
+  #       theme_void() +
+  #       theme(
+  #         plot.title = element_text(size = 16, face = "bold", hjust = 0.5)
+  #       )
+  #
+  #   } else if (nrow(genetics_filtered_data_year()) == 0) {
+  #     ggplot() +
+  #       annotate(
+  #         "text",
+  #         x = 0.5,
+  #         y = 0.5,
+  #         label = "No data available",
+  #         size = 6,
+  #         hjust = 0.5
+  #       ) +
+  #       theme_void()
+  #   } else {
+  #     genetics_filtered_data_year() |>
+  #       ggplot(aes(x = run_name, y = run_percent)) +
+  #       geom_bar(stat = "identity", fill = "#9986A5") +
+  #       geom_text(aes(label = paste0("n=", count), y = 3), size = 3) +
+  #       theme_minimal() +
+  #       labs(x = "",
+  #            y = "Percent")
+  #   }
+  # })
+  #
+  # output$genetics_dynamic_plot <- renderUI({
+  #   if (input$plot_type1 == "Run Proportions" | input$plot_type2 == "Run Proportions") {
+  #     plotOutput("genetics_plot_year", height = "600px")
+  #   } else {
+  #     plotOutput("genetics_plot_month", height = "600px")
+  #   }
+  # })
 
 # Water Quality  Map --------------------------------------------------------------
 
