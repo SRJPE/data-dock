@@ -544,13 +544,15 @@ output$wq_dynamic_plot <- renderPlotly({
         geom_line(data = detected,
                   aes(y = value,
                       color = station_id_name,
-                      group = interaction(station_id_name, seg_id)), linewidth = 0.6) +
+                      group = interaction(station_id_name, seg_id)), linewidth = 0.6, show.legend = FALSE) +
+        #TODO figure out a way to show only shapes on symbol
         geom_point(data = detected,
                    aes(y = value,
                        color = station_id_name,
                        shape = station_id_name),
-                   size = 1.8, alpha = 0.8)
-    }
+          size = 1.8, alpha = 0.8, show.legend = FALSE)
+      }
+
 
     # Non-detect markers (vertical + short horizontal at MDL/MRL)
     if (nrow(nd) > 0) {
@@ -566,18 +568,20 @@ output$wq_dynamic_plot <- renderPlotly({
     # apply Tol Muted palette, shapes, and unified legend
     p <- p +
       scale_color_manual(values = tol_muted) +
-      scale_shape_manual(values = c(16, 17, 15, 3, 7, 8, 9, 10),
-                         guide = "none") +
-      #TODO fix so that only one legend shows (shape+line?)
+      scale_shape_manual(values = c(16, 17, 15, 3, 7, 8, 9, 10)) +
       guides(color = guide_legend(
-        override.aes = list(shape = 16, linetype = 1, size = 2.5))
-        ) +
+        override.aes = list(shape = 16, linetype = 0, size = 2.5, alpha = 1)),
+        shape = "none"       # TODO
+      ) +
       theme_minimal() +
-      theme(legend.position = "bottom",
-            legend.box = "horizontal",
-            legend.title = element_text(face = "bold"),
-            strip.text = element_text(face = "bold")
-            )
+      theme(
+        legend.position = "bottom",
+        legend.box = "horizontal",
+        legend.title = element_text(face = "bold"),
+        strip.text = element_text(face = "bold")
+      )
+
+
 # TODO add units to the box plots (just like line plot)
   } else if (plot_type == "Box Plot") {
     p <- ggplot(
