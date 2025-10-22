@@ -129,6 +129,9 @@ server <- function(input, output, session) {
     if (!is.null(input$location_filter_g) && !"All Locations" %in% input$location_filter_g) {
       data <- data |> filter(map_label %in% input$location_filter_g)
     }
+    if (!is.null(input$genetic_filter_g) && length(input$genetic_filter_g) > 0) {
+      data <- data |> filter(run_name %in% input$genetic_filter_g)
+    }
 
     data
   })
