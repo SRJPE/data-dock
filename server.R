@@ -544,13 +544,12 @@ output$wq_dynamic_plot <- renderPlotly({
         geom_line(data = detected,
                   aes(y = value,
                       color = station_id_name,
-                      group = interaction(station_id_name, seg_id)), linewidth = 0.6) +
-        #TODO figure out a way to show only shapes on symbol
+                      group = interaction(station_id_name, seg_id)), linewidth = 0.6, show.legend = FALSE) +
         geom_point(data = detected,
                    aes(y = value,
                        color = station_id_name,
                        shape = station_id_name),
-          size = 1.8, alpha = 0.8)
+          size = 1.8, alpha = 0.8, show.legend = TRUE)
       }
 
 
@@ -571,15 +570,14 @@ output$wq_dynamic_plot <- renderPlotly({
       scale_shape_manual(values = c(16, 17, 15, 3, 7, 8, 9, 10)) +
       guides(color = guide_legend(
         override.aes = list(shape = 16, linetype = 0, size = 2.5, alpha = 1)),
-        shape = "none"       # TODO
-      ) +
-      theme_minimal()
-      # theme(
-      #   legend.position = "bottom",
-      #   legend.box = "horizontal",
-      #   legend.title = element_text(face = "bold"),
-      #   strip.text = element_text(face = "bold")
-      # )
+        shape = "none") +
+      theme_minimal() +
+      theme(
+        legend.position = "bottom",
+        legend.box = "horizontal",
+        legend.title = element_text(face = "bold"),
+        strip.text = element_text(face = "bold")
+      )
 
 
 # TODO add units to the box plots (just like line plot)
@@ -598,7 +596,26 @@ output$wq_dynamic_plot <- renderPlotly({
     return(NULL)
   }
 
-  ggplotly(p)
+  gp <- ggplotly(p)
+
+  for (i in seq_along(gp$x$data)) {
+    tr <- gp$x$data[[i]]
+
+    # Hide lines from legend
+    if (!is.null(tr$mode) && tr$mode == "lines") {
+      gp$x$data[[i]]$showlegend <- FALSE
+    }
+#TODO figure out how to remove duplicate shape symbology
+    # enable legend for points
+    if (!is.null(tr$mode) && grepl("markers", tr$mode)) {
+      gp$x$data[[i]]$showlegend <- TRUE
+    }
+  }
+
+  # draw legend
+  gp <- gp |> layout(showlegend = TRUE)
+
+  gp
 
 })
 
