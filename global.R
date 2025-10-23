@@ -85,6 +85,7 @@ sample_location <- read_csv(here::here("data-raw","grunid_sample_location.csv"))
 run_designation <- genetics_data_raw |>
   mutate(code = substr(sample_id, 1, 3),
          year= paste0(20,substr(sample_id, 4,5)),
+         month = month(datetime_collected), # TODO currentlu there are only months 12 and 11 so it does not plot well
          sample_event = sub("^[^_]+_([^_]+)_.*$", "\\1", sample_id),
          sample_event = as.numeric(sample_event)) |>
   left_join(select(sample_location, code, location_name)) |>
@@ -95,7 +96,7 @@ run_designation <- genetics_data_raw |>
                                location_name == "Feather-RM17" ~ "Feather River - RM 17",
                                location_name == "Sac-Delta Entry" ~ "Sacramento River - Delta Entry",
                                location_name == "Yuba" ~ "Yuba River"))
-
+# stock assignment (fall, spring) and phenotype(early, late heterozygot )
 run_designation_percent <- run_designation |>
   group_by(location_name, sample_event, year, run_name) |>
   summarize(count = n()) |>

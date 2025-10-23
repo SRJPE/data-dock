@@ -159,14 +159,14 @@ server <- function(input, output, session) {
     }
     if (input$plot_type_g == "Month") {
       sample_event_temp <- run_designation |>
-        distinct(map_label, year, sample_event) |>
-        arrange(map_label,year, sample_event) |>
+        distinct(map_label, year, month) |>
+        arrange(map_label,year, month) |>
         group_by(map_label) |>
         mutate(sample_event2 = row_number())
       df <- filtered_g_data() |>
-        group_by(year, map_label, sample_event, run_name) |>
+        group_by(year, map_label, month, run_name) |>
         summarize(count = n()) |>
-        group_by(year, map_label, sample_event) |>
+        group_by(year, map_label, month) |>
         mutate(total_sample = sum(count),
                run_percent = (count/total_sample) * 100) |>
         left_join(sample_event_temp)
@@ -240,7 +240,7 @@ server <- function(input, output, session) {
 
     if (input$plot_type_g == "Month") {
 
-      plot <- ggplot(df, aes(x = sample_event2, y = run_percent, fill = run_name)) +
+      plot <- ggplot(df, aes(x = month, y = run_percent, fill = run_name)) +
         geom_bar(stat = "identity", position = "stack") +
         #scale_fill_viridis_d(option = "D") +
         scale_fill_manual(values = run_col) +
