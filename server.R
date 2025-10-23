@@ -301,14 +301,14 @@ server <- function(input, output, session) {
         popup = ~paste0("<b>", station_id, "</b><br/>", station_description)
         ) |>
       # Inactive sites (triangles using a custom icon)
-      addMarkers(
-        data = subset(wq_metadata, status == "Inactive"),
-        layerId = ~station_id_name,
-        label = ~paste(station_id_name, "-", station_description),
-        icon = icons(
-          iconUrl = "https://upload.wikimedia.org/wikipedia/commons/3/3c/Black_triangle.svg",
-          iconWidth = 12, iconHeight = 12),
-        popup = ~paste0("<b>", station_id, "</b><br/>", station_description)) |>
+      # addMarkers(
+      #   data = subset(wq_metadata, status == "Inactive"),
+      #   layerId = ~station_id_name,
+      #   label = ~paste(station_id_name, "-", station_description),
+      #   icon = icons(
+      #     iconUrl = "https://upload.wikimedia.org/wikipedia/commons/3/3c/Black_triangle.svg",
+      #     iconWidth = 12, iconHeight = 12),
+      #   popup = ~paste0("<b>", station_id, "</b><br/>", station_description)) |>
       addCircleMarkers(
         data    = wq_metadata,
         layerId = ~station_id_name,
@@ -544,13 +544,13 @@ output$wq_dynamic_plot <- renderPlotly({
         geom_line(data = detected,
                   aes(y = value,
                       color = station_id_name,
-                      group = interaction(station_id_name, seg_id)), linewidth = 0.6, show.legend = FALSE) +
+                      group = interaction(station_id_name, seg_id)), linewidth = 0.6) +
         #TODO figure out a way to show only shapes on symbol
         geom_point(data = detected,
                    aes(y = value,
                        color = station_id_name,
                        shape = station_id_name),
-          size = 1.8, alpha = 0.8, show.legend = FALSE)
+          size = 1.8, alpha = 0.8)
       }
 
 
@@ -573,13 +573,13 @@ output$wq_dynamic_plot <- renderPlotly({
         override.aes = list(shape = 16, linetype = 0, size = 2.5, alpha = 1)),
         shape = "none"       # TODO
       ) +
-      theme_minimal() +
-      theme(
-        legend.position = "bottom",
-        legend.box = "horizontal",
-        legend.title = element_text(face = "bold"),
-        strip.text = element_text(face = "bold")
-      )
+      theme_minimal()
+      # theme(
+      #   legend.position = "bottom",
+      #   legend.box = "horizontal",
+      #   legend.title = element_text(face = "bold"),
+      #   strip.text = element_text(face = "bold")
+      # )
 
 
 # TODO add units to the box plots (just like line plot)
@@ -590,6 +590,7 @@ output$wq_dynamic_plot <- renderPlotly({
       geom_boxplot(outlier.shape = NA) +
       facet_wrap(~ analyte, scales = "free_y", ncol = 2) +
       labs(x = "", y = "value", fill = "Station") +
+      scale_fill_manual(values = tol_muted) +
       theme_minimal() +
       theme(legend.position = "none")
 
