@@ -78,46 +78,15 @@ rst_sites$latitude <- coords[, 2]
 # habitat extents
 salmonid_habitat_extents <- readRDS("data-raw/salmonid_habitat_extents.Rds")
 
+# Draft genetics data from staging database. These will be pulled from EDI when published
+genetics_data_raw <- read_csv(here::here("data-raw","grun_id_query_10-10-2025.csv"))
+sample_location <- read_csv(here::here("data-raw","grunid_sample_location.csv"))
 
-# Database data ---------------------------------------------------------------
-
-con <- DBI::dbConnect(drv = RPostgres::Postgres(),
-                      host = "run-id-database.postgres.database.azure.com",
-                      dbname = "runiddb-prod",
-                      user = Sys.getenv("runid_db_user"),
-                      password = Sys.getenv("runid_db_password"),
-                      port = 5432)
-
-DBI::dbListTables(con)
-
-# Emanuel provided this query (https://github.com/SRJPE/jpe-genetics-edi/blob/main/data-query.sql)
-run_designation_raw <- dbGetQuery(
-  con,
-  "SELECT DISTINCT ON (gri.sample_id)
-    gri.sample_id,
-    rt.run_name,
-    substring(gri.sample_id FROM '^[^_]+_((?:100|[1-9][0-9]?))_') AS sample_event,
-    st.datetime_collected,
-    st.fork_length_mm,
-    st.field_run_type_id
-FROM
-    genetic_run_identification gri
-JOIN run_type rt
-ON rt.id = gri.run_type_id
-JOIN sample st
-ON st.id = gri.sample_id
-ORDER BY
-    gri.sample_id,
-    gri.created_at DESC;
-"
-)
-
-sample_location <- dbGetQuery(con, "select code, location_name, stream_name, description from sample_location")
-sample <- dbGetQuery(con, "select * from sample")
-
-run_designation <- run_designation_raw |>
+run_designation <- genetics_data_raw |>
   mutate(code = substr(sample_id, 1, 3),
          year= paste0(20,substr(sample_id, 4,5)),
+         month = month(datetime_collected), # TODO currentlu there are only months 12 and 11 so it does not plot well
+         sample_event = sub("^[^_]+_([^_]+)_.*$", "\\1", sample_id),
          sample_event = as.numeric(sample_event)) |>
   left_join(select(sample_location, code, location_name)) |>
   mutate(map_label = case_when(location_name %in% c("Battle", "Clear", "Mill", "Deer", "Butte") ~ paste0(location_name, " Creek"),
@@ -127,13 +96,51 @@ run_designation <- run_designation_raw |>
                                location_name == "Feather-RM17" ~ "Feather River - RM 17",
                                location_name == "Sac-Delta Entry" ~ "Sacramento River - Delta Entry",
                                location_name == "Yuba" ~ "Yuba River"))
-
+# stock assignment (fall, spring) and phenotype(early, late heterozygot )
 run_designation_percent <- run_designation |>
   group_by(location_name, sample_event, year, run_name) |>
   summarize(count = n()) |>
   group_by(location_name, year, sample_event) |>
   mutate(total_sample = sum(count),
          run_percent = (count/total_sample) * 100)
+# Database data ---------------------------------------------------------------
+
+# con <- DBI::dbConnect(drv = RPostgres::Postgres(),
+#                       host = "run-id-database.postgres.database.azure.com",
+#                       dbname = "runiddb-prod",
+#                       user = Sys.getenv("runid_db_user"),
+#                       password = Sys.getenv("runid_db_password"),
+#                       port = 5432)
+#
+# DBI::dbListTables(con)
+
+# For now the sample location is saved in data-raw
+# sample_location <- dbGetQuery(con, "select code, location_name, stream_name, description from sample_location")
+# sample <- dbGetQuery(con, "select * from sample")
+# write_csv(sample_location, here::here("data-raw","grunid_sample_location.csv"))
+# Emanuel provided this query (https://github.com/SRJPE/jpe-genetics-edi/blob/main/data-query.sql)
+
+# This is not being used
+# run_designation_raw <- dbGetQuery(
+#   con,
+#   "SELECT DISTINCT ON (gri.sample_id)
+#     gri.sample_id,
+#     rt.run_name,
+#     substring(gri.sample_id FROM '^[^_]+_((?:100|[1-9][0-9]?))_') AS sample_event,
+#     st.datetime_collected,
+#     st.fork_length_mm,
+#     st.field_run_type_id
+# FROM
+#     genetic_run_identification gri
+# JOIN run_type rt
+# ON rt.id = gri.run_type_id
+# JOIN sample st
+# ON st.id = gri.sample_id
+# ORDER BY
+#     gri.sample_id,
+#     gri.created_at DESC;
+# "
+# )
 
 # water quality location metadata
 

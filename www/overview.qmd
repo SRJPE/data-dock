@@ -1,0 +1,52 @@
+---
+title: "Downstream Dashboard"
+format: 
+  html:
+    embed-resources: true
+editor: visual
+---
+
+## Purpose of this dashboard
+
+The California Department of Water Resources (DWR) is committed to [open data](https://water.ca.gov/ab1755) and the goals of the [Open and Transparent Water Data Act (AB 1755, Dodd)](https://leginfo.legislature.ca.gov/faces/billNavClient.xhtml?bill_id=201520160AB1755).  
+
+The Downstream Dashboard is a collaboration between DWR data collection programs to showcase a workflow for data publication, access, and visualization (Figure 1). This workflow can be adapted and used more broadly to support (1) making data publicly accessible and usable and (2) using open source tools.  
+
+![Figure 1. Diagram of the data lifecycle process. This effort is primarily focused on the data access portion of the data lifecycle through the publication of data on the Environmental Data Initiative (EDI) and the creation of this dashboard for data visualization and communication.](data_lifecycle.png)
+
+## About the data collection programs
+
+The Downstream Dashboard is currently focused on two DWR data collection program: (1) Environmental Management Program (EMP) Discrete Water Quality Data, and (2) Spring Run Juvenile Production Estimate (SR JPE) Genetics Data. 
+
+**EMP Discrete Water Quality Data**
+
+TODO – Insert blurb 
+
+**SR JPE Genetics Data**
+
+The Spring-Run Juvenile Production Estimate (SR JPE) project is a multidisciplinary effort to monitor the seasonal outmigration of threatened juvenile spring-run Chinook salmon (Oncorhynchus tshawytscha). As they undertake their journey from their natal rivers to the ocean, juvenile Chinook salmon are captured at 11 monitoring sites located throughout the Sacramento River Basin each year from November to May. Genetic techniques - including CRISPR-based SHERLOCK and genotyping-in-thousands by sequencing (GT-seq) - are employed to distinguish threatened spring-run Chinook from co-occurring runs (e.g., Fall, Late Fall, and Winter runs).  
+
+[Spring-Run Chinook Salmon JPE Run Identification Program Research and Initial Monitoring Plan](https://water.ca.gov/-/media/DWR-Website/Web-Pages/Programs/State-Water-Project/Endangered-Species-Protection/SR-JPE-Run-ID-Program-Development-Plan-2023-08-Update.pdf)  
+
+TODO – Insert links to journal articles or any additional documentation? 
+
+## Data management and publication
+
+The Downstream Dashboard data collection programs maintain internal databases as primary data storage and utilize the [Environmental Data Initiative (EDI)](https://edirepository.org/) to make data publicly accessible. EDI is a National Science Foundation (NSF) funded public repository for environmental data with robust metadata standards.  
+
+The Downstream Dashboard pulls data from EDI for visualization. The dashboard was designed to facilitate data exploration by allowing users to easily visualize and query parameters of interest. The dashboard is developed in R Shiny and all code is openly available on [GitHub](https://github.com/SRJPE/data-dock).  TODO rename repo 
+
+![Figure 2. Overview of data management for Downstream Dashboard programs from data collection to data access.](downstream_dashboard.png)
+
+## Dashboard
+
+TODO insert features and output of dashboard
+
+## Roles and responsibilities
+
+- For questions about the SR JPE Genetics Data, please contact Sean Canfield (sean.canfield@water.ca.gov)  
+- For questions about the EMP Discrete Water Quality Data, please contact Morgan Battey (morgan.battey@water.ca.gov) 
+- XX is responsible for ongoing maintenance of the Downstream Dashboard 
+
+TODO decide if we want to put more specific roles and responsibilities. Need to decide who will be maintaining the application 
+

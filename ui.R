@@ -8,19 +8,8 @@ ui <- fluidPage(
 
     ## Overview Tab --------------------------------------------------------
     tabPanel("Overview",
-             fluidRow(
-               column(6,
-                      h3("What is this project?"),
-                      p("Text explaining project..."),
-                      h3("Dashboard explanation"),
-                      p("Water Quality"),
-                      p("Genetics")
-                      ),
-               column(6,
-                      imageOutput("map", height = "400px")
-                      )
-               )
-             ),
+               tags$iframe(src = "overview.html", style = "height:1200px; width:100%", frameborder = "0")
+               ),
     ## Water Quality Tab ---------------------------------------------------
     tabPanel("Water Quality",
              fluidRow(
@@ -137,119 +126,105 @@ ui <- fluidPage(
     tabPanel("Genetics",
              fluidRow(
                column(
-                 width = 12,
-                 tags$div(
-                   style = "margin-bottom: 10px;",
-                   tags$strong("Choose how to filter the data:"),
-                   tags$span(
-                     class = "help-icon",
-                     shiny::icon("question-circle"),
-                     style = "cursor: pointer; color: #007BFF; margin-left: 5px;",
-                     onclick = "document.getElementById('instructions_modal').style.display='block';
-                     document.getElementById('modal_overlay').style.display='block';"),
-                   radioButtons(
-                     inputId = "which_view",
-                     label = NULL,
-                     choices = c("Dropdown Filter", "Map Filter"),
-                     inline = TRUE,
-                     selected = "Dropdown Filter")
-                   )
-                 )
-               ),
-             # === Conditional Panels for Filtering ===
-             conditionalPanel(
-               condition = "input.which_view == 'Dropdown Filter'",
+                 width = 12,)
+             ),
+             div(
+               style = "display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 10px;",
                div(
-                 style = "display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 10px;",
-                 div(
-                   style = "min-width: 200px;",
-                   selectInput(
-                     inputId = "location_filter",
-                     label = tags$strong("Filter by Location:"),
-                     choices = c("All Locations", sort(unique(run_designation$map_label))),
-                     selected = "All Locations",
-                     multiple = TRUE)
-                   ),
-                 div(
-                   style = "min-width: 250px;",
-                   sliderInput(
-                     inputId = "year_range1",
-                     label = tags$strong("Year Range:"),
-                     min = 2020,
-                     max = 2025,
-                     value = c(2020, 2024),
-                     step = 1,
-                     sep = "")
-                   ),
-                 div(
-                   style = "min-width: 200px;",
-                   selectInput(
-                     inputId = "plot_type1",
-                     label = tags$strong("Summarize by:"),
-                     choices = c("Run Proportions", "Run Proportions by Month")
+                 style = "min-width: 200px;",
+                 selectInput(
+                   inputId = "location_filter_g",
+                   label = tags$strong("Filter by Location:"),
+                   choices = c(
+                     setNames(
+                       run_designation$map_label[order(run_designation$map_label)],
+                       run_designation$map_label[order(run_designation$map_label)]
                      )
-                   )
-                 )
+                   ),
+                   selected = NULL,
+                   multiple = TRUE,
+                   selectize = TRUE)
                ),
+               div(
+                 style = "min-width: 250px;",
+                 sliderInput("year_range_g", "Year Range (update min and max years):",
+                             min = as.numeric(min(run_designation$year)),
+                             max = as.numeric(max(run_designation$year)),
+                             value = c(as.numeric(min(run_designation$year)), as.numeric(max(run_designation$year))),
+                             step = 1,
+                             sep = "")
+               ),
+               div(
+                 style = "min-width: 200px;",
+                 selectInput("plot_type_g", "Summarize data by:",
+                             choices = c("Monitoring Year", "Month"))
+               ),
+               div(
+                 style = "min-width: 200px;",
+                 selectInput(
+                   inputId = "genetic_filter_g",
+                   label = tags$strong("Filter Genetic Stock Assignment:"), #TODO - check if filter name makes sense
+                   choices = c(
+                     setNames(
+                       run_designation$run_name[order(run_designation$run_name)],
+                       run_designation$run_name[order(run_designation$run_name)]
+                     )
+                   ),
+                   selected = NULL,
+                   multiple = TRUE,
+                   selectize = TRUE)
+               )
+             ),
 
              # --- Map Filter Panel ---
              conditionalPanel(
-               condition = "input.which_view == 'Map Filter'",
+               condition = "input.which_view_g == 'Map Filter'",
                div(
                  style = "display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 10px;",
                  div(
                    style = "min-width: 250px;",
                    sliderInput(
-                     inputId = "year_range2",
+                     inputId = "year_range2_g",
                      label = tags$strong("Year Range:"),
-                     min = 2020,
-                     max = 2025,
-                     value = c(2020, 2024),
+                     min = as.numeric(min(run_designation$year)),
+                     max = as.numeric(max(run_designation$year)),
+                     value = c(as.numeric(min(run_designation$year)), as.numeric(max(run_designation$year))),
                      step = 1,
                      sep = "")
-                   ),
+                 ),
                  div(
                    style = "min-width: 200px;",
-                   selectInput(
-                     inputId = "plot_type2",
-                     label = tags$strong("Summarize by:"),
-                     choices = c("Run Proportions", "Run Proportions by Month")
-                     )
-                   )
+                   selectInput("plot_type_g", "Summarize data by:",
+                               choices = c("Monitoring Year", "Month"))
                  )
-               ),
-
-             # === Hidden Modal Overlay ===
-             tags$div(
-               id = "modal_overlay",
-               style = "display:none; position:fixed; top:0; left:0; width:100%; height:100%; background-color:rgba(0, 0, 0, 0.5); z-index:999;",
-               onclick = "document.getElementById('instructions_modal').style.display='none';
-               document.getElementById('modal_overlay').style.display='none';"
-               ),
-             tags$div(
-               id = "instructions_modal",
-               style = "display:none; position:fixed; z-index:1000; left:50%; top:50%; transform:translate(-50%, -50%); background-color:white; padding:20px; border:1px solid #ccc; box-shadow:0px 4px 8px rgba(0,0,0,0.2); width: 500px;",
-               tags$div(
-                 style = "text-align:right;",
-                 tags$button("Close",
-                             onclick = "document.getElementById('instructions_modal').style.display='none';
-                             document.getElementById('modal_overlay').style.display='none';",
-                             style = "background:none; border:none; color:#007BFF; font-weight:bold; cursor:pointer;")
-                 ),
-               tags$h4("Instructions"),
-               tags$p("Filter the data by time and space or view all data. You can filter by monitoring location either by selecting the name in the dropdown menu or by selecting the location of interest in the map. If you would like to use the map as a filter please select Map Filter")
-               ),
+               )
+             ),
 
              # === Map and Floating Plot Panel ===
              fluidRow(
-               column(
-                 width = 4,
-                 leafletOutput("genetics_map", height = "600px")),
+               column(width = 4,
+                      leafletOutput("g_map", height = "600px")
+               ),
                column(width = 8,
-                      uiOutput("genetics_dynamic_plot")
-                      )
+                      plotlyOutput("g_dynamic_plot", height = "600px"),
+                      tags$p("Note: The year is representative of a monitoring year (Nov-May), see [data collection methods](insert link) for more detail.",
+                             style = "font-size: 0.9em; font-style: italic; color: #555; margin-top:5px;")
                )
              ),
+             fluidRow(
+               column(width = 12,
+                      div(style = "margin-top: 20px; text-align: right;",
+                          downloadBttn("download_g_csv", "Download Selected Data",
+                                       style = "unite", color = "primary", size = "sm"),
+                          tags$p(
+                            tags$span("Download the data currently selected in the map and filters."),
+                            tags$br(),
+                            tags$span("For custom queries, visit the Download tab."),
+                            style = "margin-bottom: 5px; font-style: italic; color: #555;")
+                      )
+               )
+             )
+    ),
 
     ## Download Tab -------------------------------------------------------
     tabPanel(
