@@ -301,14 +301,14 @@ server <- function(input, output, session) {
         popup = ~paste0("<b>", station_id, "</b><br/>", station_description)
         ) |>
       # Inactive sites (triangles using a custom icon)
-      addMarkers(
-        data = subset(wq_metadata, status == "Inactive"),
-        layerId = ~station_id_name,
-        label = ~paste(station_id_name, "-", station_description),
-        icon = icons(
-          iconUrl = "https://upload.wikimedia.org/wikipedia/commons/3/3c/Black_triangle.svg",
-          iconWidth = 12, iconHeight = 12),
-        popup = ~paste0("<b>", station_id, "</b><br/>", station_description)) |>
+      # addMarkers(
+      #   data = subset(wq_metadata, status == "Inactive"),
+      #   layerId = ~station_id_name,
+      #   label = ~paste(station_id_name, "-", station_description),
+      #   icon = icons(
+      #     iconUrl = "https://upload.wikimedia.org/wikipedia/commons/3/3c/Black_triangle.svg",
+      #     iconWidth = 12, iconHeight = 12),
+      #   popup = ~paste0("<b>", station_id, "</b><br/>", station_description)) |>
       addCircleMarkers(
         data    = wq_metadata,
         layerId = ~station_id_name,
@@ -515,11 +515,10 @@ output$wq_dynamic_plot <- renderPlotly({
         nd_height = dplyr::case_when(
           reports_to == "MDL" ~ as.numeric(mdl),
           reports_to == "MRL" ~ as.numeric(mrl),
-          TRUE ~ NA_real_
-        ),
+          TRUE ~ NA_real_),
         x_minus = date - lubridate::days(10),
         x_plus  = date + lubridate::days(10)
-      ) |>
+        ) |>
       dplyr::filter(!is.na(nd_height))
 
     # y-axis label: unit if single analyte; otherwise blank (units are in each panel title)
@@ -534,38 +533,62 @@ output$wq_dynamic_plot <- renderPlotly({
       labs(x = "", y = y_axis_lab, color = "Location") +
       theme_minimal()
 
-    #   # lines/points for detected ONLY, with group resetting after non-detects
-      if (nrow(detected) > 0) {
-        p <- p +
-          geom_line(data = detected,
-                    aes(y = value,
-                        color = station_id_name,
-                        group = interaction(station_id_name, seg_id)), linewidth = 0.6) +
-          geom_point(data = detected,
-                     aes(y = value, color = station_id_name),
-                     size = 1, alpha = 0.6)
-        }
+    # Tol Muted color palette
+    tol_muted <- c(
+      "#332288", "#117733", "#44AA99", "#88CCEE",
+      "#DDCC77", "#CC6677", "#AA4499", "#882255")
 
-      # Non-detect markers (vertical + short horizontal at MDL/MRL)
-      if (nrow(nd) > 0) {
-        p <- p +
-          geom_segment(data = nd,
-                       aes(x = date, xend = date, y = 0, yend = nd_height, color = station_id_name),
-                       linewidth = 0.6, linetype = 5, inherit.aes = FALSE) +
-          geom_segment(data = nd,
-                       aes(x = x_minus, xend = x_plus, y = nd_height, yend = nd_height, color = station_id_name),
-                       linewidth = 0.6, lineend = "square", inherit.aes = FALSE)
-        }
+    # lines/points for detected ONLY, with group resetting after non-detects
+    if (nrow(detected) > 0) {
+      p <- p +
+        geom_line(data = detected,
+                  aes(y = value,
+                      color = station_id_name,
+                      group = interaction(station_id_name, seg_id)), linewidth = 0.6, show.legend = FALSE) +
+        geom_point(data = detected,
+                   aes(y = value,
+                       color = station_id_name,
+                       shape = station_id_name),
+          size = 1.8, alpha = 0.8, show.legend = TRUE)
       }
 
 
-  else if (plot_type == "Box Plot") {
+    # Non-detect markers (vertical + short horizontal at MDL/MRL)
+    if (nrow(nd) > 0) {
+      p <- p +
+        geom_segment(data = nd,
+                     aes(x = date, xend = date, y = 0, yend = nd_height, color = station_id_name),
+                     linewidth = 0.6, linetype = 5, inherit.aes = FALSE) +
+        geom_segment(data = nd,
+                     aes(x = x_minus, xend = x_plus, y = nd_height, yend = nd_height, color = station_id_name),
+                     linewidth = 0.6, lineend = "square", inherit.aes = FALSE)
+    }
+
+    # apply Tol Muted palette, shapes, and unified legend
+    p <- p +
+      scale_color_manual(values = tol_muted) +
+      scale_shape_manual(values = c(16, 17, 15, 3, 7, 8, 9, 10)) +
+      guides(color = guide_legend(
+        override.aes = list(shape = 16, linetype = 0, size = 2.5, alpha = 1)),
+        shape = "none") +
+      theme_minimal() +
+      theme(
+        legend.position = "bottom",
+        legend.box = "horizontal",
+        legend.title = element_text(face = "bold"),
+        strip.text = element_text(face = "bold")
+      )
+
+
+# TODO add units to the box plots (just like line plot)
+  } else if (plot_type == "Box Plot") {
     p <- ggplot(
       df |> dplyr::filter(!is.na(value)),
       aes(x = station_id, y = value, fill = station_id)) +
       geom_boxplot(outlier.shape = NA) +
       facet_wrap(~ analyte, scales = "free_y", ncol = 2) +
       labs(x = "", y = "value", fill = "Station") +
+      scale_fill_manual(values = tol_muted) +
       theme_minimal() +
       theme(legend.position = "none")
 
@@ -573,119 +596,28 @@ output$wq_dynamic_plot <- renderPlotly({
     return(NULL)
   }
 
-  ggplotly(p)
+  gp <- ggplotly(p)
 
-})
+  for (i in seq_along(gp$x$data)) {
+    tr <- gp$x$data[[i]]
 
-
-# Download tab  --------------------------------------------------------------
-# sync Water Quality selections to Download tab
-observeEvent(input$navbar, {
-  if (input$navbar == "Download Data") {
-    updateSelectInput(session, "location_filter_dl",
-                      selected = input$location_filter_wq)
-    updateSliderInput(session, "year_range_dl",
-                      value = input$year_range)
-    updateSelectizeInput(session, "analyte_download",
-                         selected = input$analyte)
-  }
-})
-
-# shared filtering logic
-filter_wq_data <- function(locations, years, analytes, include_weather = FALSE) {
-  out <- wq_data |>
-    dplyr::filter(
-      lubridate::year(date) >= years[1],
-      lubridate::year(date) <= years[2]
-    )
-
-  if (!is.null(locations) && length(locations) > 0) {
-    out <- out |> dplyr::filter(station_id_name %in% locations)
-  }
-
-  # handle analytes
-  if (!is.null(analytes) && length(analytes) > 0) {
-    out <- out |> dplyr::filter(analyte %in% analytes)
-  }
-
-  # add weather analytes if requested
-  if (include_weather) {
-    weather <- wq_quality_weather |>
-      dplyr::filter(
-        analyte %in% c("Rain", "Sky Conditions"),
-        lubridate::year(date) >= years[1],
-        lubridate::year(date) <= years[2]
-      )
-
-    # same location filtering to weather data
-    if (!is.null(locations) && length(locations) > 0) {
-      weather <- weather |> dplyr::filter(station_id_name %in% locations)
+    # Hide lines from legend
+    if (!is.null(tr$mode) && tr$mode == "lines") {
+      gp$x$data[[i]]$showlegend <- FALSE
     }
-
-    if (nrow(weather) == 0) {
-      showNotification(
-        "No weather data (Rain or Sky Conditions) available for the selected site(s) and year(s).",
-        type = "message",
-        duration = 6
-      )
-    } else {
-
-      weather <- weather |>
-        dplyr::mutate(value_text = value,
-                      value = NA_real_) |>
-        select(-value) |>
-        mutate(value = as.character(value_text)) |>
-        select(-value_text)
-
-      out <- out |>
-        dplyr::mutate(value = as.character(value))
-
-      out <- dplyr::bind_rows(out, weather)
+#TODO figure out how to remove duplicate shape symbology
+    # enable legend for points
+    if (!is.null(tr$mode) && grepl("markers", tr$mode)) {
+      gp$x$data[[i]]$showlegend <- TRUE
     }
   }
 
-  out
+  # draw legend
+  gp <- gp |> layout(showlegend = TRUE)
 
-}
-# reactives for both tabs
-wq_download_data <- reactive({
-  filter_wq_data(input$location_filter_wq,
-                 input$year_range,
-                 input$analyte,
-                 include_weather = input$include_weather)
+  gp
+
 })
 
-dl_download_data <- reactive({
-  filter_wq_data(input$location_filter_dl,
-                 input$year_range_dl,
-                 input$analyte_download,
-                 include_weather = input$include_weather)
-})
-
-# shared download handler function
-make_download_handler <- function(data_fun) {
-  downloadHandler(
-    filename = function() paste0("water_quality_", Sys.Date(), ".csv"),
-    content = function(file) {
-      readr::write_csv(data_fun(), file)
-    }
-  )
-}
-
-# assign to outputs
-output$download_wq_csv_dl <- make_download_handler(dl_download_data)
-
-output$dl_preview_table <- DT::renderDataTable({
-  req(dl_download_data())
-
-  dl_download_data() |>
-    dplyr::select(date, station_id_name, analyte, value, unit) |>
-    DT::datatable(
-      options = list(
-        pageLength = 10,
-        scrollX = TRUE
-      )
-    )
-})
 }
 
