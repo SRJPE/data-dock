@@ -858,6 +858,114 @@ output$wq_dynamic_plot <- renderPlotly({
   gp
 
 })
+# Download tab  --------------------------------------------------------------
+# sync Water Quality selections to Download tab
+observeEvent(input$navbar, {
+  if (input$navbar == "Download Data") {
+    updateSelectInput(session, "location_filter_dl",
+                      selected = input$location_filter_wq)
+    updateSliderInput(session, "year_range_dl",
+                      value = input$year_range)
+    updateSelectizeInput(session, "analyte_download",
+                         selected = input$analyte)
+  }
+})
 
+# shared filtering logic
+filter_wq_data <- function(locations, years, analytes, include_weather = FALSE) {
+  out <- wq_data |>
+    dplyr::filter(
+      lubridate::year(date) >= years[1],
+      lubridate::year(date) <= years[2]
+    )
+
+  if (!is.null(locations) && length(locations) > 0) {
+    out <- out |> dplyr::filter(station_id_name %in% locations)
+  }
+
+  # handle analytes
+  if (!is.null(analytes) && length(analytes) > 0) {
+    out <- out |> dplyr::filter(analyte %in% analytes)
+  }
+
+  # add weather analytes if requested
+  if (include_weather) {
+    weather <- wq_quality_weather |>
+      dplyr::filter(
+        analyte %in% c("Rain", "Sky Conditions"),
+        lubridate::year(date) >= years[1],
+        lubridate::year(date) <= years[2]
+      )
+
+    # same location filtering to weather data
+    if (!is.null(locations) && length(locations) > 0) {
+      weather <- weather |> dplyr::filter(station_id_name %in% locations)
+    }
+
+    if (nrow(weather) == 0) {
+      showNotification(
+        "No weather data (Rain or Sky Conditions) available for the selected site(s) and year(s).",
+        type = "message",
+        duration = 6
+      )
+    } else {
+
+      weather <- weather |>
+        dplyr::mutate(value_text = value,
+                      value = NA_real_) |>
+        select(-value) |>
+        mutate(value = as.character(value_text)) |>
+        select(-value_text)
+
+      out <- out |>
+        dplyr::mutate(value = as.character(value))
+
+      out <- dplyr::bind_rows(out, weather)
+    }
+  }
+
+  out
+
+}
+# reactives for both tabs
+wq_download_data <- reactive({
+  filter_wq_data(input$location_filter_wq,
+                 input$year_range,
+                 input$analyte,
+                 include_weather = input$include_weather)
+})
+
+dl_download_data <- reactive({
+  filter_wq_data(input$location_filter_dl,
+                 input$year_range_dl,
+                 input$analyte_download,
+                 include_weather = input$include_weather)
+})
+
+# shared download handler function
+make_download_handler <- function(data_fun) {
+  downloadHandler(
+    filename = function() paste0("water_quality_", Sys.Date(), ".csv"),
+    content = function(file) {
+      readr::write_csv(data_fun(), file)
+    }
+  )
+}
+
+# assign to outputs
+output$download_wq_csv_dl <- make_download_handler(dl_download_data)
+
+output$dl_preview_table <- DT::renderDataTable({
+  req(dl_download_data())
+
+  dl_download_data() |>
+    dplyr::select(date, station_id_name, analyte, value, unit) |>
+    DT::datatable(
+      options = list(
+        pageLength = 10,
+        scrollX = TRUE
+      )
+    )
+})
 }
 
