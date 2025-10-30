@@ -50,13 +50,21 @@ run_designation <- genetics |>
                                location_name == "Feather-RM17" ~ "Feather River - RM 17",
                                location_name == "Sac-Delta Entry" ~ "Sacramento River - Delta Entry",
                                location_name == "Yuba" ~ "Yuba River"))
+#TODO check
+# run_designation_percent <- run_designation |>
+#   group_by(map_label, sample_event, year, run_name, month) |> # is this correct?
+#   summarize(count = n()) |>
+#   group_by(map_label, year, sample_event) |>
+#   mutate(total_sample = sum(count),
+#          run_percent = (count/total_sample) * 100)
 
 run_designation_percent <- run_designation |>
-  group_by(map_label, sample_event, year, run_name) |>
-  summarize(count = n()) |>
-  group_by(map_label, year, sample_event) |>
+  group_by(year, month, run_name) |>
+  summarise(count = n(), .groups = "drop_last") |>
   mutate(total_sample = sum(count),
-         run_percent = (count/total_sample) * 100)
+         run_percent = (count / total_sample) * 100) |>
+  ungroup()
+
 ```
 
 This is a plot we currently have
@@ -86,18 +94,12 @@ This is a plot we currently have
 Bar chart stacked
 
 ```{r echo=FALSE}
-run_summary <- run_designation |>
-  group_by(year, month, run_name) |>
-  summarise(count = n(), .groups = "drop_last") |>
-  mutate(total_sample = sum(count),
-         run_percent = (count / total_sample) * 100) |>
-  ungroup()
 
 
-plot_2 <- ggplot(run_summary, aes(x = month, y = run_percent, fill = run_name)) +
+plot_2 <- ggplot(run_designation_percent, aes(x = month, y = run_percent, fill = run_name)) +
   geom_bar(stat = "identity", position = "stack", width = 0.7) +
   facet_wrap(~ year, ncol = 1) +
-  scale_fill_manual(values = run_col) +
+  scale_fill_manual(values = tol_muted) +
   scale_y_continuous() +
   theme_minimal(base_size = 13) 
 
@@ -106,14 +108,14 @@ ggplotly(plot_2)
 
 ```{r eval=FALSE, include=FALSE}
 # bar plot - would like to have same thickness for all bars
-plot_3 <- ggplot(run_summary, aes(x = month, y = run_percent, fill = run_name)) +
+plot_3 <- ggplot(run_designation_percent, aes(x = month, y = run_percent, fill = run_name)) +
   geom_bar(stat = "identity", position = position_dodge(width = 0.8), width = 0.7) +
   facet_wrap(~ year, ncol = 1) +
   scale_fill_manual(values = run_col) +
   scale_y_continuous() +
   theme_minimal() 
 
-plot_3_filtered <- ggplot(run_summary |> 
+plot_3_filtered <- ggplot(run_designation_percent |> 
                    filter(year == 2022), aes(x = month, y = run_percent, fill = run_name)) +
   geom_bar(stat = "identity", position = position_dodge(width = 0.8), width = 0.7) +
   facet_wrap(~ year, ncol = 1) +
@@ -128,15 +130,15 @@ ggplotly(plot_3)
 
 ```{r echo=FALSE}
 # adding month labels 
-run_summary <- run_designation |>
+run_summary <- run_designation_percent |>
   mutate(month = factor(month,
                         levels = c(11, 12, 1, 2, 3, 4, 5),
-                        labels = c("Nov", "Dec", "Jan", "Feb", "Mar", "Apr", "May"))) |>
-  group_by(year, month, run_name) |>
-  summarise(count = n(), .groups = "drop_last") |>
-  mutate(total_sample = sum(count),
-         run_percent = (count / total_sample) * 100) |>
-  ungroup()
+                        labels = c("Nov", "Dec", "Jan", "Feb", "Mar", "Apr", "May")))
+  # group_by(year, month, run_name) |>
+  # summarise(count = n(), .groups = "drop_last") |>
+  # mutate(total_sample = sum(count),
+  #        run_percent = (count / total_sample) * 100) |>
+  # ungroup()
 
 
 # filling gaps for those runs that are not present - purpose: remove gaps and have consistent size of bars
@@ -164,4 +166,15 @@ plot_4 <- ggplot(run_summary_full, aes(x = month, y = run_percent, fill = run_na
 ggplotly(plot_4)
 
 ```
+
+Similar plot than by year 
+
+```{r echo=FALSE}
+ggplot(run_summary, aes(x = month, y = run_percent, color = run_name, group = run_name)) +
+  geom_line() +
+  geom_point() +
+  facet_wrap(~ year)
+```
+
+
 
