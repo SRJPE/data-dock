@@ -227,12 +227,12 @@ server <- function(input, output, session) {
       #   mutate(total_sample = sum(count),
       #          run_percent = (count/total_sample) * 100) |>
       #   left_join(sample_event_temp)
-      plot <- ggplot(df, aes(x = run_name, y = run_percent, color = year)) +
-        #geom_jitter()+
+      # TODO debug the line plot
+      plot <- ggplot(df, aes(x = year, y = run_percent, color = run_name)) +
         geom_point() +
-        #geom_line() +
+        geom_line() +
         theme_minimal() +
-        scale_color_manual(values = c( "#2E2585", "#94CBEC", "#7E2954","#337538")) +
+        scale_color_manual(values = run_col) +
         facet_wrap( ~ map_label, ncol = 1) +
         labs(x = "", y = "Percent", color = "")
 
