@@ -1,0 +1,167 @@
+---
+title: "draft genetics visualizations"
+date: "`r Sys.Date()`"
+output: html_document
+editor_options: 
+  markdown: 
+    wrap: 72
+  chunk_output_type: console
+---
+
+```{r, include = F}
+library(DBI)
+library(tidyverse)
+library(leaflet)
+library(dplyr)
+library(sf)
+#library(gridExtra)
+library(patchwork)
+library(plotly)
+library(lubridate)
+
+tol_muted <- c("#2E2585", "#337538", "#5DA899", "#94CBEC","#DCCD7D", "#C26A77", "#9F4A96","#7E2954", "#999933")
+
+run_col <- c("Spring" = "#2E2585", "Winter" = "#94CBEC", "Spring/Winter" = "#5DA899", "Fall" = "#7E2954",
+                 "LateFall" = "#C26A77", "Fall/LateFall" = "#9F4A96", "Unknown" = "gray", "Early/Late Heterozygous" = "#DCCD7D")
+# this is a sample query that is only being use for platting purposes - it was randombly filled out
+genetics <- read_csv(here::here("data-raw","sample_query_drafted.csv")) |>
+  rename(run_name = genetic_run_name,
+         field_run_type_id = field_run_name) |>  # renaming for now to keep consistency with previous sample query
+  mutate(fork_length_mm = ifelse(is.na(fork_length_mm),
+                                 sample(fork_length_mm[!is.na(fork_length_mm)], sum(is.na(fork_length_mm)), replace = TRUE),
+                                 fork_length_mm),
+         field_run_type_id = ifelse(is.na(field_run_type_id),
+                                    sample(field_run_type_id[!is.na(field_run_type_id)], sum(is.na(field_run_type_id)), replace = TRUE),
+                                    field_run_type_id))
+
+sample_location <- read_csv(here::here("data-raw","grunid_sample_location.csv"))
+
+run_designation <- genetics |>
+  mutate(code = substr(sample_id, 1, 3),
+         year= paste0(20,substr(sample_id, 4,5)),
+         month = month(datetime_collected), # TODO currentlu there are only months 12 and 11 so it does not plot well
+         sample_event = sub("^[^_]+_([^_]+)_.*$", "\\1", sample_id),
+         sample_event = as.numeric(sample_event)) |>
+  left_join(select(sample_location, code, location_name)) |>
+  mutate(map_label = case_when(location_name %in% c("Battle", "Clear", "Mill", "Deer", "Butte") ~ paste0(location_name, " Creek"),
+                               location_name == "Sac-KNL" ~ "Sacramento River - Knights Landing",
+                               location_name == "Sac-Tisdale" ~ "Sacramento River - Tisdale",
+                               location_name == "Feather-RM61" ~ "Feather River - RM 61",
+                               location_name == "Feather-RM17" ~ "Feather River - RM 17",
+                               location_name == "Sac-Delta Entry" ~ "Sacramento River - Delta Entry",
+                               location_name == "Yuba" ~ "Yuba River"))
+
+run_designation_percent <- run_designation |>
+  group_by(map_label, sample_event, year, run_name) |>
+  summarize(count = n()) |>
+  group_by(map_label, year, sample_event) |>
+  mutate(total_sample = sum(count),
+         run_percent = (count/total_sample) * 100)
+```
+
+This is a plot we currently have
+
+```{r echo=FALSE}
+# plot_1 <- ggplot(run_designation_percent, aes(x = month, y = run_percent, fill = run_name)) +
+#   geom_bar(stat = "identity", position = "stack") +
+#   scale_fill_manual(values = run_col) +
+#   scale_y_continuous(breaks = seq(0, 100, by = 20)) +
+#   theme_minimal(base_size = 12) +
+#   facet_wrap(~ map_label, ncol = 1, scales = "free_y") +
+#   labs(fill = "", x = "Month", y = "Percent of Samples by Run")
+# 
+# # filtering some sites selected to make it easier to see
+# plot_1_filtered <- ggplot(run_designation_percent |> 
+#                             filter(map_label %in% c("Battle Creek", "Clear Creek", "Sacramento River - Delta Entry")), aes(x = month, y = run_percent, fill = run_name)) +
+#   geom_bar(stat = "identity", position = "stack") +
+#   scale_fill_manual(values = run_col) +
+#   scale_y_continuous(breaks = seq(0, 100, by = 20)) +
+#   theme_minimal() +
+#   facet_wrap(~ map_label, ncol = 1) +
+#   labs(fill = "", x = "Month", y = "Percent of Samples by Run")
+# 
+# ggplotly(plot_1_filtered)
+```
+
+Bar chart stacked
+
+```{r echo=FALSE}
+run_summary <- run_designation |>
+  group_by(year, month, run_name) |>
+  summarise(count = n(), .groups = "drop_last") |>
+  mutate(total_sample = sum(count),
+         run_percent = (count / total_sample) * 100) |>
+  ungroup()
+
+
+plot_2 <- ggplot(run_summary, aes(x = month, y = run_percent, fill = run_name)) +
+  geom_bar(stat = "identity", position = "stack", width = 0.7) +
+  facet_wrap(~ year, ncol = 1) +
+  scale_fill_manual(values = run_col) +
+  scale_y_continuous() +
+  theme_minimal(base_size = 13) 
+
+ggplotly(plot_2)
+```
+
+```{r eval=FALSE, include=FALSE}
+# bar plot - would like to have same thickness for all bars
+plot_3 <- ggplot(run_summary, aes(x = month, y = run_percent, fill = run_name)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.8), width = 0.7) +
+  facet_wrap(~ year, ncol = 1) +
+  scale_fill_manual(values = run_col) +
+  scale_y_continuous() +
+  theme_minimal() 
+
+plot_3_filtered <- ggplot(run_summary |> 
+                   filter(year == 2022), aes(x = month, y = run_percent, fill = run_name)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.8), width = 0.7) +
+  facet_wrap(~ year, ncol = 1) +
+  scale_fill_manual(values = run_col) +
+  scale_y_continuous() +
+  theme_minimal() 
+
+ggplotly(plot_3)
+# ggplotly(plot_3_filtered)
+```
+
+
+```{r echo=FALSE}
+# adding month labels 
+run_summary <- run_designation |>
+  mutate(month = factor(month,
+                        levels = c(11, 12, 1, 2, 3, 4, 5),
+                        labels = c("Nov", "Dec", "Jan", "Feb", "Mar", "Apr", "May"))) |>
+  group_by(year, month, run_name) |>
+  summarise(count = n(), .groups = "drop_last") |>
+  mutate(total_sample = sum(count),
+         run_percent = (count / total_sample) * 100) |>
+  ungroup()
+
+
+# filling gaps for those runs that are not present - purpose: remove gaps and have consistent size of bars
+month_year_bins <- expand.grid(year = unique(run_summary$year),
+                               month = factor(c("Nov", "Dec", "Jan", "Feb", "Mar", "Apr"),
+                                              levels = c("Nov", "Dec", "Jan", "Feb", "Mar","Apr")),
+                               run_name = unique(run_summary$run_name))
+
+run_summary_full <- run_summary |>
+  right_join(month_year_bins, by = c("year", "month", "run_name")) |>
+  mutate(run_percent = replace_na(run_percent, 0))
+
+
+plot_4 <- ggplot(run_summary_full, aes(x = month, y = run_percent, fill = run_name)) +
+  geom_bar(stat = "identity",
+           position = position_dodge(width = 0.8),
+           width = 0.7) + 
+  facet_wrap(~ year, ncol = 1) +
+  scale_fill_manual(values = tol_muted) +
+  scale_y_continuous(limits = c(0, 100),
+                     breaks = seq(0, 100, 20),
+                     labels = function(x) paste0(x, "%")) +
+  theme_minimal(base_size = 13) 
+
+ggplotly(plot_4)
+
+```
+
