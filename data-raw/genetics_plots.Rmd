@@ -186,6 +186,8 @@ run_summary_complete_2 <- all_combos_2 |>
 
 ```
 
+Example: Battle Creek 
+
 ```{r echo=FALSE}
 line_plot_month <- ggplot(run_summary_complete_2 |> filter(location_name == "Battle"), aes(x = month, y = run_percent, color = field_run_type_id, group = field_run_type_id)) +
   geom_line() +
@@ -199,12 +201,28 @@ line_plot_month <- ggplot(run_summary_complete_2 |> filter(location_name == "Bat
 
 ggplotly(line_plot_month)
 ```
+Example: Mill Creek 
+
+```{r echo=FALSE}
+line_plot_month_2 <- ggplot(run_summary_complete_2 |> filter(location_name == "Mill"), aes(x = month, y = run_percent, color = field_run_type_id, group = field_run_type_id)) +
+  geom_line() +
+  geom_point() +
+  scale_color_manual(values = tol_muted) +
+  scale_y_continuous(limits = c(0, 100),
+                     breaks = seq(0, 100, 20),
+                     labels = function(x) paste0(x, "%")) +
+  facet_wrap(~ year) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+
+ggplotly(line_plot_month_2)
+```
 
 ### Line plot throughout the years
 
-Using as an example Battle Creek selection
+Example: Battle Creek 
+
 ```{r echo=FALSE}
-line_plot_year <- ggplot(run_summary_complete_2 |> filter(location_name == "Mill"), aes(x = date, y = run_percent, color = field_run_type_id, group = field_run_type_id)) +
+line_plot_year <- ggplot(run_summary_complete_2 |> filter(location_name == "Battle"), aes(x = date, y = run_percent, color = field_run_type_id, group = field_run_type_id)) +
   geom_line() +
   geom_point() +
   scale_color_manual(values = tol_muted) +
@@ -214,4 +232,18 @@ line_plot_year <- ggplot(run_summary_complete_2 |> filter(location_name == "Mill
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
 
 ggplotly(line_plot_year)
+```
+Example: Battle Creek 
+
+```{r echo=FALSE}
+line_plot_year_2 <- ggplot(run_summary_complete_2 |> filter(location_name == "Mill"), aes(x = date, y = run_percent, color = field_run_type_id, group = field_run_type_id)) +
+  geom_line() +
+  geom_point() +
+  scale_color_manual(values = tol_muted) +
+  scale_y_continuous(limits = c(0, 100),
+                     breaks = seq(0, 100, 20),
+                     labels = function(x) paste0(x, "%")) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+
+ggplotly(line_plot_year_2)
 ```
