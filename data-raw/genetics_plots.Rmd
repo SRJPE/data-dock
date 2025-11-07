@@ -327,3 +327,46 @@ line_plot_year_grouped_2 <- ggplot(run_summary_complete_by_year |> filter(locati
 ggplotly(line_plot_year_grouped_2)
 
 ```
+
+
+### Histograms
+
+```{r include=FALSE}
+plot_test <- run_designation |>
+  mutate(day_standard = yday(datetime_collected), # regular ordinal day
+         sample_day = (day_standard - 304) %% 365 + 150) # shift so that Nov 1 = 150
+  
+plot_test <- plot_test |> 
+  group_by(sample_day, location_name, field_run_type_id) |> 
+  summarise(count = n(), .groups = "drop") |>
+  mutate(total_sample_day = sum(count)) |> 
+         # run_percent = (count / total_sample_day) * 100) |>
+  ungroup() |> 
+  mutate(sample_day = case_when(is.na(sample_day) ~ 0, # fill NAs with zeros
+                                TRUE ~ sample_day)) |> glimpse()
+  
+ggplot(plot_test |> filter(location_name == "Sac-KNL"), aes(x = sample_day, y = count, color = field_run_type_id)) +
+  geom_col() +
+  facet_wrap(~ field_run_type_id) +
+  theme_minimal()
+```
+
+Example: Sacramento Knights Landing 
+
+```{r echo=FALSE}
+ggplot(plot_test |> filter(location_name == "Sac-KNL"), aes(x = sample_day, color = field_run_type_id, fill = field_run_type_id)) +
+  geom_density(alpha = 0.3, adjust = 1.5) +
+  facet_wrap(~ field_run_type_id) +
+  theme_minimal() +
+  labs(x = "Sample Day", y = "", fill = "Run Type", color = "Run Type")
+```
+
+Example: Clear Creek 
+
+```{r echo=FALSE}
+ggplot(plot_test |> filter(location_name == "Clear"), aes(x = sample_day, color = field_run_type_id, fill = field_run_type_id)) +
+  geom_density(alpha = 0.3, adjust = 1.5) +
+  facet_wrap(~ field_run_type_id) +
+  theme_minimal() +
+  labs(x = "Sample Day", y = "", fill = "Run Type", color = "Run Type")
+```
