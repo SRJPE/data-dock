@@ -159,16 +159,29 @@ ui <- fluidPage(
                  selectInput("plot_type_g", "Summarize data by:",
                              choices = c("Monitoring Year", "Month"))
                ),
+               # div(
+               #   style = "min-width: 200px;",
+               #   selectInput(
+               #     inputId = "genetic_filter_g",
+               #     label = tags$strong("Filter Genetic Stock Assignment:"), #TODO - check if filter name makes sense
+               #     choices = c(
+               #       setNames(
+               #         run_designation$run_name[order(run_designation$run_name)],
+               #         run_designation$run_name[order(run_designation$run_name)]
+               #       )
+               #     ),
+               #     selected = NULL,
+               #     multiple = TRUE,
+               #     selectize = TRUE)
+               # )
                div(
                  style = "min-width: 200px;",
                  selectInput(
-                   inputId = "genetic_filter_g",
-                   label = tags$strong("Filter Genetic Stock Assignment:"), #TODO - check if filter name makes sense
-                   choices = c(
-                     setNames(
-                       run_designation$run_name[order(run_designation$run_name)],
-                       run_designation$run_name[order(run_designation$run_name)]
-                     )
+                   inputId = "month_filter_g",
+                   label = tags$strong("Filter Month:"), #TODO - make it functional
+                   choices = c("Nov", "Dec", "Jan", "Feb", "March", "Apr"
+                       # run_designation$month[order(run_designation$month)],
+                       # run_designation$month[order(run_designation$month)]
                    ),
                    selected = NULL,
                    multiple = TRUE,

@@ -107,7 +107,8 @@ run_designation <- genetics_data_raw |>
                                location_name == "Feather-RM61" ~ "Feather River - RM 61",
                                location_name == "Feather-RM17" ~ "Feather River - RM 17",
                                location_name == "Sac-Delta Entry" ~ "Sacramento River - Delta Entry",
-                               location_name == "Yuba" ~ "Yuba River"))
+                               location_name == "Yuba" ~ "Yuba River")) |>
+  filter(!is.na(month))
 # stock assignment (fall, spring) and phenotype(early, late heterozygot )
 run_designation_percent <- run_designation |>
   group_by(location_name, sample_event, year, run_name) |>
