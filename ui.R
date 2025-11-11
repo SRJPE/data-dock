@@ -174,19 +174,6 @@ ui <- fluidPage(
                #     multiple = TRUE,
                #     selectize = TRUE)
                # )
-               div(
-                 style = "min-width: 200px;",
-                 selectInput(
-                   inputId = "month_filter_g",
-                   label = tags$strong("Filter Month:"), #TODO - make it functional
-                   choices = c("Nov", "Dec", "Jan", "Feb", "March", "Apr"
-                       # run_designation$month[order(run_designation$month)],
-                       # run_designation$month[order(run_designation$month)]
-                   ),
-                   selected = NULL,
-                   multiple = TRUE,
-                   selectize = TRUE)
-               )
              ),
 
              # --- Map Filter Panel ---

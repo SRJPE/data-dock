@@ -187,7 +187,11 @@ server <- function(input, output, session) {
   output$g_dynamic_plot <- renderPlotly({
     req(!is.null(input$location_filter_g) && length(input$location_filter_g) > 0)
     df <- data_for_plot_g()
-
+# TODO figure out the best plot configuration (e.g. stacked)
+    # if more than one year selected then you can nonly vew one site
+    # If one year selected then make sure they are stacked
+    # when more than 1 year is selected limit to 3 sites
+    #  limit to only 3 years
 #
 #     selected_locs <- input$location_filter_g %||% character(0)
 #
