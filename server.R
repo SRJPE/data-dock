@@ -158,18 +158,28 @@ server <- function(input, output, session) {
                run_percent = (count/total_sample) * 100)
     }
     if (input$plot_type_g == "Month") {
-      sample_event_temp <- run_designation |>
-        distinct(map_label, year, month) |>
-        arrange(map_label,year, month) |>
-        group_by(map_label) |>
-        mutate(sample_event2 = row_number())
+      # sample_event_temp <- run_designation |>
+      #   distinct(map_label, year, month) |>
+      #   arrange(map_label,year, month) |>
+      #   group_by(map_label) |>
+      #   mutate(sample_event2 = row_number())
       df <- filtered_g_data() |>
-        group_by(year, map_label, month, run_name) |>
-        summarize(count = n()) |>
-        group_by(year, map_label, month) |>
-        mutate(total_sample = sum(count),
-               run_percent = (count/total_sample) * 100) |>
-        left_join(sample_event_temp)
+        # group_by(year, map_label, month, run_name) |>
+        # summarize(count = n()) |>
+        # group_by(year, map_label, month) |>
+        # mutate(total_sample = sum(count),
+        #        run_percent = (count/total_sample) * 100) |>
+        # left_join(sample_event_temp)
+        filter(!is.na(month)) |>
+        group_by(year, month, location_name, run_name) |>
+        summarise(total_samples = n(), .groups = "drop") |>
+        group_by(year, month, location_name) |>
+        mutate(site_total = sum(total_samples),
+               run_percent = (total_samples / site_total) * 100) |>
+        ungroup() |>
+        mutate(month = factor(month,
+                              levels = 1:12,
+                              labels = month.abb))
     }
     df
   })
@@ -239,14 +249,21 @@ server <- function(input, output, session) {
 
     if (input$plot_type_g == "Month") {
 
+      # plot <- ggplot(df, aes(x = month, y = run_percent, fill = run_name)) +
+      #   geom_bar(stat = "identity", position = "stack") +
+      #   #scale_fill_viridis_d(option = "D") +
+      #   scale_fill_manual(values = run_col) +
+      #   scale_y_continuous(breaks = seq(0, 100, by = 20)) +
+      #   theme_minimal() +
+      #   facet_wrap( ~ map_label, ncol = 1) +
+      #   labs(fill = "", x = "Sample Event", y = "Percent")
       plot <- ggplot(df, aes(x = month, y = run_percent, fill = run_name)) +
         geom_bar(stat = "identity", position = "stack") +
-        #scale_fill_viridis_d(option = "D") +
-        scale_fill_manual(values = run_col) +
-        scale_y_continuous(breaks = seq(0, 100, by = 20)) +
+        facet_wrap(~ location_name + year) +
+        scale_y_continuous(limits = c(0, 100)) +
+        scale_fill_manual(values = tol_muted) +
         theme_minimal() +
-        facet_wrap( ~ map_label, ncol = 1) +
-        labs(fill = "", x = "Sample Event", y = "Percent")
+        theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
     }
     ggplotly(plot)
 
