@@ -130,7 +130,7 @@ server <- function(input, output, session) {
       data <- data |> filter(map_label %in% input$location_filter_g)
     }
     if (!is.null(input$genetic_filter_g) && length(input$genetic_filter_g) > 0) {
-      data <- data |> filter(field_run_type_id %in% input$genetic_filter_g)
+      data <- data |> filter(run_name %in% input$genetic_filter_g)
     }
 
     data
@@ -151,7 +151,7 @@ server <- function(input, output, session) {
   data_for_plot_g <- reactive({
     if (input$plot_type_g == "Monitoring Year") {
       df <- filtered_g_data() |>
-        group_by(year, map_label, field_run_type_id) |>
+        group_by(year, map_label, run_name) |>
         summarize(count = n()) |>
         group_by(year, map_label) |>
         mutate(total_sample = sum(count),
@@ -171,7 +171,7 @@ server <- function(input, output, session) {
         #        run_percent = (count/total_sample) * 100) |>
         # left_join(sample_event_temp)
         filter(!is.na(month)) |>
-        group_by(year, month, location_name, field_run_type_id) |>
+        group_by(year, month, location_name, run_name) |>
         summarise(total_samples = n(), .groups = "drop") |>
         group_by(year, month, location_name) |>
         mutate(site_total = sum(total_samples),
@@ -241,9 +241,9 @@ server <- function(input, output, session) {
       #   mutate(total_sample = sum(count),
       #          run_percent = (count/total_sample) * 100) |>
       #   left_join(sample_event_temp)
-      plot <- ggplot(df, aes(x = year, y = run_percent, color = field_run_type_id)) +
+      plot <- ggplot(df, aes(x = year, y = run_percent, color = run_name)) +
         geom_point() +
-        geom_line(aes(group = interaction(field_run_type_id, map_label))) +
+        geom_line(aes(group = interaction(run_name, map_label))) +
         theme_minimal() +
         scale_color_manual(values = run_col) +
         facet_wrap( ~ map_label, ncol = 1) +
@@ -261,7 +261,7 @@ server <- function(input, output, session) {
       #   theme_minimal() +
       #   facet_wrap( ~ map_label, ncol = 1) +
       #   labs(fill = "", x = "Sample Event", y = "Percent")
-      plot <- ggplot(df, aes(x = month, y = run_percent, fill = field_run_type_id)) +
+      plot <- ggplot(df, aes(x = month, y = run_percent, fill = run_name)) + #TODO figure out if we should use run_name or field_run_type_id
         geom_bar(stat = "identity", position = "stack") +
         facet_wrap(~ location_name + year) +
         scale_y_continuous(limits = c(0, 100)) +
