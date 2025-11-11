@@ -112,6 +112,23 @@ bar_plot <- ggplot(run_summary_month_site |> filter(location_name == "Battle"), 
 ggplotly(bar_plot)
 ```
 
+```{r echo=FALSE}
+# Same plot than above but ploty 
+bar_plot_2 <- ggplot(run_summary_month_site |> filter(location_name == "Mill"), aes(x = month, y = run_percent, fill = field_run_type_id)) +
+  geom_bar(stat = "identity", position = "stack") +
+  facet_wrap(~ location_name + year, ncol = 1) +
+  scale_y_continuous(limits = c(0, 100)) +
+  scale_fill_manual(values = tol_muted) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+    strip.text = element_text(size = 8),  # make facet titles clear
+    panel.spacing = unit(3, "lines")                      # increase vertical space between panels
+  )
+
+ggplotly(bar_plot_2)
+```
+
 
 
 ```{r include=FALSE}
