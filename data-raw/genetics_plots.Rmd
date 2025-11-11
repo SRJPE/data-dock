@@ -24,7 +24,8 @@ tol_muted <- c("#2E2585", "#337538", "#5DA899", "#94CBEC","#DCCD7D", "#C26A77", 
 run_col <- c("Spring" = "#2E2585", "Winter" = "#94CBEC", "Spring/Winter" = "#5DA899", "Fall" = "#7E2954",
                  "LateFall" = "#C26A77", "Fall/LateFall" = "#9F4A96", "Unknown" = "gray", "Early/Late Heterozygous" = "#DCCD7D")
 # this is a sample query that is only being use for platting purposes - it was randombly filled out
-genetics <- read_csv(here::here("data-raw","sample_query_drafted.csv")) |>
+# genetics <- read_csv(here::here("data-raw","sample_query_drafted.csv")) |>
+genetics <- read_csv(here::here("data-raw","sample_query_11-8-2025.csv")) |>
   rename(run_name = genetic_run_name,
          field_run_type_id = field_run_name) |>  # renaming for now to keep consistency with previous sample query
   mutate(fork_length_mm = ifelse(is.na(fork_length_mm),
@@ -39,7 +40,7 @@ sample_location <- read_csv(here::here("data-raw","grunid_sample_location.csv"))
 run_designation <- genetics |>
   mutate(code = substr(sample_id, 1, 3),
          year= paste0(20,substr(sample_id, 4,5)),
-         month = month(datetime_collected), # TODO currentlu there are only months 12 and 11 so it does not plot well
+         month = month(datetime_collected),
          sample_event = sub("^[^_]+_([^_]+)_.*$", "\\1", sample_id),
          sample_event = as.numeric(sample_event)) |>
   left_join(select(sample_location, code, location_name)) |>
@@ -98,11 +99,15 @@ Using as an example Battle Creek selection
 # Same plot than above but ploty 
 bar_plot <- ggplot(run_summary_month_site |> filter(location_name == "Battle"), aes(x = month, y = run_percent, fill = field_run_type_id)) +
   geom_bar(stat = "identity", position = "stack") +
-  facet_wrap(~ location_name + year) +
+  facet_wrap(~ location_name + year, ncol = 1) +
   scale_y_continuous(limits = c(0, 100)) +
   scale_fill_manual(values = tol_muted) +
   theme_minimal() +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+  theme(
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+    strip.text = element_text(size = 8),  # make facet titles clear
+    panel.spacing = unit(3, "lines")                      # increase vertical space between panels
+  )
 
 ggplotly(bar_plot)
 ```
@@ -292,8 +297,6 @@ line_plot_year_grouped <- ggplot(run_summary_complete_by_year |> filter(location
   theme_minimal()
 
 ggplotly(line_plot_year_grouped)
-
-
 ```
 
 ```{r echo=FALSE}
@@ -333,19 +336,20 @@ ggplotly(line_plot_year_grouped_2)
 
 ```{r include=FALSE}
 plot_test <- run_designation |>
-  mutate(day_standard = yday(datetime_collected), # regular ordinal day
-         sample_day = (day_standard - 304) %% 365 + 150) # shift so that Nov 1 = 150
+  mutate(day_standard = yday(datetime_collected)) # regular ordinal day
+         # sample_day = (day_standard - 304) %% 365 + 150) # shift so that Nov 1 = 150
   
 plot_test <- plot_test |> 
-  group_by(sample_day, location_name, field_run_type_id) |> 
+  group_by(day_standard, location_name, field_run_type_id) |> 
   summarise(count = n(), .groups = "drop") |>
   mutate(total_sample_day = sum(count)) |> 
          # run_percent = (count / total_sample_day) * 100) |>
   ungroup() |> 
-  mutate(sample_day = case_when(is.na(sample_day) ~ 0, # fill NAs with zeros
-                                TRUE ~ sample_day)) |> glimpse()
+  # mutate(sample_day = case_when(is.na(sample_day) ~ 0, # fill NAs with zeros
+  #                               TRUE ~ sample_day)) |> 
+  glimpse()
   
-ggplot(plot_test |> filter(location_name == "Sac-KNL"), aes(x = sample_day, y = count, color = field_run_type_id)) +
+ggplot(plot_test |> filter(location_name == "Sac-KNL"), aes(x = day_standard, y = count, color = field_run_type_id)) +
   geom_col() +
   facet_wrap(~ field_run_type_id) +
   theme_minimal()
@@ -353,20 +357,44 @@ ggplot(plot_test |> filter(location_name == "Sac-KNL"), aes(x = sample_day, y = 
 
 Example: Sacramento Knights Landing 
 
-```{r echo=FALSE}
-ggplot(plot_test |> filter(location_name == "Sac-KNL"), aes(x = sample_day, color = field_run_type_id, fill = field_run_type_id)) +
+```{r echo=FALSE, warning=FALSE}
+dist_1 <- ggplot(plot_test |> filter(location_name == "Sac-KNL"), aes(x = day_standard, color = field_run_type_id, fill = field_run_type_id)) +
   geom_density(alpha = 0.3, adjust = 1.5) +
-  facet_wrap(~ field_run_type_id) +
+  facet_wrap(~ field_run_type_id, ncol = 1) +
   theme_minimal() +
-  labs(x = "Sample Day", y = "", fill = "Run Type", color = "Run Type")
+  scale_x_continuous(name = "Month", # modify x label to months 
+                     breaks = c(15, 46, 75, 105, 135, 166, 196, 227, 258, 288, 319, 349),
+                     labels = month.abb) +
+  labs(x = "Sample Day", y = "", fill = "Run Type", color = "Run Type") +
+  theme(axis.text.x = element_text(angle = 70, vjust = 0.5, hjust = 1)) 
+
+ggplotly(dist_1)
 ```
+
 
 Example: Clear Creek 
 
-```{r echo=FALSE}
-ggplot(plot_test |> filter(location_name == "Clear"), aes(x = sample_day, color = field_run_type_id, fill = field_run_type_id)) +
+```{r eval=FALSE, include=FALSE}
+ggplot(plot_test |> filter(location_name == "Clear"), aes(x = day_standard, color = field_run_type_id, fill = field_run_type_id)) +
   geom_density(alpha = 0.3, adjust = 1.5) +
   facet_wrap(~ field_run_type_id) +
   theme_minimal() +
   labs(x = "Sample Day", y = "", fill = "Run Type", color = "Run Type")
 ```
+
+```{r echo=FALSE, warning=FALSE}
+dist_2 <- ggplot(plot_test |> filter(location_name == "Clear"),
+       aes(x = day_standard, color = field_run_type_id, fill = field_run_type_id)) +
+  geom_density(alpha = 0.3, adjust = 1.5) +
+  facet_wrap(~ field_run_type_id, ncol = 1) +
+  theme_minimal() +
+  scale_x_continuous(name = "Month", # modify x label to months 
+                     breaks = c(15, 46, 75, 105, 135, 166, 196, 227, 258, 288, 319, 349),
+                     labels = month.abb) +
+  labs(x = "Sample Day", y = "", fill = "Run Type", color = "Run Type") +
+  theme(axis.text.x = element_text(angle = 70, vjust = 0.5, hjust = 1)) 
+
+
+ggplotly(dist_2)
+```
+

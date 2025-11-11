@@ -82,7 +82,8 @@ salmonid_habitat_extents <- readRDS("data-raw/salmonid_habitat_extents.Rds")
 # genetics_data_raw <- read_csv(here::here("data-raw","grun_id_query_10-10-2025.csv"))
 # adding a new query to use as example data
 # randomly filling missing data
-genetics_data_raw <- read_csv(here::here("data-raw","sample_query_drafted.csv")) |>
+# genetics_data_raw <- read_csv(here::here("data-raw","sample_query_drafted.csv")) |>
+genetics_data_raw <- read_csv(here::here("data-raw","sample_query_11-8-2025.csv")) |>
   rename(run_name = genetic_run_name,
          field_run_type_id = field_run_name) |>  # renaming for now to keep consistency with previous sample query
   mutate(fork_length_mm = ifelse(is.na(fork_length_mm),
