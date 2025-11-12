@@ -62,6 +62,15 @@ run_designation_percent <- run_designation |>
 
 ```
 
+The datasets used in these visualizations are preliminary and have not yet undergone full processing and rule set implementation. As a result, the information presented here may be incomplete and not accurately represent final data distributions. These examples are intended solely to illustrate potential visualization concepts for the genetics data dashboard once finalized datasets become available.
+
+The figures below demonstrate example plots that will be included in the interactive dashboard. Users will be able to customize the view by selecting:
+
+ - Site(s)
+ - Year(s)
+ - A summary option — by month or by monitoring year
+
+
 ## Summarizing data per month/site/location and run
 
 ```{r include=FALSE}
@@ -95,9 +104,12 @@ Using as an example Battle Creek selection
 
 ### Bar plot
 
+Example: Battle Creek, year 2022, summarized by month
+
 ```{r echo=FALSE}
 # Same plot than above but ploty 
-bar_plot <- ggplot(run_summary_month_site |> filter(location_name == "Battle"), aes(x = month, y = run_percent, fill = run_name)) +
+bar_plot <- ggplot(run_summary_month_site |> filter(location_name == "Battle",
+                                                    year == "2022"), aes(x = month, y = run_percent, fill = run_name)) +
   geom_bar(stat = "identity", position = "stack") +
   facet_wrap(~ location_name + year, ncol = 1) +
   scale_y_continuous(limits = c(0, 100)) +
@@ -112,9 +124,11 @@ bar_plot <- ggplot(run_summary_month_site |> filter(location_name == "Battle"), 
 ggplotly(bar_plot)
 ```
 
+Example: Mill Creek, year 2024, summarized by month
+
 ```{r echo=FALSE}
 # Same plot than above but ploty 
-bar_plot_2 <- ggplot(run_summary_month_site |> filter(location_name == "Mill"), aes(x = month, y = run_percent, fill = run_name)) +
+bar_plot_2 <- ggplot(run_summary_month_site |> filter(location_name == "Mill", year == "2024"), aes(x = month, y = run_percent, fill = run_name)) +
   geom_bar(stat = "identity", position = "stack") +
   facet_wrap(~ location_name + year, ncol = 1) +
   scale_y_continuous(limits = c(0, 100)) +
@@ -179,7 +193,7 @@ run_summary_complete <- all_combos |>
   
 ```
 
-## Line plot
+## Line plot - summarized by month
 
 ```{r include=FALSE}
 # plot seems off since there are no 0 count for run types that were not counted 
@@ -349,7 +363,7 @@ ggplotly(line_plot_year_grouped_2)
 ```
 
 
-### Histograms
+### Histograms - Frequency plots throughout all the years 
 
 ```{r include=FALSE}
 plot_test <- run_designation |>
@@ -374,8 +388,11 @@ ggplot(plot_test_clean |> filter(location_name == "Sac-KNL"), aes(x = day_standa
 
 Example: Sacramento Knights Landing 
 
+Filtered to just three run types
+
 ```{r echo=FALSE, warning=FALSE}
-dist_1 <- ggplot(plot_test_clean |> filter(location_name == "Sac-KNL"), aes(x = day_standard, color = run_name, fill = run_name)) +
+dist_1 <- ggplot(plot_test_clean |> filter(location_name == "Sac-KNL",
+                                           run_name %in% c("Spring", "Spring/Winter", "Winter")), aes(x = day_standard, color = run_name, fill = run_name)) +
   geom_density(alpha = 0.3, adjust = 1.5) +
   facet_wrap(~ run_name, ncol = 1) +
   theme_minimal() +
@@ -388,9 +405,9 @@ dist_1 <- ggplot(plot_test_clean |> filter(location_name == "Sac-KNL"), aes(x = 
 ggplotly(dist_1)
 ```
 
-Sample plot but removing Late Fall
 
-```{r echo=FALSE, warning=FALSE}
+```{r eval=FALSE, warning=FALSE, include=FALSE}
+# Sample plot but removing Late Fall
 dist_1_1 <- ggplot(plot_test_clean |> filter(location_name == "Sac-KNL",
                                            run_name != "LateFall"), aes(x = day_standard, color = run_name, fill = run_name)) +
   geom_density(alpha = 0.3, adjust = 1.5) +
@@ -407,6 +424,8 @@ ggplotly(dist_1_1)
 
 Example: Clear Creek 
 
+Filtered to four run types
+
 ```{r eval=FALSE, include=FALSE}
 ggplot(plot_test_clean |> filter(location_name == "Clear"), aes(x = day_standard, color = run_name, fill = run_name)) +
   geom_density(alpha = 0.3, adjust = 1.5) +
@@ -415,7 +434,7 @@ ggplot(plot_test_clean |> filter(location_name == "Clear"), aes(x = day_standard
   labs(x = "Sample Day", y = "", fill = "Run Type", color = "Run Type")
 ```
 
-```{r echo=FALSE, warning=FALSE}
+```{r eval=FALSE, warning=FALSE, include=FALSE}
 dist_2 <- ggplot(plot_test_clean |> filter(location_name == "Clear"),
        aes(x = day_standard, color = run_name, fill = run_name)) +
   geom_density(alpha = 0.3, adjust = 1.5) +
@@ -431,11 +450,11 @@ dist_2 <- ggplot(plot_test_clean |> filter(location_name == "Clear"),
 ggplotly(dist_2)
 ```
 
-Same plot than above but removing Early/Late Heterozygous
-
 ```{r echo=FALSE, warning=FALSE}
 dist_2_2 <- ggplot(plot_test_clean |> filter(location_name == "Clear",
-                                           run_name != "Early/Late Heterozygous"),
+                                           run_name != "Early/Late Heterozygous",
+                                           run_name != "Unknown",
+                                           run_name != "Spring"),
        aes(x = day_standard, color = run_name, fill = run_name)) +
   geom_density(alpha = 0.3, adjust = 1.5) +
   facet_wrap(~ run_name, ncol = 1) +
