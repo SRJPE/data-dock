@@ -221,6 +221,8 @@ server <- function(input, output, session) {
     if (input$plot_type_g == "Monitoring Year") {
       plot <- ggplot(df, aes(x = year, y = run_percent, fill = run_name)) +
         geom_bar(stat = "identity", position = "stack") +
+        geom_text(aes(label = paste0("n=", total_sample), y = 90),
+                  vjust = -0.5, color = "white", size = 2.5) +
         facet_wrap(~ map_label, ncol = 1) +
         scale_fill_manual(values = run_col) +
         theme_minimal()
