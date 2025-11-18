@@ -186,6 +186,17 @@ server <- function(input, output, session) {
   output$g_dynamic_plot <- renderPlotly({
     req(!is.null(input$location_filter_g) && length(input$location_filter_g) > 0)
     df <- data_for_plot_g()
+#TODO add a limit of how many years can be selected. I am thinking no more than 3 years, and no mor than 8 sites
+    # if (input$plot_type_g == "Month" && length(input$year_filter_g) > 3) {
+    #   showNotification("Please select no more than 3 years for Month plots.",
+    #                    type = "error")
+    #
+    #   return(
+    #     plotly_empty(type = "scatter", mode = "lines") |>
+    #       layout(title = "Too many years selected (max = 3).")
+    #   )
+    # }
+
 
     if (nrow(df) == 0) {
       return(plotly_empty(type = "scatter", mode = "lines") |>
