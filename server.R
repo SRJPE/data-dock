@@ -187,12 +187,7 @@ server <- function(input, output, session) {
   output$g_dynamic_plot <- renderPlotly({
     req(!is.null(input$location_filter_g) && length(input$location_filter_g) > 0)
     df <- data_for_plot_g()
-# TODO figure out the best plot configuration (e.g. stacked)
-    # if more than one year selected then you can nonly vew one site
-    # If one year selected then make sure they are stacked
-    # when more than 1 year is selected limit to 3 sites
-    #  limit to only 3 years
-#
+
 #     selected_locs <- input$location_filter_g %||% character(0)
 #
 #     present_locs <- sort(unique(df$location_name))
@@ -224,30 +219,18 @@ server <- function(input, output, session) {
     run_col <- c("Spring" = "#2E2585", "Winter" = "#94CBEC", "Spring/Winter" = "#5DA899", "Fall" = "#7E2954",
                  "LateFall" = "#C26A77", "Fall/LateFall" = "#9F4A96", "Unknown" = "gray", "Early/Late Heterozygous" = "#DCCD7D")
     if (input$plot_type_g == "Monitoring Year") {
-      # plot <- ggplot(df, aes(x = run_name, y = run_percent)) +
-      #   geom_boxplot(fill = "#9986A5") +
-      #   theme_minimal() +
-      #   facet_wrap( ~ map_label, ncol = 1) +
-      #   labs(x = "", y = "Percent")
-      # sample_event_temp <- run_designation |>
-      #   distinct(map_label, year, sample_event) |>
-      #   arrange(map_label,year, sample_event) |>
-      #   group_by(map_label) |>
-      #   mutate(sample_event2 = row_number())
-      # df <- filtered_g_data() |>
-      #   group_by(year, map_label, sample_event, run_name) |>
-      #   summarize(count = n()) |>
-      #   group_by(year, map_label, sample_event) |>
-      #   mutate(total_sample = sum(count),
-      #          run_percent = (count/total_sample) * 100) |>
-      #   left_join(sample_event_temp)
-      plot <- ggplot(df, aes(x = year, y = run_percent, color = run_name)) +
-        geom_point() +
-        geom_line(aes(group = interaction(run_name, map_label))) +
-        theme_minimal() +
-        scale_color_manual(values = run_col) +
-        facet_wrap( ~ map_label, ncol = 1) +
-        labs(x = "", y = "Percent", color = "")
+      plot <- ggplot(df, aes(x = year, y = run_percent, fill = run_name)) +
+        geom_bar(stat = "identity", position = "stack") +
+        facet_wrap(~ map_label, ncol = 1) +
+        scale_fill_manual(values = run_col) +
+        theme_minimal()
+      # keeping line code, in case we decide to go back
+        # geom_point() +
+        # geom_line(aes(group = interaction(run_name, map_label))) +
+        # theme_minimal() +
+        # scale_color_manual(values = run_col) +
+        # facet_wrap( ~ map_label, ncol = 1) +
+        # labs(x = "", y = "Percent", color = "")
 
     }
 
@@ -263,9 +246,13 @@ server <- function(input, output, session) {
       #   labs(fill = "", x = "Sample Event", y = "Percent")
       plot <- ggplot(df, aes(x = month, y = run_percent, fill = run_name)) + #TODO figure out if we should use run_name or field_run_type_id
         geom_bar(stat = "identity", position = "stack") +
+        # geom_text(
+        #   aes(label = paste0("N=", site_total), y = site_total/2),
+        #   color = "black", size = 3
+        # ) +
         facet_wrap(~ location_name + year) +
         scale_y_continuous(limits = c(0, 100)) +
-        scale_fill_manual(values = tol_muted) +
+        scale_fill_manual(values = run_col) +
         theme_minimal() +
         theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
     }
