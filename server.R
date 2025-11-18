@@ -244,12 +244,10 @@ server <- function(input, output, session) {
       #   theme_minimal() +
       #   facet_wrap( ~ map_label, ncol = 1) +
       #   labs(fill = "", x = "Sample Event", y = "Percent")
-      plot <- ggplot(df, aes(x = month, y = run_percent, fill = run_name)) + #TODO figure out if we should use run_name or field_run_type_id
+      plot <- ggplot(df, aes(x = month, y = run_percent, fill = run_name)) +
         geom_bar(stat = "identity", position = "stack") +
-        # geom_text(
-        #   aes(label = paste0("N=", site_total), y = site_total/2),
-        #   color = "black", size = 3
-        # ) +
+        geom_text(aes(label = paste0("n=", site_total), y = 90),
+                  vjust = -0.5, color = "white", size = 2.5) +
         facet_wrap(~ location_name + year) +
         scale_y_continuous(limits = c(0, 100)) +
         scale_fill_manual(values = run_col) +
