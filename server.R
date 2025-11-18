@@ -155,7 +155,8 @@ server <- function(input, output, session) {
         summarize(count = n()) |>
         group_by(year, map_label) |>
         mutate(total_sample = sum(count),
-               run_percent = (count/total_sample) * 100)
+               run_percent = (count/total_sample) * 100) |>
+        filter(run_name != "Unknown") # removing unknowns for now
     }
     if (input$plot_type_g == "Month") {
       # sample_event_temp <- run_designation |>
@@ -179,7 +180,8 @@ server <- function(input, output, session) {
         ungroup() |>
         mutate(month = factor(month,
                               levels = 1:12,
-                              labels = month.abb))
+                              labels = month.abb)) |>
+        filter(run_name != "Unknown") # removing unknowns for now
     }
     df
   })
