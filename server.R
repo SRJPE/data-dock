@@ -146,8 +146,6 @@ server <- function(input, output, session) {
     }
   )
 
-  #wq_missing_sites <- reactiveVal(character(0)) # filtering so message works
-
   data_for_plot_g <- reactive({
     if (input$plot_type_g == "Monitoring Year") {
       df <- filtered_g_data() |>
@@ -159,18 +157,7 @@ server <- function(input, output, session) {
         filter(run_name != "Unknown") # removing unknowns for now
     }
     if (input$plot_type_g == "Month") {
-      # sample_event_temp <- run_designation |>
-      #   distinct(map_label, year, month) |>
-      #   arrange(map_label,year, month) |>
-      #   group_by(map_label) |>
-      #   mutate(sample_event2 = row_number())
       df <- filtered_g_data() |>
-        # group_by(year, map_label, month, run_name) |>
-        # summarize(count = n()) |>
-        # group_by(year, map_label, month) |>
-        # mutate(total_sample = sum(count),
-        #        run_percent = (count/total_sample) * 100) |>
-        # left_join(sample_event_temp)
         filter(!is.na(month)) |>
         group_by(year, month, location_name, run_name) |>
         summarise(total_samples = n(), .groups = "drop") |>
@@ -190,30 +177,6 @@ server <- function(input, output, session) {
     req(!is.null(input$location_filter_g) && length(input$location_filter_g) > 0)
     df <- data_for_plot_g()
 
-#     selected_locs <- input$location_filter_g %||% character(0)
-#
-#     present_locs <- sort(unique(df$location_name))
-#     missing_locs <- setdiff(selected_locs, present_locs)
-#
-#     prev_missing <- g_missing_sites()
-#     new_missing  <- setdiff(missing_locs, prev_missing)
-#
-#     if (length(new_missing) > 0) {
-#       showNotification(
-#         paste0("No data for selected analyte(s) at: ",
-#                paste(new_missing, collapse = ", ")),
-#         type = "warning", duration = 6
-#       )
-#     }
-#
-#     # update the tracker (so sites with data don't trigger, and new missing will)
-#     wq_missing_sites(missing_locs)
-#
-#     if (n_distinct(df$analyte) > 8) {
-#       validate(
-#         need(FALSE, "Too many analytes selected. Please select 8 or fewer.")
-#       )
-#     }
     if (nrow(df) == 0) {
       return(plotly_empty(type = "scatter", mode = "lines") |>
                layout(title = "No data available for current selection."))
@@ -239,15 +202,6 @@ server <- function(input, output, session) {
     }
 
     if (input$plot_type_g == "Month") {
-
-      # plot <- ggplot(df, aes(x = month, y = run_percent, fill = run_name)) +
-      #   geom_bar(stat = "identity", position = "stack") +
-      #   #scale_fill_viridis_d(option = "D") +
-      #   scale_fill_manual(values = run_col) +
-      #   scale_y_continuous(breaks = seq(0, 100, by = 20)) +
-      #   theme_minimal() +
-      #   facet_wrap( ~ map_label, ncol = 1) +
-      #   labs(fill = "", x = "Sample Event", y = "Percent")
       plot <- ggplot(df, aes(x = month, y = run_percent, fill = run_name)) +
         geom_bar(stat = "identity", position = "stack") +
         geom_text(aes(label = paste0("n=", site_total), y = 90),
@@ -263,7 +217,7 @@ server <- function(input, output, session) {
   })
 
 
-  # Genetics Map --------------------------------------------------------------
+# Genetics Map --------------------------------------------------------------
 
   # output$genetics_map <- renderLeaflet({
   #   leaflet() |>
