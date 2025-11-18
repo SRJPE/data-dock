@@ -168,7 +168,17 @@ server <- function(input, output, session) {
         mutate(month = factor(month,
                               levels = 1:12,
                               labels = month.abb)) |>
-        filter(run_name != "Unknown") # removing unknowns for now
+        filter(run_name != "Unknown") |>  # removing unknowns for now - plot will no longer be at a 100%
+        complete(
+          location_name,
+          year,
+          month,
+          run_name,
+          fill = list(
+            run_percent = 0,
+            site_total = 0
+          )
+        )
     }
     df
   })
@@ -204,10 +214,10 @@ server <- function(input, output, session) {
     if (input$plot_type_g == "Month") {
       plot <- ggplot(df, aes(x = month, y = run_percent, fill = run_name)) +
         geom_bar(stat = "identity", position = "stack") +
-        geom_text(aes(label = paste0("n=", site_total), y = 90),
-                  vjust = -0.5, color = "white", size = 2.5) +
+        geom_text(aes(label = ifelse(is.na(site_total) | site_total == 0, "", paste0("n=", site_total)), y = 105),
+                  vjust = -0.5, color = "black", size = 2.5, angle = 45) + #TODO figure out why label is not rotaing
         facet_wrap(~ location_name + year) +
-        scale_y_continuous(limits = c(0, 100)) +
+        scale_y_continuous(limits = c(0, 110)) +
         scale_fill_manual(values = run_col) +
         theme_minimal() +
         theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
@@ -216,7 +226,7 @@ server <- function(input, output, session) {
 
   })
 
-
+# this is draft code below
 # Genetics Map --------------------------------------------------------------
 
   # output$genetics_map <- renderLeaflet({

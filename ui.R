@@ -150,7 +150,7 @@ ui <- fluidPage(
                  sliderInput("year_range_g", "Year Range (update min and max years):",
                              min = as.numeric(min(run_designation$year)),
                              max = as.numeric(max(run_designation$year)),
-                             value = c(as.numeric(min(run_designation$year)), as.numeric(max(run_designation$year))),
+                             value = c(as.numeric(min(run_designation$year)), 2023),
                              step = 1,
                              sep = "")
                ),
