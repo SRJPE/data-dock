@@ -153,8 +153,8 @@ server <- function(input, output, session) {
         summarize(count = n()) |>
         group_by(year, map_label) |>
         mutate(total_sample = sum(count),
-               run_percent = (count/total_sample) * 100) |>
-        filter(run_name != "Unknown") # removing unknowns for now
+               run_percent = (count/total_sample) * 100)
+        # filter(run_name != "Unknown") # removing unknowns for now
     }
     if (input$plot_type_g == "Month") {
       df <- filtered_g_data() |>
@@ -168,7 +168,7 @@ server <- function(input, output, session) {
         mutate(month = factor(month,
                               levels = 1:12,
                               labels = month.abb)) |>
-        filter(run_name != "Unknown") |>  # removing unknowns for now - plot will no longer be at a 100%
+        # filter(run_name != "Unknown") |>  # removing unknowns for now - plot will no longer be at a 100%
         complete(location_name, year, month, run_name, fill = list(run_percent = 0, site_total = 0))
       } # adding this so when years are not present at a given location, there is still a facet (empty) for that year
     df
