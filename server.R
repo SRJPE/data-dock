@@ -196,14 +196,14 @@ server <- function(input, output, session) {
     run_col <- c("Spring" = "#2E2585", "Winter" = "#94CBEC", "Spring/Winter" = "#5DA899", "Fall" = "#7E2954",
                  "LateFall" = "#C26A77", "Fall/LateFall" = "#9F4A96", "Unknown" = "gray", "Early/Late Heterozygous" = "#DCCD7D")
     if (input$plot_type_g == "Monitoring Year") {
-      plot <- ggplot(df, aes(x = year, y = run_percent, fill = run_name)) +
+      plot <- ggplot(df, aes(x = year, y = run_percent, fill = run_name, text = paste0("sample_size: n=",
+                                                                                       total_sample))) +
         geom_bar(stat = "identity", position = "stack") +
-        geom_text(aes(label = paste0("n=", total_sample), y = 105),
-                  vjust = -0.5, color = "black", size = 2.5) +
         facet_wrap(~ map_label, ncol = 1) +
-        scale_y_continuous(limits = c(0, 110)) +
+        # scale_y_continuous(limits = c(0, 110)) +
         scale_fill_manual(values = run_col) +
-        theme_minimal()
+        theme_minimal() +
+        labs(x = "", y = "Run Assignment Proportions")
       # keeping line code, in case we decide to go back
         # geom_point() +
         # geom_line(aes(group = interaction(run_name, map_label))) +
@@ -211,17 +211,16 @@ server <- function(input, output, session) {
         # scale_color_manual(values = run_col) +
         # facet_wrap( ~ map_label, ncol = 1) +
         # labs(x = "", y = "Percent", color = "")
-
     }
 
     if (input$plot_type_g == "Month") {
-      plot <- ggplot(df, aes(x = month, y = run_percent, fill = run_name)) +
+      plot <- ggplot(df, aes(x = month, y = run_percent, fill = run_name, text = paste0("sample_size: n=",
+                                                                                        total_sample))) +
         geom_bar(stat = "identity", position = "stack") +
-        geom_text(aes(label = ifelse(is.na(site_total) | site_total == 0, "", paste0("n=", site_total)), y = 105),
-                  vjust = -0.5, color = "black", size = 2.5, angle = 45) + #TODO figure out why label is not rotaing
         facet_wrap(~ location_name + year) +
         scale_y_continuous(limits = c(0, 110)) +
         scale_fill_manual(values = run_col) +
+        labs(x = "", y = "Run Type") +
         theme_minimal() +
         theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
     }
