@@ -196,11 +196,10 @@ server <- function(input, output, session) {
     run_col <- c("Spring" = "#2E2585", "Winter" = "#94CBEC", "Spring/Winter" = "#5DA899", "Fall" = "#7E2954",
                  "LateFall" = "#C26A77", "Fall/LateFall" = "#9F4A96", "Unknown" = "gray", "Early/Late Heterozygous" = "#DCCD7D")
     if (input$plot_type_g == "Monitoring Year") {
-      plot <- ggplot(df, aes(x = year, y = run_percent, fill = run_name, text = paste0("sample_size: n=",
+      plot <- ggplot(df, aes(x = year, y = run_percent, fill = run_name, text = paste0("sample_size: ",
                                                                                        total_sample))) +
         geom_bar(stat = "identity", position = "stack") +
         facet_wrap(~ map_label, ncol = 1) +
-        # scale_y_continuous(limits = c(0, 110)) +
         scale_fill_manual(values = run_col) +
         theme_minimal() +
         labs(x = "", y = "Run Assignment Proportions")
@@ -214,11 +213,10 @@ server <- function(input, output, session) {
     }
 
     if (input$plot_type_g == "Month") {
-      plot <- ggplot(df, aes(x = month, y = run_percent, fill = run_name, text = paste0("sample_size: n=",
-                                                                                        total_sample))) +
+      plot <- ggplot(df, aes(x = month, y = run_percent, fill = run_name, text = paste0("sample_size: ",
+                                                                                        site_total))) +
         geom_bar(stat = "identity", position = "stack") +
         facet_wrap(~ location_name + year) +
-        scale_y_continuous(limits = c(0, 110)) +
         scale_fill_manual(values = run_col) +
         labs(x = "", y = "Run Type") +
         theme_minimal() +
