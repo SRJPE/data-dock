@@ -213,12 +213,21 @@ server <- function(input, output, session) {
     }
 
     if (input$plot_type_g == "Month") {
+      selected_years <- seq(input$year_range_g[1], input$year_range_g[2])
+      if (length(selected_years) > 3) {
+        showNotification("Please select a range of 3 years or fewer.",
+                         type = "error")
+        return(
+          plotly_empty(type = "scatter", mode = "lines") |>
+            layout(title = "Too many years selected. Please select 3 years max.")
+        )
+      }
       plot <- ggplot(df, aes(x = month, y = run_percent, fill = run_name, text = paste0("sample_size: ",
                                                                                         site_total))) +
         geom_bar(stat = "identity", position = "stack") +
-        facet_wrap(~ location_name + year) +
+        facet_wrap(~ location_name + year, ncol = 3) +
         scale_fill_manual(values = run_col) +
-        labs(x = "", y = "Run Type") +
+        labs(x = "", y = "Run Type Percent") +
         theme_minimal() +
         theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
     }
