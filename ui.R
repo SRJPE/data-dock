@@ -141,7 +141,7 @@ ui <- fluidPage(
                        run_designation$map_label[order(run_designation$map_label)]
                      )
                    ),
-                   selected = NULL,
+                   selected = "Clear Creek",
                    multiple = TRUE,
                    selectize = TRUE)
                ),
@@ -150,7 +150,7 @@ ui <- fluidPage(
                  sliderInput("year_range_g", "Year Range:",
                              min = as.numeric(min(run_designation$year)),
                              max = as.numeric(max(run_designation$year)),
-                             value = c(as.numeric(min(run_designation$year)), 2023),
+                             value = c(as.numeric(min(run_designation$year)), max(run_designation$year)),
                              step = 1,
                              sep = "",
                              ticks = TRUE)

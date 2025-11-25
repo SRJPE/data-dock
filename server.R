@@ -228,7 +228,8 @@ server <- function(input, output, session) {
                          type = "error")
         return(
           plotly_empty(type = "scatter", mode = "lines") |>
-            layout(title = "Too many years selected. Please select 3 years max.")
+            layout(title = "Too many years selected. Please select 3 years max.<br>
+                   Recommend summarizing by monitoring year when looking at more than 3 years.")
         )
       }
       n_years <- length(unique(df$year))
