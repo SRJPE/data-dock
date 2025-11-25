@@ -170,11 +170,15 @@ server <- function(input, output, session) {
         mutate(site_total = sum(total_samples),
                run_percent = (total_samples / site_total) * 100) |>
         ungroup() |>
+        # code to fix the plot so that it starts from monitoring year
+        mutate(fake_year = ifelse(month %in% 10:12, "1991", "1992"),
+               fake_date = as.Date(paste0(fake_year, "-", month, "-01"))) |>
+        select(-fake_year) |>
         mutate(month = factor(month,
                               levels = 1:12,
                               labels = month.abb)) |>
         # filter(run_name != "Unknown") |>  # removing unknowns for now - plot will no longer be at a 100%
-        complete(location_name, year, month, run_name, fill = list(run_percent = 0, site_total = 0))
+        complete(location_name, year, month, fake_date, run_name, fill = list(run_percent = 0, site_total = 0))
       } # adding this so when years are not present at a given location, there is still a facet (empty) for that year
     df
     })
@@ -228,14 +232,16 @@ server <- function(input, output, session) {
         )
       }
       n_years <- length(unique(df$year))
-      plot <- ggplot(df, aes(x = month, y = run_percent, fill = run_name, text = paste0("sample_size: ",
+      plot <- ggplot(df, aes(x = fake_date, y = run_percent, fill = run_name, text = paste0("sample_size: ",
                                                                                         site_total))) +
         geom_bar(stat = "identity", position = "stack") +
         facet_wrap(~ location_name + year, ncol = n_years) +
         scale_fill_manual(name = "Run type", values = run_col) +
         labs(x = "", y = "Run Type Percent") +
         theme_minimal() +
-        theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+        theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+        # add labels
+        scale_x_date(breaks = "1 month", date_labels = "%b")
     }
     ggplotly(plot)
 
