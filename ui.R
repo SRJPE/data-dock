@@ -153,7 +153,7 @@ ui <- fluidPage(
                              value = c(as.numeric(min(run_designation$year)), 2023),
                              step = 1,
                              sep = "",
-                             ticks = FALSE  )
+                             ticks = TRUE)
                ),
                div(
                  style = "min-width: 200px;",

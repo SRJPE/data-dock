@@ -91,7 +91,12 @@ server <- function(input, output, session) {
         lat1 = min(rst_sites$latitude,  na.rm = TRUE),
         lng2 = max(rst_sites$longitude, na.rm = TRUE),
         lat2 = max(rst_sites$latitude,  na.rm = TRUE)
-      )
+      ) |>
+      htmlwidgets::onRender("
+      function(el, x){
+        this.zoomControl.setPosition('bottomright');
+      }
+    ")
   })
 
   observeEvent(input$g_map_marker_click, ignoreInit = TRUE, {
