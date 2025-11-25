@@ -205,7 +205,10 @@ server <- function(input, output, session) {
     run_col <- c("Spring" = "#2E2585", "Winter" = "#94CBEC", "Spring/Winter" = "#5DA899", "Fall" = "#7E2954",
                  "LateFall" = "#C26A77", "Fall/LateFall" = "#9F4A96", "Unknown" = "gray", "Early/Late Heterozygous" = "#DCCD7D")
     if (input$plot_type_g == "Monitoring Year") {
-      plot <- ggplot(df, aes(x = year, y = run_percent, fill = run_name, text = paste0("sample_size: ",
+      plot <- ggplot(df, aes(x = year, y = run_percent, fill = run_name, text = paste0("Year: ", year, "<br>",
+                                                                                       "Run Assignment Proportion: ", signif(run_percent, 2), "<br>",
+                                                                                       "Run Type: ", run_name, "<br>",
+                                                                                       "Sample Size: ",
                                                                                        total_sample))) +
         geom_bar(stat = "identity", position = "stack") +
         facet_wrap(~ map_label, ncol = 1) +
@@ -233,7 +236,10 @@ server <- function(input, output, session) {
         )
       }
       n_years <- length(unique(df$year))
-      plot <- ggplot(df, aes(x = fake_date, y = run_percent, fill = run_name, text = paste0("sample_size: ",
+      plot <- ggplot(df, aes(x = fake_date, y = run_percent, fill = run_name, text = paste0("Year: ", year, "<br>",
+                                                                                            "Run Type Percent: ", signif(run_percent, 2), "<br>",
+                                                                                            "Run Type: ", run_name, "<br>",
+                                                                                            "Sample Size: ",
                                                                                         site_total))) +
         geom_bar(stat = "identity", position = "stack") +
         facet_wrap(~ location_name + year, ncol = n_years) +
@@ -244,7 +250,7 @@ server <- function(input, output, session) {
         # add labels
         scale_x_date(breaks = "1 month", date_labels = "%b")
     }
-    ggplotly(plot)
+    ggplotly(plot, tooltip = "text")
 
   })
 
