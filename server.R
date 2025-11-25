@@ -82,7 +82,7 @@ server <- function(input, output, session) {
         label = ~label,
         radius = 6, stroke = TRUE, weight = 1, color = "black",
         fillOpacity = 0.7,
-        #fillColor = ~site_color,
+        fillColor = ifelse(rst_sites$stream == "clear creek", "#7E2954", "black"), #default highlight to Clear
         popup = ~label
       ) |>
       # Initial full-extent view
