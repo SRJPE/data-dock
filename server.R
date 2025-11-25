@@ -205,7 +205,7 @@ server <- function(input, output, session) {
                                                                                        total_sample))) +
         geom_bar(stat = "identity", position = "stack") +
         facet_wrap(~ map_label, ncol = 1) +
-        scale_fill_manual(values = run_col) +
+        scale_fill_manual(name = "Run type", values = run_col) +
         theme_minimal() +
         labs(x = "", y = "Run Assignment Proportions")
       # keeping line code, in case we decide to go back
@@ -227,11 +227,12 @@ server <- function(input, output, session) {
             layout(title = "Too many years selected. Please select 3 years max.")
         )
       }
+      n_years <- length(unique(df$year))
       plot <- ggplot(df, aes(x = month, y = run_percent, fill = run_name, text = paste0("sample_size: ",
                                                                                         site_total))) +
         geom_bar(stat = "identity", position = "stack") +
-        facet_wrap(~ location_name + year, ncol = 3) +
-        scale_fill_manual(values = run_col) +
+        facet_wrap(~ location_name + year, ncol = n_years) +
+        scale_fill_manual(name = "Run type", values = run_col) +
         labs(x = "", y = "Run Type Percent") +
         theme_minimal() +
         theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
