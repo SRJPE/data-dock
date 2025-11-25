@@ -26,7 +26,7 @@ Typically, water quality is defined by regulated standards set by a regulatory a
 
 **SR JPE Genetics Data**
 
-The Spring-Run Juvenile Production Estimate (SR JPE) project is a multidisciplinary effort to monitor the seasonal outmigration of threatened juvenile spring-run Chinook salmon (Oncorhynchus tshawytscha). As they undertake their journey from their natal rivers to the ocean, juvenile Chinook salmon are captured at 11 monitoring sites located throughout the Sacramento River Basin each year from November to May. Genetic techniques - including CRISPR-based SHERLOCK and genotyping-in-thousands by sequencing (GT-seq) - are employed to distinguish threatened spring-run Chinook from co-occurring runs (e.g., Fall, Late Fall, and Winter runs).
+The Spring-Run Juvenile Production Estimate (SR JPE) project is a multidisciplinary effort to monitor the seasonal outmigration of threatened juvenile spring-run Chinook salmon (*Oncorhynchus tshawytscha*). As they undertake their journey from their natal rivers to the ocean, juvenile Chinook salmon are captured at 11 monitoring sites located throughout the Sacramento River Basin each year from November to May. Genetic techniques - including CRISPR-based SHERLOCK and genotyping-in-thousands by sequencing (GT-seq) - are employed to distinguish threatened spring-run Chinook from co-occurring runs (e.g., Fall, Late Fall, and Winter runs).
 
 [Spring-Run Chinook Salmon JPE Run Identification Program Research and Initial Monitoring Plan](https://water.ca.gov/-/media/DWR-Website/Web-Pages/Programs/State-Water-Project/Endangered-Species-Protection/SR-JPE-Run-ID-Program-Development-Plan-2023-08-Update.pdf)
 
