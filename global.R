@@ -79,7 +79,20 @@ rst_sites$latitude <- coords[, 2]
 salmonid_habitat_extents <- readRDS("data-raw/salmonid_habitat_extents.Rds")
 
 # Draft genetics data from staging database. These will be pulled from EDI when published
-genetics_data_raw <- read_csv(here::here("data-raw","grun_id_query_10-10-2025.csv"))
+# genetics_data_raw <- read_csv(here::here("data-raw","grun_id_query_10-10-2025.csv"))
+# adding a new query to use as example data
+# randomly filling missing data
+# genetics_data_raw <- read_csv(here::here("data-raw","sample_query_drafted.csv")) |>
+genetics_data_raw <- read_csv(here::here("data-raw","sample_query_11-18-2025.csv")) |>
+  rename(run_name = genetic_run_name,
+         field_run_type_id = field_run_name) |>  # renaming for now to keep consistency with previous sample query
+  mutate(fork_length_mm = ifelse(is.na(fork_length_mm),
+                                 sample(fork_length_mm[!is.na(fork_length_mm)], sum(is.na(fork_length_mm)), replace = TRUE),
+                                 fork_length_mm),
+         field_run_type_id = ifelse(is.na(field_run_type_id),
+                                    sample(field_run_type_id[!is.na(field_run_type_id)], sum(is.na(field_run_type_id)), replace = TRUE),
+                                    field_run_type_id))
+
 sample_location <- read_csv(here::here("data-raw","grunid_sample_location.csv"))
 
 run_designation <- genetics_data_raw |>
@@ -95,7 +108,8 @@ run_designation <- genetics_data_raw |>
                                location_name == "Feather-RM61" ~ "Feather River - RM 61",
                                location_name == "Feather-RM17" ~ "Feather River - RM 17",
                                location_name == "Sac-Delta Entry" ~ "Sacramento River - Delta Entry",
-                               location_name == "Yuba" ~ "Yuba River"))
+                               location_name == "Yuba" ~ "Yuba River")) |>
+  filter(!is.na(month))
 # stock assignment (fall, spring) and phenotype(early, late heterozygot )
 run_designation_percent <- run_designation |>
   group_by(location_name, sample_event, year, run_name) |>

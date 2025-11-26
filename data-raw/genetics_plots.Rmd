@@ -1,0 +1,496 @@
+---
+title: "draft genetics visualizations"
+date: "`r Sys.Date()`"
+output: html_document
+editor_options: 
+  markdown: 
+    wrap: 72
+  chunk_output_type: console
+---
+
+```{r, include = F}
+library(DBI)
+library(tidyverse)
+library(leaflet)
+library(dplyr)
+library(sf)
+#library(gridExtra)
+library(patchwork)
+library(plotly)
+library(lubridate)
+
+tol_muted <- c("#2E2585", "#337538", "#5DA899", "#94CBEC","#DCCD7D", "#C26A77", "#9F4A96","#7E2954", "#999933")
+
+run_col <- c("Spring" = "#2E2585", "Winter" = "#94CBEC", "Spring/Winter" = "#5DA899", "Fall" = "#7E2954",
+                 "LateFall" = "#C26A77", "Fall/LateFall" = "#9F4A96", "Unknown" = "gray", "Early/Late Heterozygous" = "#DCCD7D")
+# this is a sample query that is only being use for platting purposes - it was randombly filled out
+# genetics <- read_csv(here::here("data-raw","sample_query_drafted.csv")) |>
+genetics <- read_csv(here::here("data-raw","sample_query_11-8-2025.csv")) |>
+  rename(run_name = genetic_run_name,
+         field_run_type_id = field_run_name) |>  # renaming for now to keep consistency with previous sample query
+  mutate(fork_length_mm = ifelse(is.na(fork_length_mm),
+                                 sample(fork_length_mm[!is.na(fork_length_mm)], sum(is.na(fork_length_mm)), replace = TRUE),
+                                 fork_length_mm),
+         field_run_type_id = ifelse(is.na(field_run_type_id),
+                                    sample(field_run_type_id[!is.na(field_run_type_id)], sum(is.na(field_run_type_id)), replace = TRUE),
+                                    field_run_type_id))
+
+sample_location <- read_csv(here::here("data-raw","grunid_sample_location.csv"))
+
+run_designation <- genetics |>
+  mutate(code = substr(sample_id, 1, 3),
+         year= paste0(20,substr(sample_id, 4,5)),
+         month = month(datetime_collected),
+         sample_event = sub("^[^_]+_([^_]+)_.*$", "\\1", sample_id),
+         sample_event = as.numeric(sample_event)) |>
+  left_join(select(sample_location, code, location_name)) |>
+  mutate(map_label = case_when(location_name %in% c("Battle", "Clear", "Mill", "Deer", "Butte") ~ paste0(location_name, " Creek"),
+                               location_name == "Sac-KNL" ~ "Sacramento River - Knights Landing",
+                               location_name == "Sac-Tisdale" ~ "Sacramento River - Tisdale",
+                               location_name == "Feather-RM61" ~ "Feather River - RM 61",
+                               location_name == "Feather-RM17" ~ "Feather River - RM 17",
+                               location_name == "Sac-Delta Entry" ~ "Sacramento River - Delta Entry",
+                               location_name == "Yuba" ~ "Yuba River"))
+
+run_designation_percent <- run_designation |>
+  # group_by(year, month, run_name) |>
+  group_by(year, month, run_name, map_label) |>
+  summarise(count = n(), .groups = "drop_last") |>
+  mutate(total_sample = sum(count),
+         run_percent = (count / total_sample) * 100) |>
+  ungroup()
+
+```
+
+The datasets used in these visualizations are preliminary and have not yet undergone full processing and rule set implementation. As a result, the information presented here may be incomplete and not accurately represent final data distributions. These examples are intended solely to illustrate potential visualization concepts for the genetics data dashboard once finalized datasets become available.
+
+The figures below demonstrate example plots that will be included in the interactive dashboard. Users will be able to customize the view by selecting:
+
+ - Site(s)
+ - Year(s)
+ - A summary option — by month or by monitoring year
+
+
+## Summarizing data per month/site/location and run
+
+```{r include=FALSE}
+run_summary_month_site <- run_designation |>
+  filter(!is.na(month)) |>
+  group_by(year, month, location_name, run_name) |>
+  summarise(total_samples = n(), .groups = "drop") |>
+  group_by(year, month, location_name) |>
+  mutate(site_total = sum(total_samples),
+         run_percent = (total_samples / site_total) * 100) |>
+  ungroup() |>
+  mutate(month = factor(month,
+                        levels = 1:12,
+                        labels = month.abb))
+# 
+# 
+# 
+# # This is another plot to clean up. Make sure it adds to 100%- #TODO
+# ggplot(run_summary_month_site |> filter(location_name %in% c("Battle", "Feather-RM61")), aes(x = month, y = run_percent, fill = run_name)) +
+#   geom_bar(stat = "identity", position = "stack") +
+#   facet_wrap(~ location_name + year) +
+#   scale_y_continuous(limits = c(0, 100)) +
+#   theme_minimal() +
+#   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+
+# check
+# run_summary_month_site |> filter(location_name == "Feather-RM61", year == "2023") |> view()
+```
+
+Using as an example Battle Creek selection
+
+### Bar plot
+
+Example: Battle Creek, year 2022, summarized by month
+
+```{r echo=FALSE}
+# Same plot than above but ploty 
+# bar_plot <- ggplot(run_summary_month_site |> filter(location_name == "Battle",
+#                                                     year == "2022"), aes(x = month, y = run_percent, fill = run_name)) +
+#   geom_bar(stat = "identity", position = "stack") +
+#   facet_wrap(~ location_name + year, ncol = 1) +
+#   scale_y_continuous(limits = c(0, 100)) +
+#   scale_fill_manual(values = tol_muted) +
+#   theme_minimal() +
+#   theme(
+#     axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+#     strip.text = element_text(size = 8),  # make facet titles clear
+#     panel.spacing = unit(3, "lines")                      # increase vertical space between panels
+#   )
+# 
+# ggplotly(bar_plot)
+```
+
+
+```{r echo=FALSE}
+bar_plot <- ggplot(
+  run_summary_month_site |> filter(location_name == "Battle", year == "2022"),
+  aes(x = month, y = run_percent, fill = run_name)
+) +
+  geom_bar(stat = "identity", position = "stack") +
+  geom_text(aes(label = paste0("n=", site_total), y = 90),
+                  vjust = -0.5, color = "white", size = 2.5) +
+  facet_wrap(~ location_name + year, ncol = 1) +
+  scale_y_continuous(limits = c(0, 100)) +
+  scale_fill_manual(values = run_col) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+    strip.text = element_text(size = 8),
+    panel.spacing = unit(3, "lines")
+  )
+
+ggplotly(bar_plot)
+
+```
+
+
+Example: Mill Creek, year 2024, summarized by month
+
+```{r echo=FALSE}
+# Same plot than above but ploty 
+bar_plot_2 <- ggplot(run_summary_month_site |> filter(location_name == "Mill", year == "2024"), aes(x = month, y = run_percent, fill = run_name)) +
+  geom_bar(stat = "identity", position = "stack") +
+  geom_text(aes(label = paste0("n=", site_total), y = 90),
+                  vjust = -0.5, color = "white", size = 2.5) +
+  facet_wrap(~ location_name + year, ncol = 1) +
+  scale_y_continuous(limits = c(0, 100)) +
+  scale_fill_manual(values = run_col) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+    strip.text = element_text(size = 8),  # make facet titles clear
+    panel.spacing = unit(3, "lines")                      # increase vertical space between panels
+  )
+
+ggplotly(bar_plot_2)
+```
+
+
+
+```{r include=FALSE}
+
+# we defenitely want user to have option to see each of the sites/all years - Try facet per site/ per year (maybe add limit on just selection of 1 site)
+
+# summarize by year, month, location, and run type
+run_summary <- run_designation |>
+  mutate(month_num = month(datetime_collected),
+         month = factor(month_num,
+                        levels = c(11, 12, 1, 2, 3, 4),
+                        labels = c("Nov", "Dec", "Jan", "Feb", "Mar", "Apr")))
+
+run_summary <- run_summary |>
+  group_by(year, month, location_name, run_name) |>
+  summarise(total_samples = n(), .groups = "drop") |>
+  group_by(year, month, location_name) |>
+  mutate(month_total = sum(total_samples),
+         run_percent = (total_samples / month_total) * 100) |>
+  ungroup()
+
+all_combos <- expand_grid(year = unique(run_designation$year),
+                          month = factor(c("Nov", "Dec", "Jan", "Feb", "Mar", "Apr"),
+                                         levels = c("Nov", "Dec", "Jan", "Feb", "Mar", "Apr")),
+                          location_name = unique(run_designation$location_name),
+                          run_name = unique(run_designation$run_name))
+
+# run_summary_complete <- all_combos |>
+#   left_join(run_summary, by = c("year", "month", "location_name", "run_name")) |>
+#   mutate(total_samples = replace_na(total_samples, 0),
+#          month_total = replace_na(month_total, 0),
+#          run_percent = ifelse(month_total == 0, 0, run_percent))
+
+# if there is a run present, then it fills other runs with 0, if no run at all that month/year, then it fills with NA
+run_summary_complete <- all_combos |>
+  left_join(run_summary, by = c("year", "month", "location_name", "run_name")) |>
+  group_by(year, month, location_name) |>
+  mutate(
+    # flag if this month/year/location has any data at all
+    has_data = any(!is.na(total_samples) & total_samples > 0),
+
+    total_samples = ifelse(has_data & is.na(total_samples), 0, total_samples),
+    month_total   = ifelse(has_data & is.na(month_total), 0, month_total),
+    run_percent   = ifelse(has_data & is.na(run_percent), 0, run_percent)
+  ) |>
+  ungroup() |>
+  select(-has_data)
+  
+```
+
+## Line plot - summarized by month
+
+```{r include=FALSE}
+# plot seems off since there are no 0 count for run types that were not counted 
+# ggplot(run_summary_complete |> filter(location_name == "Battle"), aes(x = month, y = run_percent, color = run_name, group = run_name)) +
+#   geom_line() +
+#   geom_point() +
+#   facet_wrap(~ year)
+```
+
+
+```{r include=FALSE}
+# run_summary_2 <- run_designation |>
+#   mutate(month_num = month(datetime_collected),
+#          month = factor(month_num, levels = 1:12,
+#                         labels = c("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"))) |>
+#   group_by(year, month_num, month, location_name, run_name) |>
+#   summarise(total_samples = n(), .groups = "drop") |>
+#   group_by(year, month_num, month, location_name) |>
+#   mutate(month_total = sum(total_samples),
+#          run_percent = (total_samples / month_total) * 100) |>
+#   ungroup()
+# 
+# wanted_months <- c(11, 12, 1, 2, 3, 4)
+# 
+# # only month_num
+# all_combos_2 <- tidyr::expand_grid(year = sort(unique(run_designation$year)), 
+#                                    month_num = wanted_months,
+#                                    location_name  = sort(unique(run_designation$location_name)),
+#                                    run_name = sort(unique(run_designation$run_name)))
+# 
+# # join numeric month + other keys
+# run_summary_complete_2 <- all_combos_2 |>
+#   left_join(run_summary_2, by = c("year", "month_num", "location_name", "run_name")) |>  # fill missing values
+#   mutate(total_samples = tidyr::replace_na(total_samples, 0),
+#                 month_total = replace_na(month_total, 0),
+#                 run_percent = if_else(month_total == 0, 0, run_percent)) |> 
+#   mutate(month = factor(c("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec")
+#                         [month_num],
+#                         levels = c("Nov", "Dec", "Jan", "Feb", "Mar", "Apr"))) |> 
+#   mutate(date = as.Date(paste0(year, "-", month_num, "-01"))) # create a fake date
+
+```
+
+Example: Battle Creek 
+
+```{r echo=FALSE}
+# line_plot_month <- ggplot(run_summary_complete_2 |> filter(location_name == "Battle"), aes(x = month, y = run_percent, color = run_name, group = run_name)) +
+#   geom_line() +
+#   geom_point() +
+#   scale_color_manual(values = tol_muted) +
+#   scale_y_continuous(limits = c(0, 100),
+#                      breaks = seq(0, 100, 20),
+#                      labels = function(x) paste0(x, "%")) +
+#   facet_wrap(~ year) +
+#   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+# 
+# ggplotly(line_plot_month)
+```
+
+```{r echo=FALSE}
+# using data object that assigns NA when no run is present at all
+line_plot_month <- ggplot(run_summary_complete |> filter(location_name == "Battle"), aes(x = month, y = run_percent, color = run_name, group = run_name)) +
+  geom_line() +
+  geom_point() +
+  scale_color_manual(values = tol_muted) +
+  scale_y_continuous(limits = c(0, 100),
+                     breaks = seq(0, 100, 20),
+                     labels = function(x) paste0(x, "%")) +
+  facet_wrap(~ year) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+  theme_minimal()
+
+ggplotly(line_plot_month)
+```
+
+Example: Mill Creek 
+
+```{r echo=FALSE}
+# line_plot_month_2 <- ggplot(run_summary_complete_2 |> filter(location_name == "Mill"), aes(x = month, y = run_percent, color = run_name, group = run_name)) +
+#   geom_line() +
+#   geom_point() +
+#   scale_color_manual(values = tol_muted) +
+#   scale_y_continuous(limits = c(0, 100),
+#                      breaks = seq(0, 100, 20),
+#                      labels = function(x) paste0(x, "%")) +
+#   facet_wrap(~ year) +
+#   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+# 
+# ggplotly(line_plot_month_2)
+```
+
+```{r echo=FALSE}
+# using data object that assigns NA when no run is present at all
+line_plot_month_2 <- ggplot(run_summary_complete |> filter(location_name == "Mill"), aes(x = month, y = run_percent, color = run_name, group = run_name)) +
+  geom_line() +
+  geom_point() +
+  scale_color_manual(values = tol_muted) +
+  scale_y_continuous(limits = c(0, 100),
+                     breaks = seq(0, 100, 20),
+                     labels = function(x) paste0(x, "%")) +
+  facet_wrap(~ year) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+  theme_minimal()
+
+ggplotly(line_plot_month_2)
+```
+
+### Summarizing data per year/site/location and run
+
+Line plot throughout the years
+
+Example: Battle Creek 
+
+```{r echo=FALSE}
+# grouping by year
+run_summary_complete_by_year <- run_designation |>  
+  group_by(year, location_name, run_name) |>
+  summarise(total_samples = n(), .groups = "drop") |>
+  group_by(year, location_name) |>
+  mutate(year_total = sum(total_samples),
+         run_percent_year = (total_samples / year_total) * 100) |>
+  ungroup()
+  
+line_plot_year_grouped <- ggplot(run_summary_complete_by_year |> filter(location_name == "Battle"), aes(x = year, y = run_percent_year, color = run_name, group = run_name)) +
+  geom_line() +
+  geom_point() +
+  scale_color_manual(values = tol_muted) +
+  scale_y_continuous(limits = c(0, 100),
+                     breaks = seq(0, 100, 20),
+                     labels = function(x) paste0(x, "%")) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+  theme_minimal()
+
+ggplotly(line_plot_year_grouped)
+```
+
+```{r echo=FALSE}
+# using data object that assigns NA when no run is present at all
+# line_plot_year <- ggplot(run_summary_complete |> mutate(date = as.Date(paste0(year, "-", month, "-01"))) |> 
+#   filter(location_name == "Battle"), aes(x = date, y = run_percent, color = run_name, group = run_name)) +
+#   geom_line() +
+#   geom_point() +
+#   scale_color_manual(values = tol_muted) +
+#   scale_y_continuous(limits = c(0, 100),
+#                      breaks = seq(0, 100, 20),
+#                      labels = function(x) paste0(x, "%")) +
+#   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+# 
+# ggplotly(line_plot_year)
+```
+
+Example: Mill Creek 
+
+```{r echo=FALSE}
+line_plot_year_grouped_2 <- ggplot(run_summary_complete_by_year |> filter(location_name == "Mill"), aes(x = year, y = run_percent_year, color = run_name, group = run_name)) +
+  geom_line() +
+  geom_point() +
+  scale_color_manual(values = tol_muted) +
+  scale_y_continuous(limits = c(0, 100),
+                     breaks = seq(0, 100, 20),
+                     labels = function(x) paste0(x, "%")) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+  theme_minimal()
+
+ggplotly(line_plot_year_grouped_2)
+
+```
+
+
+### Histograms - Frequency plots throughout all the years 
+
+```{r include=FALSE}
+plot_test <- run_designation |>
+  mutate(day_standard = yday(datetime_collected)) # regular ordinal day
+         # sample_day = (day_standard - 304) %% 365 + 150) # shift so that Nov 1 = 150
+  
+plot_test_clean <- plot_test |> 
+  group_by(day_standard, location_name, run_name) |> 
+  summarise(count = n(), .groups = "drop") |>
+  mutate(total_sample_day = sum(count)) |> 
+         # run_percent = (count / total_sample_day) * 100) |>
+  ungroup() |> 
+  mutate(day_standard = case_when(is.na(day_standard) ~ 0, # fill NAs with zeros
+                                TRUE ~ day_standard)) |>
+  glimpse()
+  
+ggplot(plot_test_clean |> filter(location_name == "Sac-KNL"), aes(x = day_standard, y = count, color = run_name)) +
+  geom_col() +
+  facet_wrap(~ run_name) +
+  theme_minimal()
+```
+
+Example: Sacramento Knights Landing 
+
+Filtered to just three run types
+
+```{r echo=FALSE, warning=FALSE}
+dist_1 <- ggplot(plot_test_clean |> filter(location_name == "Sac-KNL",
+                                           run_name %in% c("Spring", "Spring/Winter", "Winter")), aes(x = day_standard, color = run_name, fill = run_name)) +
+  geom_density(alpha = 0.3, adjust = 1.5) +
+  facet_wrap(~ run_name, ncol = 1) +
+  theme_minimal() +
+  scale_x_continuous(name = "Month", # modify x label to months 
+                     breaks = c(15, 46, 75, 105, 135, 166, 196, 227, 258, 288, 319, 349),
+                     labels = month.abb) +
+  labs(x = "Sample Day", y = "", fill = "Run Type", color = "Run Type") +
+  theme(axis.text.x = element_text(angle = 70, vjust = 0.5, hjust = 1)) 
+
+ggplotly(dist_1)
+```
+
+
+```{r eval=FALSE, warning=FALSE, include=FALSE}
+# Sample plot but removing Late Fall
+dist_1_1 <- ggplot(plot_test_clean |> filter(location_name == "Sac-KNL",
+                                           run_name != "LateFall"), aes(x = day_standard, color = run_name, fill = run_name)) +
+  geom_density(alpha = 0.3, adjust = 1.5) +
+  facet_wrap(~ run_name, ncol = 1) +
+  theme_minimal() +
+  scale_x_continuous(name = "Month", # modify x label to months 
+                     breaks = c(15, 46, 75, 105, 135, 166, 196, 227, 258, 288, 319, 349),
+                     labels = month.abb) +
+  labs(x = "Sample Day", y = "", fill = "Run Type", color = "Run Type") +
+  theme(axis.text.x = element_text(angle = 70, vjust = 0.5, hjust = 1)) 
+
+ggplotly(dist_1_1)
+```
+
+Example: Clear Creek 
+
+Filtered to four run types
+
+```{r eval=FALSE, include=FALSE}
+ggplot(plot_test_clean |> filter(location_name == "Clear"), aes(x = day_standard, color = run_name, fill = run_name)) +
+  geom_density(alpha = 0.3, adjust = 1.5) +
+  facet_wrap(~ run_name) +
+  theme_minimal() +
+  labs(x = "Sample Day", y = "", fill = "Run Type", color = "Run Type")
+```
+
+```{r eval=FALSE, warning=FALSE, include=FALSE}
+dist_2 <- ggplot(plot_test_clean |> filter(location_name == "Clear"),
+       aes(x = day_standard, color = run_name, fill = run_name)) +
+  geom_density(alpha = 0.3, adjust = 1.5) +
+  facet_wrap(~ run_name, ncol = 1) +
+  theme_minimal() +
+  scale_x_continuous(name = "Month", # modify x label to months 
+                     breaks = c(15, 46, 75, 105, 135, 166, 196, 227, 258, 288, 319, 349),
+                     labels = month.abb) +
+  labs(x = "Sample Day", y = "", fill = "Run Type", color = "Run Type") +
+  theme(axis.text.x = element_text(angle = 70, vjust = 0.5, hjust = 1)) 
+
+
+ggplotly(dist_2)
+```
+
+```{r echo=FALSE, warning=FALSE}
+dist_2_2 <- ggplot(plot_test_clean |> filter(location_name == "Clear",
+                                           run_name != "Early/Late Heterozygous",
+                                           run_name != "Unknown",
+                                           run_name != "Spring"),
+       aes(x = day_standard, color = run_name, fill = run_name)) +
+  geom_density(alpha = 0.3, adjust = 1.5) +
+  facet_wrap(~ run_name, ncol = 1) +
+  theme_minimal() +
+  scale_x_continuous(name = "Month", # modify x label to months 
+                     breaks = c(15, 46, 75, 105, 135, 166, 196, 227, 258, 288, 319, 349),
+                     labels = month.abb) +
+  labs(x = "Sample Day", y = "", fill = "Run Type", color = "Run Type") +
+  theme(axis.text.x = element_text(angle = 70, vjust = 0.5, hjust = 1)) 
+
+
+ggplotly(dist_2_2)
+```

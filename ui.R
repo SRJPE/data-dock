@@ -141,39 +141,25 @@ ui <- fluidPage(
                        run_designation$map_label[order(run_designation$map_label)]
                      )
                    ),
-                   selected = NULL,
+                   selected = "Clear Creek",
                    multiple = TRUE,
                    selectize = TRUE)
                ),
                div(
                  style = "min-width: 250px;",
-                 sliderInput("year_range_g", "Year Range (update min and max years):",
+                 sliderInput("year_range_g", "Year Range:",
                              min = as.numeric(min(run_designation$year)),
                              max = as.numeric(max(run_designation$year)),
-                             value = c(as.numeric(min(run_designation$year)), as.numeric(max(run_designation$year))),
+                             value = c(as.numeric(min(run_designation$year)), max(run_designation$year)),
                              step = 1,
-                             sep = "")
+                             sep = "",
+                             ticks = TRUE)
                ),
                div(
                  style = "min-width: 200px;",
                  selectInput("plot_type_g", "Summarize data by:",
                              choices = c("Monitoring Year", "Month"))
                ),
-               div(
-                 style = "min-width: 200px;",
-                 selectInput(
-                   inputId = "genetic_filter_g",
-                   label = tags$strong("Filter Genetic Stock Assignment:"), #TODO - check if filter name makes sense
-                   choices = c(
-                     setNames(
-                       run_designation$run_name[order(run_designation$run_name)],
-                       run_designation$run_name[order(run_designation$run_name)]
-                     )
-                   ),
-                   selected = NULL,
-                   multiple = TRUE,
-                   selectize = TRUE)
-               )
              ),
 
              # --- Map Filter Panel ---
