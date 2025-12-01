@@ -410,240 +410,248 @@ output$download_wq_csv <- downloadHandler(
 
 wq_missing_sites <- reactiveVal(character(0)) # filtering so message works
 
-output$wq_dynamic_plot <- renderPlotly({
-  req(!is.null(input$location_filter_wq) && length(input$location_filter_wq) > 0)
-  req(input$analyte, length(input$analyte) > 0)
+  output$wq_dynamic_plot <- renderPlotly({
+    req(!is.null(input$location_filter_wq) && length(input$location_filter_wq) > 0)
+    req(input$analyte, length(input$analyte) > 0)
 
-  df <- filtered_wq_data()
+    df <- filtered_wq_data()
 
-  selected_locs <- input$location_filter_wq %||% character(0)
+    selected_locs <- input$location_filter_wq %||% character(0)
 
-  present_locs <- sort(unique(df$station_id_name))
-  missing_locs <- setdiff(selected_locs, present_locs)
+    present_locs <- sort(unique(df$station_id_name))
+    missing_locs <- setdiff(selected_locs, present_locs)
 
-  prev_missing <- wq_missing_sites()
-  new_missing  <- setdiff(missing_locs, prev_missing)
+    prev_missing <- wq_missing_sites()
+    new_missing  <- setdiff(missing_locs, prev_missing)
 
-  if (length(new_missing) > 0) {
-    showNotification(
-      paste0("No data for selected analyte(s) at: ",
-             paste(new_missing, collapse = ", ")),
-      type = "warning", duration = 6
-    )
-  }
+    if (length(new_missing) > 0) {
+      showNotification(
+        paste0("No data for selected analyte(s) at: ",
+               paste(new_missing, collapse = ", ")),
+        type = "warning", duration = 6
+      )
+    }
 
-  # update the tracker (so sites with data don't trigger, and new missing will)
-  wq_missing_sites(missing_locs)
+    # update the tracker (so sites with data don't trigger, and new missing will)
+    wq_missing_sites(missing_locs)
 
-  if (n_distinct(df$analyte) > 8) {
-    validate(
-      need(FALSE, "Too many analytes selected. Please select 8 or fewer.")
-    )
-  }
-  if (nrow(df) == 0) {
-    return(plotly_empty(type = "scatter", mode = "lines") |>
-             layout(title = "No data available for current selection."))
-  }
+    if (n_distinct(df$analyte) > 8) {
+      validate(
+        need(FALSE, "Too many analytes selected. Please select 8 or fewer.")
+      )
+    }
+    if (nrow(df) == 0) {
+      return(plotly_empty(type = "scatter", mode = "lines") |>
+               layout(title = "No data available for current selection."))
+    }
 
-  plot_type <- as.character(input$plot_type)[1]
-  y_lab <- if (length(input$analyte) == 1) input$analyte[[1]] else "Value"
-
-
-  # flags + segment ids
-  df <- df |>
-    dplyr::arrange(analyte, station_id_name, date) |>
-    dplyr::group_by(analyte, station_id_name) |>
-    dplyr::mutate(nd_flag = tolower(trimws(detection_status)) %in% c("not detected","not detected."),
-                  seg_id  = cumsum(dplyr::lag(nd_flag, default = FALSE))
-                  ) |>
-    dplyr::ungroup()
-
-  # if (plot_type == "Time Series") {
-  #   detected <- df |>
-  #     dplyr::filter(!is.na(value) & !nd_flag) # splitting detected vs non-detected using the flag
-  #
-  #   nd <- df |>
-  #     dplyr::filter(nd_flag) |>
-  #     dplyr::mutate(nd_height = dplyr::case_when(
-  #       reports_to == "MDL" ~ as.numeric(mdl),
-  #       reports_to == "MRL" ~ as.numeric(mrl),
-  #       TRUE ~ NA_real_),
-  #       x_minus = date - lubridate::days(10),
-  #       x_plus  = date + lubridate::days(10)
-  #       ) |>
-  #     dplyr::filter(!is.na(nd_height))
-  #
-  #   # base plot so facets exist
-  #   p <- ggplot(df, aes(x = date)) +
-  #     facet_wrap(~ analyte, scales = "free_y", ncol = 1) +
-  #     labs(x = "", y = y_lab, color = "Location") +
-  #     theme_minimal()
-  #
-  #
-  #   # lines/points for detected ONLY, with group resetting after non-detects
-  #   if (nrow(detected) > 0) {
-  #     p <- p +
-  #       geom_line(data = detected,
-  #                 aes(y = value,
-  #                     color = station_id_name,
-  #                     group = interaction(station_id_name, seg_id)), linewidth = 0.6) +
-  #       geom_point(data = detected,
-  #                  aes(y = value, color = station_id_name),
-  #                  size = 1, alpha = 0.6)
-  #     }
-  #
-  #   # Non-detect markers (vertical + short horizontal at MDL/MRL)
-  #   if (nrow(nd) > 0) {
-  #     p <- p +
-  #       geom_segment(data = nd,
-  #                    aes(x = date, xend = date, y = 0, yend = nd_height, color = station_id_name),
-  #                    linewidth = 0.6, linetype = 5, inherit.aes = FALSE) +
-  #       geom_segment(data = nd,
-  #                    aes(x = x_minus, xend = x_plus, y = nd_height, yend = nd_height, color = station_id_name),
-  #                    linewidth = 0.6, lineend = "square", inherit.aes = FALSE)
-  #     }
-  #   }
-
-  # normalize unit per analyte
-  unit_lu <- df |>
-    dplyr::filter(!is.na(unit)) |>
-    dplyr::count(analyte, unit, name = "n") |>
-    dplyr::arrange(analyte, dplyr::desc(n)) |>
-    dplyr::group_by(analyte) |>
-    dplyr::slice(1L) |>
-    dplyr::ungroup() |>
-    dplyr::transmute(analyte, unit_label = unit)
-
-  df_plot <- df |>
-    dplyr::left_join(unit_lu, by = "analyte") |>
-    dplyr::mutate(
-      unit_label   = dplyr::coalesce(unit_label, "unit unknown"),
-      analyte_label = paste0(analyte, " (", unit_label, ")")
-    )
+    plot_type <- as.character(input$plot_type)[1]
+    y_lab <- if (length(input$analyte) == 1) input$analyte[[1]] else "Value"
 
 
-  df_plot <- df_plot |>
-    dplyr::arrange(analyte, station_id_name, date) |>
-    dplyr::group_by(analyte, station_id_name) |>
-    dplyr::mutate(
-      nd_flag = tolower(trimws(detection_status)) %in% c("not detected","not detected."),
-      seg_id  = cumsum(dplyr::lag(nd_flag, default = FALSE))
-    ) |>
-    dplyr::ungroup()
+    # flags + segment ids
+    df <- df |>
+      dplyr::arrange(analyte, station_id_name, date) |>
+      dplyr::group_by(analyte, station_id_name) |>
+      dplyr::mutate(nd_flag = tolower(trimws(detection_status)) %in% c("not detected","not detected."),
+                    seg_id  = cumsum(dplyr::lag(nd_flag, default = FALSE))
+                    ) |>
+      dplyr::ungroup()
 
-  if (plot_type == "Time Series") {
-    detected <- df_plot |>
-      dplyr::filter(!is.na(value) & !nd_flag)
+    # if (plot_type == "Time Series") {
+    #   detected <- df |>
+    #     dplyr::filter(!is.na(value) & !nd_flag) # splitting detected vs non-detected using the flag
+    #
+    #   nd <- df |>
+    #     dplyr::filter(nd_flag) |>
+    #     dplyr::mutate(nd_height = dplyr::case_when(
+    #       reports_to == "MDL" ~ as.numeric(mdl),
+    #       reports_to == "MRL" ~ as.numeric(mrl),
+    #       TRUE ~ NA_real_),
+    #       x_minus = date - lubridate::days(10),
+    #       x_plus  = date + lubridate::days(10)
+    #       ) |>
+    #     dplyr::filter(!is.na(nd_height))
+    #
+    #   # base plot so facets exist
+    #   p <- ggplot(df, aes(x = date)) +
+    #     facet_wrap(~ analyte, scales = "free_y", ncol = 1) +
+    #     labs(x = "", y = y_lab, color = "Location") +
+    #     theme_minimal()
+    #
+    #
+    #   # lines/points for detected ONLY, with group resetting after non-detects
+    #   if (nrow(detected) > 0) {
+    #     p <- p +
+    #       geom_line(data = detected,
+    #                 aes(y = value,
+    #                     color = station_id_name,
+    #                     group = interaction(station_id_name, seg_id)), linewidth = 0.6) +
+    #       geom_point(data = detected,
+    #                  aes(y = value, color = station_id_name),
+    #                  size = 1, alpha = 0.6)
+    #     }
+    #
+    #   # Non-detect markers (vertical + short horizontal at MDL/MRL)
+    #   if (nrow(nd) > 0) {
+    #     p <- p +
+    #       geom_segment(data = nd,
+    #                    aes(x = date, xend = date, y = 0, yend = nd_height, color = station_id_name),
+    #                    linewidth = 0.6, linetype = 5, inherit.aes = FALSE) +
+    #       geom_segment(data = nd,
+    #                    aes(x = x_minus, xend = x_plus, y = nd_height, yend = nd_height, color = station_id_name),
+    #                    linewidth = 0.6, lineend = "square", inherit.aes = FALSE)
+    #     }
+    #   }
 
-    nd <- df_plot |>
-      dplyr::filter(nd_flag) |>
+    # normalize unit per analyte
+    unit_lu <- df |>
+      dplyr::filter(!is.na(unit)) |>
+      dplyr::count(analyte, unit, name = "n") |>
+      dplyr::arrange(analyte, dplyr::desc(n)) |>
+      dplyr::group_by(analyte) |>
+      dplyr::slice(1L) |>
+      dplyr::ungroup() |>
+      dplyr::transmute(analyte, unit_label = unit)
+
+    df_plot <- df |>
+      dplyr::left_join(unit_lu, by = "analyte") |>
       dplyr::mutate(
-        nd_height = dplyr::case_when(
-          reports_to == "MDL" ~ as.numeric(mdl),
-          reports_to == "MRL" ~ as.numeric(mrl),
-          TRUE ~ NA_real_),
-        x_minus = date - lubridate::days(10),
-        x_plus  = date + lubridate::days(10)
-        ) |>
-      dplyr::filter(!is.na(nd_height))
-
-    # y-axis label: unit if single analyte; otherwise blank (units are in each panel title)
-    y_axis_lab <- if (dplyr::n_distinct(df_plot$analyte) == 1) {
-      unique(df_plot$unit_label)
-    } else {
-      NULL
-    }
-
-    p <- ggplot(df_plot, aes(x = date)) +
-      facet_wrap(~ analyte_label, scales = "free_y", ncol = 1) +
-      labs(x = "", y = y_axis_lab, color = "Location") +
-      theme_minimal()
-
-    # Tol Muted color palette
-    tol_muted <- c(
-      "#332288", "#117733", "#44AA99", "#88CCEE",
-      "#DDCC77", "#CC6677", "#AA4499", "#882255")
-
-    # lines/points for detected ONLY, with group resetting after non-detects
-    if (nrow(detected) > 0) {
-      p <- p +
-        geom_line(data = detected,
-                  aes(y = value,
-                      color = station_id_name,
-                      group = interaction(station_id_name, seg_id)), linewidth = 0.6, show.legend = FALSE) +
-        geom_point(data = detected,
-                   aes(y = value,
-                       color = station_id_name,
-                       shape = station_id_name),
-          size = 1.8, alpha = 0.8, show.legend = TRUE)
-      }
-
-
-    # Non-detect markers (vertical + short horizontal at MDL/MRL)
-    if (nrow(nd) > 0) {
-      p <- p +
-        geom_segment(data = nd,
-                     aes(x = date, xend = date, y = 0, yend = nd_height, color = station_id_name),
-                     linewidth = 0.6, linetype = 5, inherit.aes = FALSE) +
-        geom_segment(data = nd,
-                     aes(x = x_minus, xend = x_plus, y = nd_height, yend = nd_height, color = station_id_name),
-                     linewidth = 0.6, lineend = "square", inherit.aes = FALSE)
-    }
-
-    # apply Tol Muted palette, shapes, and unified legend
-    p <- p +
-      scale_color_manual(values = tol_muted) +
-      scale_shape_manual(values = c(16, 17, 15, 3, 7, 8, 9, 10)) +
-      guides(color = guide_legend(
-        override.aes = list(shape = 16, linetype = 0, size = 2.5, alpha = 1)),
-        shape = "none") +
-      theme_minimal() +
-      theme(
-        legend.position = "bottom",
-        legend.box = "horizontal",
-        legend.title = element_text(face = "bold"),
-        strip.text = element_text(face = "bold")
+        unit_label   = dplyr::coalesce(unit_label, "unit unknown"),
+        analyte_label = paste0(analyte, " (", unit_label, ")")
       )
 
 
-# TODO add units to the box plots (just like line plot)
-  } else if (plot_type == "Box Plot") {
-    p <- ggplot(
-      df |> dplyr::filter(!is.na(value)),
-      aes(x = station_id, y = value, fill = station_id)) +
-      geom_boxplot(outlier.shape = NA) +
-      facet_wrap(~ analyte, scales = "free_y", ncol = 2) +
-      labs(x = "", y = "value", fill = "Station") +
-      scale_fill_manual(values = tol_muted) +
-      theme_minimal() +
-      theme(legend.position = "none")
+    df_plot <- df_plot |>
+      dplyr::arrange(analyte, station_id_name, date) |>
+      dplyr::group_by(analyte, station_id_name) |>
+      dplyr::mutate(
+        nd_flag = tolower(trimws(detection_status)) %in% c("not detected","not detected."),
+        seg_id  = cumsum(dplyr::lag(nd_flag, default = FALSE))
+      ) |>
+      dplyr::ungroup()
 
-  } else {
-    return(NULL)
-  }
+    if (plot_type == "Time Series") {
+      detected <- df_plot |>
+        dplyr::filter(!is.na(value) & !nd_flag)
 
-  gp <- ggplotly(p)
+      nd <- df_plot |>
+        dplyr::filter(nd_flag) |>
+        dplyr::mutate(
+          nd_height = dplyr::case_when(
+            reports_to == "MDL" ~ as.numeric(mdl),
+            reports_to == "MRL" ~ as.numeric(mrl),
+            TRUE ~ NA_real_),
+          x_minus = date - lubridate::days(10),
+          x_plus  = date + lubridate::days(10)
+          ) |>
+        dplyr::filter(!is.na(nd_height))
 
-  for (i in seq_along(gp$x$data)) {
-    tr <- gp$x$data[[i]]
+      # y-axis label: unit if single analyte; otherwise blank (units are in each panel title)
+      y_axis_lab <- if (dplyr::n_distinct(df_plot$analyte) == 1) {
+        unique(df_plot$unit_label)
+      } else {
+        NULL
+      }
 
-    # Hide lines from legend
-    if (!is.null(tr$mode) && tr$mode == "lines") {
-      gp$x$data[[i]]$showlegend <- FALSE
+      p <- ggplot(df_plot, aes(x = date)) +
+        facet_wrap(~ analyte_label, scales = "free_y", ncol = 1) +
+        labs(x = "", y = y_axis_lab, color = "Location") +
+        theme_minimal()
+
+      # Tol Muted color palette
+      tol_muted <- c(
+        "#332288", "#117733", "#44AA99", "#88CCEE",
+        "#DDCC77", "#CC6677", "#AA4499", "#882255")
+
+      # lines/points for detected ONLY, with group resetting after non-detects
+      if (nrow(detected) > 0) {
+        p <- p +
+          geom_line(data = detected,
+                    aes(y = value,
+                        color = station_id_name,
+                        group = interaction(station_id_name, seg_id)), linewidth = 0.6, show.legend = FALSE) +
+          geom_point(data = detected,
+                     aes(y = value,
+                         color = station_id_name,
+                         shape = station_id_name),
+            size = 1.8, alpha = 0.8, show.legend = TRUE)
+        }
+
+
+      # Non-detect markers (vertical + short horizontal at MDL/MRL)
+      if (nrow(nd) > 0) {
+        p <- p +
+          geom_segment(data = nd,
+                       aes(x = date, xend = date, y = 0, yend = nd_height, color = station_id_name),
+                       linewidth = 0.6, linetype = 5, inherit.aes = FALSE) +
+          geom_segment(data = nd,
+                       aes(x = x_minus, xend = x_plus, y = nd_height, yend = nd_height, color = station_id_name),
+                       linewidth = 0.6, lineend = "square", inherit.aes = FALSE)
+      }
+
+      # apply Tol Muted palette, shapes, and unified legend
+      p <- p +
+        scale_color_manual(values = tol_muted) +
+        scale_shape_manual(values = c(16, 17, 15, 3, 7, 8, 9, 10)) +
+        guides(color = guide_legend(
+          override.aes = list(shape = 16, linetype = 0, size = 2.5, alpha = 1)),
+          shape = "none") +
+        theme_minimal() +
+        theme(
+          legend.position = "bottom",
+          legend.box = "horizontal",
+          legend.title = element_text(face = "bold"),
+          strip.text = element_text(face = "bold")
+        )
+
+
+  # TODO add units to the box plots (just like line plot)
+    } else if (plot_type == "Box Plot") {
+      p <- ggplot(
+        df |> dplyr::filter(!is.na(value)),
+        aes(x = station_id, y = value, fill = station_id)) +
+        geom_boxplot(outlier.shape = NA) +
+        facet_wrap(~ analyte, scales = "free_y", ncol = 2) +
+        labs(x = "", y = "value", fill = "Station") +
+        scale_fill_manual(values = tol_muted) +
+        theme_minimal() +
+        theme(legend.position = "none")
+
+    } else {
+      return(NULL)
     }
-#TODO figure out how to remove duplicate shape symbology
-    # enable legend for points
-    if (!is.null(tr$mode) && grepl("markers", tr$mode)) {
-      gp$x$data[[i]]$showlegend <- TRUE
+
+    gp <- ggplotly(p)
+
+    seen <- character()   # track which site names already used
+
+    for (i in seq_along(gp$x$data)) {
+      tr <- gp$x$data[[i]]
+
+      # Hide lines from legend
+      if (!is.null(tr$mode) && tr$mode == "lines") {
+        gp$x$data[[i]]$showlegend <- FALSE
+      }
+
+      # Enable legend only once per site for markers
+      if (!is.null(tr$mode) && grepl("markers", tr$mode)) {
+        site_name <- tr$name
+        if (site_name %in% seen) {
+          gp$x$data[[i]]$showlegend <- FALSE
+        } else {
+          gp$x$data[[i]]$showlegend <- TRUE
+          seen <- c(seen, site_name)
+        }
+      }
     }
-  }
 
-  # draw legend
-  gp <- gp |> layout(showlegend = TRUE)
+    # draw legend
+    gp <- gp |> layout(showlegend = TRUE)
 
-  gp
+    gp
 
-})
+  })
 # Download tab  --------------------------------------------------------------
 # sync Water Quality selections to Download tab
 observeEvent(input$navbar, {
