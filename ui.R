@@ -35,15 +35,6 @@ ui <- fluidPage(
                    multiple = TRUE,
                    selectize = TRUE)
                  ),
-
-               #TODO confirm that we will no longer use the sites
-               # sidebarLayout(
-               #   sidebarPanel(
-               #     h4("Controls"),
-               #     selectInput("region", "Region/site:",
-               #                 choices = c("Carquinez", "Central Delta", "Confluence",
-               #                             "North Delta", "San Pablo Bay", "South Delta",
-               #                             "Suisun and Grizzly Bays", "Suisun Marsh")),
                div(
                  style = "min-width: 250px;",
                  sliderInput("year_range", "Year Range (update min and max years):",

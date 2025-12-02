@@ -30,24 +30,20 @@ The Spring-Run Juvenile Production Estimate (SR JPE) project is a multidisciplin
 
 [Spring-Run Chinook Salmon JPE Run Identification Program Research and Initial Monitoring Plan](https://water.ca.gov/-/media/DWR-Website/Web-Pages/Programs/State-Water-Project/Endangered-Species-Protection/SR-JPE-Run-ID-Program-Development-Plan-2023-08-Update.pdf)
 
-TODO – Insert links to journal articles or any additional documentation?
-
 ## Data management and publication
 
 The Downstream Dashboard data collection programs maintain internal databases as primary data storage and utilize the [Environmental Data Initiative (EDI)](https://edirepository.org/) to make data publicly accessible. EDI is a National Science Foundation (NSF) funded public repository for environmental data with robust metadata standards.
 
-The Downstream Dashboard pulls data from EDI for visualization. The dashboard was designed to facilitate data exploration by allowing users to easily visualize and query parameters of interest. The dashboard is developed in R Shiny and all code is openly available on [GitHub](https://github.com/SRJPE/data-dock). TODO rename repo
+The Downstream Dashboard pulls data from EDI for visualization. The dashboard was designed to facilitate data exploration by allowing users to easily visualize and query parameters of interest. The dashboard is developed in R Shiny and all code is openly available on [GitHub](https://github.com/SRJPE/data-dock). Publication of the data in EDI is in progress, and the dashboard will be updated with the link as soon as it becomes available. The dashboard will also be updated as future EDI updates occur.
 
 ![Figure 2. Overview of data management for Downstream Dashboard programs from data collection to data access.](downstream_dashboard.png)
 
 ## Dashboard
 
-TODO insert features and output of dashboard
+The dashboard is organized into three primary sections: Water Quality, Genetic and Download Data. The Water Quality tab enables users to visualize temporal patterns, examine analyte-specific trends, and interact with site-based map selections. The Genetics tab allows user to explore run assignment distributions across locations and time. The Download Data tab provides functionality for exporting filtered and customized datasets.
 
 ## Roles and responsibilities
 
 -   For questions about the SR JPE Genetics Data, please contact Sean Canfield (sean.canfield\@water.ca.gov)\
 -   For questions about the EMP Discrete Water Quality Data, please contact Morgan Battey (morgan.battey\@water.ca.gov)
--   XX is responsible for ongoing maintenance of the Downstream Dashboard
-
-TODO decide if we want to put more specific roles and responsibilities. Need to decide who will be maintaining the application
+-   Dave Bosworth is responsible for ongoing maintenance of the Downstream Dashboard (david.bosworth\@water.ca.gov)

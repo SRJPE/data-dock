@@ -3,8 +3,7 @@ server <- function(input, output, session) {
   showModal(modalDialog(title = "Welcome to the Genetics and Water Quality Dashboard!",
                         tagList(
                           tags$h5("NOTE: This tool is in development!"),
-                          tags$p("This web-tool is designed to explore..."),
-                          tags$p("Use the tool to:"),
+                          tags$p("This web-tool is designed to..."),
                           tags$ul(
                             tags$li("Review water quality outputs"),
                             tags$li("Review genetics data outputs"),
