@@ -272,23 +272,5 @@ ui <- fluidPage(
           )
         )
       ),
-
-    ## Resources Tab -------------------------------------------------------
-    tabPanel("Resources",
-             tabsetPanel(
-               tabPanel("Data Repositories",
-                        h4("Data Access"),
-                        p("Information about data sources...")
-               ),
-               tabPanel("R Packages",
-                        h4("GitHub Resources"),
-                        p("List of relevant packages...")
-               ),
-               tabPanel("Shiny Applications",
-                        h4("Shiny Resources"),
-                        p("Links to other apps...")
-                        )
-               )
-             )
     )
   )
