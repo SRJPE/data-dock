@@ -37,7 +37,7 @@ ui <- fluidPage(
                  ),
                div(
                  style = "min-width: 250px;",
-                 sliderInput("year_range", "Year Range (update min and max years):",
+                 sliderInput("year_range", "Year Range:",
                              min = 2020,
                              max = 2025,
                              value = c(2020, 2025),
