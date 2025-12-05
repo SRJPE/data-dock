@@ -40,7 +40,7 @@ The Downstream Dashboard pulls data from EDI for visualization. The dashboard wa
 
 ## Dashboard
 
-The dashboard is organized into three primary sections: Water Quality, Genetic and Download Data. The Water Quality tab enables users to visualize temporal patterns, examine analyte-specific trends, and interact with site-based map selections. The Genetics tab allows user to explore run assignment distributions across locations and time. The Download Data tab provides functionality for exporting filtered and customized datasets.
+The dashboard is organized into three primary sections: Water Quality, Genetics, and Download Data. The Water Quality tab enables users to visualize temporal patterns, examine analyte-specific trends, and interact with site-based map selections. The Genetics tab allows user to explore run assignment distributions across locations and time. The Download Data tab provides functionality for exporting filtered and customized datasets.
 
 ## Roles and responsibilities
 

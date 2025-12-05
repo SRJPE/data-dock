@@ -22,7 +22,7 @@ ui <- fluidPage(
                  style = "min-width: 200px;",
                  selectInput(
                    inputId = "location_filter_wq",
-                   label = tags$strong("Filter by Location:"),
+                   label = tags$strong("Station"),
                    choices = c(
                      setNames(
                        # wq_metadata$station_id[order(wq_metadata$station_description)],
@@ -37,7 +37,7 @@ ui <- fluidPage(
                  ),
                div(
                  style = "min-width: 250px;",
-                 sliderInput("year_range", "Year Range:",
+                 sliderInput("year_range", "Year Range",
                              min = 2020,
                              max = 2025,
                              value = c(2020, 2025),
@@ -48,7 +48,7 @@ ui <- fluidPage(
                  style = "min-width: 200px;",
                  selectizeInput(
                    inputId = "analyte",
-                   label = "Analyte:",
+                   label = "Analyte",
                    choices = NULL,
                    selected = NULL,
                    multiple = TRUE,
@@ -57,7 +57,7 @@ ui <- fluidPage(
                  ),
                div(
                  style = "min-width: 200px;",
-                 selectInput("plot_type", "Plot Type:",
+                 selectInput("plot_type", "Plot Type",
                              choices = c("Time Series", "Box Plot"))
                  )
                ),
@@ -125,7 +125,7 @@ ui <- fluidPage(
                  style = "min-width: 200px;",
                  selectInput(
                    inputId = "location_filter_g",
-                   label = tags$strong("Filter by Location:"),
+                   label = tags$strong("Monitoring Site"),
                    choices = c(
                      setNames(
                        run_designation$map_label[order(run_designation$map_label)],
@@ -138,7 +138,7 @@ ui <- fluidPage(
                ),
                div(
                  style = "min-width: 250px;",
-                 sliderInput("year_range_g", "Year Range:",
+                 sliderInput("year_range_g", "Year Range",
                              min = as.numeric(min(run_designation$year)),
                              max = as.numeric(max(run_designation$year)),
                              value = c(as.numeric(min(run_designation$year)), max(run_designation$year)),
@@ -148,7 +148,7 @@ ui <- fluidPage(
                ),
                div(
                  style = "min-width: 200px;",
-                 selectInput("plot_type_g", "Summarize data by:",
+                 selectInput("plot_type_g", "Data Summary Type",
                              choices = c("Monitoring Year", "Month"))
                ),
              ),
@@ -171,7 +171,7 @@ ui <- fluidPage(
                  ),
                  div(
                    style = "min-width: 200px;",
-                   selectInput("plot_type_g", "Summarize data by:",
+                   selectInput("plot_type_g", "Data Summary Type",
                                choices = c("Monitoring Year", "Month"))
                  )
                )
@@ -242,7 +242,7 @@ ui <- fluidPage(
               size = "lg"),
             tags$p(
               HTML("Download the data you’ve selected using the filters on this tab.<br>
-        The table below provides a preview only — the exported <code>.csv</code> file will include the complete raw dataset.<br>
+        The table provides a preview only — the exported <code>.csv</code> file will include the complete raw dataset.<br>
         For more information about the data and metadata, please visit the
         <a href='link-to-metadata-file' target='_blank'>EDI package here</a>."), #TODO add link to EDI
               style = "font-style: italic; color: #555; text-align: center; margin-top: 10px;")

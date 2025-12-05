@@ -1,4 +1,3 @@
-# TODO we will want to go throught these libraries and remove any we are not using
 library(shiny)
 library(tidyverse)
 library(shinythemes)
@@ -7,19 +6,6 @@ library(shinyWidgets)
 library(lubridate)
 library(plotly)
 library(shinycssloaders)
-library(waterYearType)
-library(DSMhabitat)
-library(ggplot2)
-library(mapdata)
-library(ggrepel)
-library(bayesplot)
-library(sf)
-library(DBI)
-library(patchwork)
-library(janitor)
-library(colorspace)
-
-
 
 # Colors ------------------------------------------------------------------
 colors_full <-  c("#9A8822", "#F5CDB4", "#F8AFA8", "#FDDDA0", "#74A089", #Royal 2
