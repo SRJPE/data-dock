@@ -191,9 +191,12 @@ server <- function(input, output, session) {
       return(plotly_empty(type = "scatter", mode = "lines") |>
                layout(title = "No data available for current selection."))
     }
-    run_col <- c("Spring" = "#2E2585", "Winter" = "#94CBEC", "Spring/Winter" = "#5DA899", "Fall" = "#7E2954",
-                 "LateFall" = "#C26A77", "Fall/LateFall" = "#9F4A96", "Unknown" = "gray", "Early/Late Heterozygous" = "#DCCD7D")
-    if (input$plot_type_g == "Monitoring Year") {
+    run_col <- c("spring" = "#2E2585", "fall or late fall" = "#9F4A96", "unknown" = "gray", "winter" = "#94CBEC")
+
+    # run_col <- c("Spring" = "#2E2585", "Winter" = "#94CBEC", "Spring/Winter" = "#5DA899", "Fall" = "#7E2954",
+    #              "LateFall" = "#C26A77", "Fall/LateFall" = "#9F4A96", "Unknown" = "gray", "Early/Late Heterozygous" = "#DCCD7D")
+
+     if (input$plot_type_g == "Monitoring Year") {
       plot <- ggplot(df, aes(x = year, y = run_percent, fill = run_name, text = paste0("Year: ", year, "<br>",
                                                                                        "Run Assignment Proportion: ", signif(run_percent, 2), "<br>",
                                                                                        "Run Type: ", run_name, "<br>",

@@ -6,6 +6,8 @@ library(shinyWidgets)
 library(lubridate)
 library(plotly)
 library(shinycssloaders)
+library(sf)
+library(janitor)
 
 # Colors ------------------------------------------------------------------
 colors_full <-  c("#9A8822", "#F5CDB4", "#F8AFA8", "#FDDDA0", "#74A089", #Royal 2
@@ -69,15 +71,16 @@ salmonid_habitat_extents <- readRDS("data-raw/salmonid_habitat_extents.Rds")
 # adding a new query to use as example data
 # randomly filling missing data
 # genetics_data_raw <- read_csv(here::here("data-raw","sample_query_drafted.csv")) |>
-genetics_data_raw <- read_csv(here::here("data-raw","sample_query_11-18-2025.csv")) |>
-  rename(run_name = genetic_run_name,
-         field_run_type_id = field_run_name) |>  # renaming for now to keep consistency with previous sample query
+genetics_data_raw <- read_csv(here::here("data-raw","genetics_query_12-9-2025.csv")) |>
+  rename(run_name = final_run_designation,
+         field_run_type_id = field_run_type) |>  # renaming for now to keep consistency with previous sample query
   mutate(fork_length_mm = ifelse(is.na(fork_length_mm),
                                  sample(fork_length_mm[!is.na(fork_length_mm)], sum(is.na(fork_length_mm)), replace = TRUE),
                                  fork_length_mm),
          field_run_type_id = ifelse(is.na(field_run_type_id),
                                     sample(field_run_type_id[!is.na(field_run_type_id)], sum(is.na(field_run_type_id)), replace = TRUE),
-                                    field_run_type_id))
+                                    field_run_type_id)) |>
+  mutate(run_name = tolower(run_name))
 
 sample_location <- read_csv(here::here("data-raw","grunid_sample_location.csv"))
 
@@ -95,7 +98,9 @@ run_designation <- genetics_data_raw |>
                                location_name == "Feather-RM17" ~ "Feather River - RM 17",
                                location_name == "Sac-Delta Entry" ~ "Sacramento River - Delta Entry",
                                location_name == "Yuba" ~ "Yuba River")) |>
-  filter(!is.na(month))
+  filter(!is.na(month))|>
+  filter(run_name != "unknown" | year != 2025)
+
 # stock assignment (fall, spring) and phenotype(early, late heterozygot )
 run_designation_percent <- run_designation |>
   group_by(location_name, sample_event, year, run_name) |>
