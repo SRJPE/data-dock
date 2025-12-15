@@ -197,7 +197,7 @@ server <- function(input, output, session) {
     #              "LateFall" = "#C26A77", "Fall/LateFall" = "#9F4A96", "Unknown" = "gray", "Early/Late Heterozygous" = "#DCCD7D")
 
      if (input$plot_type_g == "Monitoring Year") {
-      plot <- ggplot(df, aes(x = year, y = run_percent, fill = run_name, text = paste0("Year: ", year, "<br>",
+      plot <- ggplot(df, aes(x = year, y = run_percent, fill = run_name, text = paste0("Monitoring Year: ", year, "<br>",
                                                                                        "Run Assignment Proportion: ", signif(run_percent, 2), "<br>",
                                                                                        "Run Type: ", run_name, "<br>",
                                                                                        "Sample Size: ",
@@ -228,7 +228,7 @@ server <- function(input, output, session) {
         )
       }
       n_years <- length(unique(df$year))
-      plot <- ggplot(df, aes(x = fake_date, y = run_percent, fill = run_name, text = paste0("Year: ", year, "<br>",
+      plot <- ggplot(df, aes(x = fake_date, y = run_percent, fill = run_name, text = paste0("Monitoring Year: ", year, "<br>",
                                                                                             "Run Type Percent: ", signif(run_percent, 2), "<br>",
                                                                                             "Run Type: ", run_name, "<br>",
                                                                                             "Sample Size: ",
