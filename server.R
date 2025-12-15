@@ -617,7 +617,7 @@ wq_missing_sites <- reactiveVal(character(0)) # filtering so message works
         facet_wrap(~ analyte, scales = "free_y", ncol = 2) +
         labs(x = "", y = "value", fill = "Station") +
         scale_fill_manual(values = tol_muted) +
-        theme_minimal() +
+        theme_bw() +
         theme(legend.position = "none")
 
     } else {
