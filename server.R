@@ -572,11 +572,17 @@ wq_missing_sites <- reactiveVal(character(0)) # filtering so message works
           geom_line(data = detected,
                     aes(y = value,
                         color = station_id_name,
-                        group = interaction(station_id_name, seg_id)), linewidth = 0.6, show.legend = FALSE) +
+                        group = interaction(station_id_name, seg_id),
+                        text = paste0("Date: ", date, "<br>",
+                                      "Value: ", value, "<br>",
+                                      "Station: ", station_id_name)), linewidth = 0.6, show.legend = FALSE) +
           geom_point(data = detected,
                      aes(y = value,
                          color = station_id_name,
-                         shape = station_id_name),
+                         shape = station_id_name,
+                         text = paste0("Date: ", date, "<br>",
+                                       "Value: ", value, "<br>",
+                                       "Station: ", station_id_name)),
             size = 1.8, alpha = 0.8, show.legend = TRUE)
         }
 
@@ -585,10 +591,18 @@ wq_missing_sites <- reactiveVal(character(0)) # filtering so message works
       if (nrow(nd) > 0) {
         p <- p +
           geom_segment(data = nd,
-                       aes(x = date, xend = date, y = 0, yend = nd_height, color = station_id_name),
+                       aes(x = date, xend = date, y = 0, yend = nd_height, color = station_id_name, text = paste0("Date: ", date, "<br>",
+                                                                                                                  "MDL value: ", mdl, "<br>",
+                                                                                                                  "MRL value: ", mrl, "<br>",
+                                                                                                                  "Reports to: ", reports_to, "<br>",
+                                                                                                                  "Station: ", station_id_name)),
                        linewidth = 0.6, linetype = 5, inherit.aes = FALSE) +
           geom_segment(data = nd,
-                       aes(x = x_minus, xend = x_plus, y = nd_height, yend = nd_height, color = station_id_name),
+                       aes(x = x_minus, xend = x_plus, y = nd_height, yend = nd_height, color = station_id_name, text = paste0("Date: ", date, "<br>",
+                                                                                                                               "MDL value: ", mdl, "<br>",
+                                                                                                                               "MRL value: ", mrl, "<br>",
+                                                                                                                               "Reports to: ", reports_to, "<br>",
+                                                                                                                               "Station: ", station_id_name)),
                        linewidth = 0.6, lineend = "square", inherit.aes = FALSE)
       }
 
@@ -612,7 +626,9 @@ wq_missing_sites <- reactiveVal(character(0)) # filtering so message works
     } else if (plot_type == "Box Plot") {
       p <- ggplot(
         df |> dplyr::filter(!is.na(value)),
-        aes(x = station_id, y = value, fill = station_id)) +
+        aes(x = station_id, y = value, fill = station_id, text = paste0("Date: ", date, "<br>",
+                                                                        "Value: ", value, "<br>",
+                                                                        "Station: ", station_id_name))) +
         geom_boxplot(outlier.shape = NA) +
         facet_wrap(~ analyte, scales = "free_y", ncol = 2) +
         labs(x = "", y = "value", fill = "Station") +
@@ -624,7 +640,7 @@ wq_missing_sites <- reactiveVal(character(0)) # filtering so message works
       return(NULL)
     }
 
-    gp <- ggplotly(p)
+    gp <- ggplotly(p, tooltip = "text")
 
     seen <- character()   # track which site names already used
 
@@ -654,10 +670,10 @@ wq_missing_sites <- reactiveVal(character(0)) # filtering so message works
     gp
 
   })
-# Download tab  --------------------------------------------------------------
+# Download WQ tab  --------------------------------------------------------------
 # sync Water Quality selections to Download tab
 observeEvent(input$navbar, {
-  if (input$navbar == "Download Data") {
+  if (input$navbar == "Download WQ Data") {
     updateSelectInput(session, "location_filter_dl",
                       selected = input$location_filter_wq)
     updateSliderInput(session, "year_range_dl",

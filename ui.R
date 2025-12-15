@@ -205,7 +205,7 @@ ui <- fluidPage(
 
     ## Download Tab -------------------------------------------------------
     tabPanel(
-      "Download Data",
+      "Download WQ Data",
       sidebarLayout(
         sidebarPanel(
           width = 4,
