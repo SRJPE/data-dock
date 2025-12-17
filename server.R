@@ -768,7 +768,13 @@ make_download_handler <- function(data_fun) {
 output$download_wq_csv_dl <- make_download_handler(dl_download_data)
 
 output$dl_preview_table <- DT::renderDataTable({
-  req(dl_download_data())
+  req(
+    input$location_filter_dl,
+    input$year_range_dl,
+    input$analyte_download,
+    length(input$location_filter_dl) > 0,
+    length(input$analyte_download) > 0
+  )
 
   dl_download_data() |>
     dplyr::select(date, station_id_name, analyte, value, unit) |>
@@ -781,3 +787,15 @@ output$dl_preview_table <- DT::renderDataTable({
 })
 }
 
+# Download Gen tab  --------------------------------------------------------------
+# sync Water Quality selections to Download tab
+# observeEvent(input$navbar, {
+#   if (input$navbar == "Download Gen Data") {
+#     updateSelectInput(session, "location_filter_g",
+#                       selected = input$location_filter_g)
+#     updateSliderInput(session, "year_range_g",
+#                       value = input$year_range)
+#     updateSelectizeInput(session, "run_download",
+#                          selected = input$run_name)
+#   }
+# })
