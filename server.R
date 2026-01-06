@@ -249,14 +249,34 @@ server <- function(input, output, session) {
 
 # Water Quality  Map --------------------------------------------------------------
 
-  observe({
+  observeEvent(input$location_filter_wq, {
+
+    sel_stations <- input$location_filter_wq
+
+    analyte_choices <-
+      if (is.null(sel_stations) || length(sel_stations) == 0) {
+        sort(unique(wq_data$analyte))
+      } else {
+        wq_data |>
+          dplyr::filter(station_id_name %in% sel_stations) |>
+          dplyr::pull(analyte) |>
+          unique() |>
+          sort()
+      }
+
+    current <- input$analyte
+    keep <- if (!is.null(current) && all(current %in% analyte_choices)) current else character(0)
+
     updateSelectizeInput(
       session,
       inputId = "analyte",
-      choices = sort(unique(wq_data$analyte)),
-      selected = character(0),
-      server = TRUE)
-    })
+      choices  = analyte_choices,
+      selected = keep,
+      server   = TRUE
+    )
+  }, ignoreInit = FALSE)
+
+
 # zoom to selection
   draw_and_zoom_selection <- function(sel_names) {
     map <- leafletProxy("wq_map") |>
