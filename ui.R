@@ -45,6 +45,17 @@ ui <- fluidPage(
                              sep = "")
                  ),
                div(
+                 style = "min-width: 280px;",
+                 dateRangeInput(
+                   inputId = "date_range_wq",
+                   label   = tags$strong("Exact Date Range"),
+                   start   = as.Date("2020-01-01"),
+                   end     = as.Date("2025-12-31"),
+                   format  = "yyyy-mm-dd",
+                   separator = " to "
+                 )
+               ),
+               div(
                  style = "min-width: 200px;",
                  selectizeInput(
                    inputId = "analyte",
@@ -79,10 +90,16 @@ ui <- fluidPage(
                      sep = "")
                    ),
                  div(
-                   style = "min-width: 200px;",
-                   selectInput("plot_type", "Plot Type:",
-                               choices = c("Time Series", "Box Plot"))
+                   style = "min-width: 280px;",
+                   dateRangeInput(
+                     inputId = "date_range_wq2",
+                     label   = tags$strong("Exact Date Range:"),
+                     start   = as.Date("2020-01-01"),
+                     end     = as.Date("2025-12-31"),
+                     format  = "yyyy-mm-dd",
+                     separator = " to "
                    )
+                 ),
                  )
                ),
 
@@ -203,7 +220,7 @@ ui <- fluidPage(
              )
     ),
 
-    ## Download Tab -------------------------------------------------------
+    ## Download WQ Tab -------------------------------------------------------
     tabPanel(
       "Download WQ Data",
       sidebarLayout(
@@ -263,5 +280,62 @@ ui <- fluidPage(
           )
         )
       ),
+    ## Download Gen Data -----
+    # tabPanel(
+    #   "Download Genetics Data",
+    #   sidebarLayout(
+    #     sidebarPanel(
+        #   width = 4,
+        #   h4("Select Data to Download"),
+        #   tags$hr(),
+        #   selectInput(
+        #     "location_filter_g", "Filter by Location:",
+        #     choices = run_designation$location_name,
+        #     multiple = TRUE),
+        #   sliderInput(
+        #     "year_range_g", "Year Range:",
+        #     min = 2020, max = 2025,
+        #     value = c(2020, 2025),
+        #     step = 1,
+        #     sep = ""),
+        #   selectizeInput(
+        #     "run_download", "Run Name:",
+        #     choices = sort(unique(run_designation$run_name)),
+        #     multiple = TRUE,
+        #     options = list(placeholder = "Select run name")
+        #   ),
+        #   tags$hr(),
+        #   div(
+        #     style = "margin-top: 10px; text-align: center;",
+        #     downloadBttn(
+        #       "download_g_csv_dl",
+        #       "Download Selected Data",
+        #       style = "unite",
+        #       color = "primary",
+        #       size = "lg"),
+        #     tags$p(
+        #       HTML("Download the data you’ve selected using the filters on this tab.<br>
+        # The table provides a preview only — the exported <code>.csv</code> file will include the complete raw dataset.<br>
+        # For more information about the data and metadata, please visit the
+        # <a href='link-to-metadata-file' target='_blank'>EDI package here</a>."), #TODO add link to EDI
+        #       style = "font-style: italic; color: #555; text-align: center; margin-top: 10px;")
+        #   )
+        # ),
+
+        # Data preview table
+    #     mainPanel(
+    #       width = 8,
+    #       h3("Preview of Selected Data"),
+    #       tags$p(
+    #         "This table updates automatically when you change filters in the sidebar.",
+    #         style = "font-style: italic; color: #555; margin-bottom: 10px;"),
+    #       div(
+    #         style = "margin-top: 10px;",
+    #         DT::dataTableOutput("g_preview_table")
+    #       )
+    #     )
+    #   )
+    # ),
+
     )
   )

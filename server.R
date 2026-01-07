@@ -276,6 +276,84 @@ server <- function(input, output, session) {
     )
   }, ignoreInit = FALSE)
 
+  # keep date range in sync with year_range (main controls)
+  # This makes the year slider behave like a shortcut preset for the exact date range
+
+  sync_lock_main <- reactiveVal(FALSE)
+  sync_lock_map  <- reactiveVal(FALSE)
+
+  observeEvent(input$year_range, {
+    if (isTRUE(sync_lock_main())) return()
+
+    sync_lock_main(TRUE)
+    on.exit(sync_lock_main(FALSE), add = TRUE)
+
+    yr <- input$year_range
+    updateDateRangeInput(
+      session, "date_range_wq",
+      start = as.Date(sprintf("%d-01-01", yr[1])),
+      end   = as.Date(sprintf("%d-12-31", yr[2]))
+    )
+  }, ignoreInit = TRUE)
+
+  observeEvent(input$date_range_wq, {
+    if (isTRUE(sync_lock_main())) return()
+
+    dr <- input$date_range_wq
+    req(!is.null(dr), length(dr) == 2, all(!is.na(dr)))
+
+    # Convert chosen dates into years
+    y1 <- as.integer(format(as.Date(dr[1]), "%Y"))
+    y2 <- as.integer(format(as.Date(dr[2]), "%Y"))
+
+    # If same as current slider, do nothing (avoids unnecessary updates)
+    cur <- input$year_range
+    if (!is.null(cur) && length(cur) == 2 && identical(c(y1, y2), as.integer(cur))) return()
+
+    sync_lock_main(TRUE)
+    on.exit(sync_lock_main(FALSE), add = TRUE)
+
+    updateSliderInput(
+      session, "year_range",
+      value = c(y1, y2)
+    )
+  }, ignoreInit = TRUE)
+
+  observeEvent(input$year_range2, {
+    if (isTRUE(sync_lock_map())) return()
+
+    sync_lock_map(TRUE)
+    on.exit(sync_lock_map(FALSE), add = TRUE)
+
+    yr <- input$year_range2
+    updateDateRangeInput(
+      session, "date_range_wq2",
+      start = as.Date(sprintf("%d-01-01", yr[1])),
+      end   = as.Date(sprintf("%d-12-31", yr[2]))
+    )
+  }, ignoreInit = TRUE)
+
+  # slider
+  observeEvent(input$date_range_wq2, {
+    if (isTRUE(sync_lock_map())) return()
+
+    dr <- input$date_range_wq2
+    req(!is.null(dr), length(dr) == 2, all(!is.na(dr)))
+
+    y1 <- as.integer(format(as.Date(dr[1]), "%Y"))
+    y2 <- as.integer(format(as.Date(dr[2]), "%Y"))
+
+    cur <- input$year_range2
+    if (!is.null(cur) && length(cur) == 2 && identical(c(y1, y2), as.integer(cur))) return()
+
+    sync_lock_map(TRUE)
+    on.exit(sync_lock_map(FALSE), add = TRUE)
+
+    updateSliderInput(
+      session, "year_range2",
+      value = c(y1, y2)
+    )
+  }, ignoreInit = TRUE)
 
 # zoom to selection
   draw_and_zoom_selection <- function(sel_names) {
@@ -403,18 +481,28 @@ server <- function(input, output, session) {
   }, ignoreInit = TRUE)
 
 filtered_wq_data <- reactive({
-  req(input$analyte, length(input$analyte) > 0, input$year_range)
+  req(input$analyte, length(input$analyte) > 0)
+
+  # Use the active date range input (so changing it triggers a reactive update)
+  dr <- if (!is.null(input$which_view_wq) && input$which_view_wq == "Map Filter") {
+    input$date_range_wq2
+  } else {
+    input$date_range_wq
+  }
+  req(!is.null(dr), length(dr) == 2, all(!is.na(dr)))
 
   data <- wq_data |>
-    filter(
+    dplyr::filter(
       analyte %in% input$analyte,
-      # data_classification == input$data_classification,
-      lubridate::year(date) >= input$year_range[1],
-      lubridate::year(date) <= input$year_range[2]
+      as.Date(date) >= dr[1],
+      as.Date(date) <= dr[2]
     )
 
-  if (!is.null(input$location_filter_wq) && !"All Locations" %in% input$location_filter_wq) {
-    data <- data |> filter(station_id_name %in% input$location_filter_wq)
+  if (!is.null(input$location_filter_wq) &&
+      length(input$location_filter_wq) > 0 &&
+      !"All Locations" %in% input$location_filter_wq) {
+    data <- data |>
+      dplyr::filter(station_id_name %in% input$location_filter_wq)
   }
 
   data
