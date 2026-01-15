@@ -111,7 +111,9 @@ server <- function(input, output, session) {
 
     new_sel <- if (id %in% current) setdiff(current, id) else union(current, id)
 
-    updateSelectInput(session, "location_filter_g", selected = new_sel)
+    updatePickerInput(session, "location_filter_wq", selected = new_sel)
+
+    # updateSelectInput(session, "location_filter_g", selected = new_sel)
   })
 
   # redraw highlight + zoom on dropdown change
@@ -458,7 +460,6 @@ server <- function(input, output, session) {
         lat2 = max(wq_metadata$latitude,  na.rm = TRUE)
         )
     })
-
   observeEvent(input$wq_map_marker_click, ignoreInit = TRUE, {
     click <- input$wq_map_marker_click
     req(!is.null(click), !is.null(click$id))
@@ -474,6 +475,14 @@ server <- function(input, output, session) {
 
     updateSelectInput(session, "location_filter_wq", selected = new_sel)
   })
+
+  # CHANGE 3: Clear stations button clears picker AND resets the map
+  observeEvent(input$clear_sites_wq, {
+    updatePickerInput(session, "location_filter_wq", selected = character(0))
+
+    # optional immediate reset (your dropdown observer will also handle this)
+    draw_and_zoom_selection(character(0))
+  }, ignoreInit = TRUE)
 
   # redraw highlight + zoom on dropdown change
   observeEvent(input$location_filter_wq, {

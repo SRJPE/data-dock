@@ -1,5 +1,6 @@
 library(shiny)
 library(leaflet)
+library(shinyWidgets)
 
 ui <- fluidPage(
   navbarPage(
@@ -20,21 +21,31 @@ ui <- fluidPage(
                style = "display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 10px;",
                div(
                  style = "min-width: 200px;",
-                 selectInput(
+                 # selectInput(
+                 #   inputId = "location_filter_wq",
+                 #   label = tags$strong("Station"),
+                 #   choices = c(
+                 #     setNames(
+                 #       # wq_metadata$station_id[order(wq_metadata$station_description)],
+                 #       # wq_metadata$station_description[order(wq_metadata$station_description)]
+                 #       wq_metadata$station_id_name[order(wq_metadata$station_id_name)],
+                 #       wq_metadata$station_id_name[order(wq_metadata$station_id_name)]
+                 #       )
+                 #     ),
+                 #   selected = NULL,
+                 #   multiple = TRUE,
+                 #   selectize = TRUE)
+                 pickerInput(
                    inputId = "location_filter_wq",
                    label = tags$strong("Station"),
-                   choices = c(
-                     setNames(
-                       # wq_metadata$station_id[order(wq_metadata$station_description)],
-                       # wq_metadata$station_description[order(wq_metadata$station_description)]
-                       wq_metadata$station_id_name[order(wq_metadata$station_id_name)],
-                       wq_metadata$station_id_name[order(wq_metadata$station_id_name)]
-                       )
-                     ),
-                   selected = NULL,
+                   choices = wq_metadata$station_id_name[order(wq_metadata$station_id_name)],
                    multiple = TRUE,
-                   selectize = TRUE)
+                   options = list(
+                     `actions-box` = FALSE)
+                   )
                  ),
+               actionButton("clear_sites_wq", "Clear stations", class = "btn btn-default btn-sm"),
+
                div(
                  style = "min-width: 250px;",
                  sliderInput("year_range", "Year Range",
@@ -55,6 +66,14 @@ ui <- fluidPage(
                    separator = " to "
                  )
                ),
+       #         tags$small(
+       #           HTML(
+       #             "Selecting a date updates the year slider automatically.<br>
+       # If the date is unavailable, the closest available date is used."
+       #           ),
+       #           style = "color: #666; font-style: italic; display: block; margin-top: 1px;"
+       #       ), possibly adding this text
+
                div(
                  style = "min-width: 200px;",
                  selectizeInput(
