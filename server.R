@@ -428,15 +428,6 @@ server <- function(input, output, session) {
         fillColor = ~site_color,
         popup = ~paste0("<b>", station_id, "</b><br/>", station_description)
         ) |>
-      # Inactive sites (triangles using a custom icon)
-      # addMarkers(
-      #   data = subset(wq_metadata, status == "Inactive"),
-      #   layerId = ~station_id_name,
-      #   label = ~paste(station_id_name, "-", station_description),
-      #   icon = icons(
-      #     iconUrl = "https://upload.wikimedia.org/wikipedia/commons/3/3c/Black_triangle.svg",
-      #     iconWidth = 12, iconHeight = 12),
-      #   popup = ~paste0("<b>", station_id, "</b><br/>", station_description)) |>
       addCircleMarkers(
         data    = wq_metadata,
         layerId = ~station_id_name,
@@ -476,13 +467,12 @@ server <- function(input, output, session) {
     updateSelectInput(session, "location_filter_wq", selected = new_sel)
   })
 
-  # CHANGE 3: Clear stations button clears picker AND resets the map
-  observeEvent(input$clear_sites_wq, {
-    updatePickerInput(session, "location_filter_wq", selected = character(0))
+#
+#   observeEvent(input$clear_sites_wq, {
+#     updatePickerInput(session, "location_filter_wq", selected = character(0))
+#     draw_and_zoom_selection(character(0))
+#   }, ignoreInit = TRUE)
 
-    # optional immediate reset (your dropdown observer will also handle this)
-    draw_and_zoom_selection(character(0))
-  }, ignoreInit = TRUE)
 
   # redraw highlight + zoom on dropdown change
   observeEvent(input$location_filter_wq, {
@@ -516,6 +506,55 @@ filtered_wq_data <- reactive({
 
   data
 })
+
+observeEvent(input$location_filter_wq, {
+  draw_and_zoom_selection(input$location_filter_wq)
+})
+
+# reset all ----
+observeEvent(input$clear_all, {
+
+  # Reset station picker
+  updatePickerInput(
+    session,
+    inputId = "location_filter_wq",
+    selected = character(0)
+  )
+
+  # Reset analyte picker
+  updateSelectizeInput(
+    session,
+    inputId = "analyte",
+    selected = character(0)
+  )
+
+  # Reset year sliders
+  updateSliderInput(
+    session, "year_range",
+    value = c(min(wq_data$year), 2025)
+  )
+  updateSliderInput(
+    session, "year_range2",
+    value = c(min(wq_data$year), 2025)
+  )
+
+  # Reset date ranges
+  updateDateRangeInput(
+    session, "date_range_wq",
+    start = as.Date(sprintf("%d-01-01", min(wq_data$year))),
+    end   = as.Date(sprintf("%d-12-31", 2025))
+  )
+  updateDateRangeInput(
+    session, "date_range_wq2",
+    start = as.Date(sprintf("%d-01-01", min(wq_data$year))),
+    end   = as.Date(sprintf("%d-12-31", 2025)) #setting to 2025 for now, ideally range will be max(wq_data$year), but latest date is 2023 right now
+  )
+
+  # Reset map (zoom + highlight)
+  draw_and_zoom_selection(character(0))
+})
+
+# ----
 
 output$download_wq_csv <- downloadHandler(
   filename = function() {

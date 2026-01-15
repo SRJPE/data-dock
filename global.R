@@ -204,7 +204,8 @@ left_join(wq_metadata |>  st_drop_geometry() |> select(station_id, station_descr
 
 wq_data <- wq_data_joined |>
   mutate(date = mdy(date),
-         value = as.numeric(value)) |>
+         value = as.numeric(value),
+         year = year(date)) |>
   filter(!is.na(station_description),
          analyte != "Latitude",
          analyte != "Longitude",

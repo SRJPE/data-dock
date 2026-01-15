@@ -66,13 +66,6 @@ ui <- fluidPage(
                    separator = " to "
                  )
                ),
-       #         tags$small(
-       #           HTML(
-       #             "Selecting a date updates the year slider automatically.<br>
-       # If the date is unavailable, the closest available date is used."
-       #           ),
-       #           style = "color: #666; font-style: italic; display: block; margin-top: 1px;"
-       #       ), possibly adding this text
 
                div(
                  style = "min-width: 200px;",
@@ -89,7 +82,8 @@ ui <- fluidPage(
                  style = "min-width: 200px;",
                  selectInput("plot_type", "Plot Type",
                              choices = c("Time Series", "Box Plot"))
-                 )
+                 ),
+       actionButton("clear_all", "Clear All", icon = icon("eraser")),
                ),
 
              # --- Map Filter Panel ---
