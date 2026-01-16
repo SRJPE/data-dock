@@ -987,15 +987,3 @@ output$dl_preview_table <- DT::renderDataTable({
 })
 }
 
-# Download Gen tab  --------------------------------------------------------------
-# sync Water Quality selections to Download tab
-# observeEvent(input$navbar, {
-#   if (input$navbar == "Download Gen Data") {
-#     updateSelectInput(session, "location_filter_g",
-#                       selected = input$location_filter_g)
-#     updateSliderInput(session, "year_range_g",
-#                       value = input$year_range)
-#     updateSelectizeInput(session, "run_download",
-#                          selected = input$run_name)
-#   }
-# })

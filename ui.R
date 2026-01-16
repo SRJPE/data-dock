@@ -125,11 +125,11 @@ ui <- fluidPage(
                       tags$br(),
                       tags$span("For custom queries, visit the Download tab."),
                       style = "margin-bottom: 5px; font-style: italic; color: #555;")
+                    )
                 )
          )
-       )
-               ),
-
+       ),
+       ## Download WQ Data -----
        tabPanel(
          "Download Data",
          sidebarLayout(
@@ -185,12 +185,12 @@ ui <- fluidPage(
            div(
              style = "margin-top: 10px;",
              DT::dataTableOutput("dl_preview_table")
+             )
            )
          )
+         )
        )
-               )
-             )
-    ),
+       ),
 
     actionButton(
       inputId = "clear_all_dl",
@@ -296,7 +296,8 @@ ui <- fluidPage(
                )
              )
                ),
-
+             ## Download Gen Data -----
+             # TODO currently not very functional
     tabPanel(
       "Download Data",
       sidebarLayout(
@@ -348,70 +349,11 @@ ui <- fluidPage(
           div(
             style = "margin-top: 10px;",
             DT::dataTableOutput("g_preview_table")
+            )
           )
         )
       )
     )
-
-
-    ## Download Gen Data -----
-    #TODO add functionality to this tab
-    # tabPanel(
-    #   "Download Data",
-    #   sidebarLayout(
-    #     sidebarPanel(
-    #       width = 4,
-    #       h4("Select Data to Download"),
-    #       tags$hr(),
-    #       selectInput(
-    #         "location_filter_g", "Filter by Location:",
-    #         choices = run_designation$location_name,
-    #         multiple = TRUE),
-    #       sliderInput(
-    #         "year_range_g", "Year Range:",
-    #         min = 2020, max = 2025,
-    #         value = c(2020, 2025),
-    #         step = 1,
-    #         sep = ""),
-    #       selectizeInput(
-    #         "run_download", "Run Name:",
-    #         choices = sort(unique(run_designation$run_name)),
-    #         multiple = TRUE,
-    #         options = list(placeholder = "Select run name")
-    #       ),
-    #       tags$hr(),
-    #       div(
-    #         style = "margin-top: 10px; text-align: center;",
-    #         downloadBttn(
-    #           "download_g_csv_dl",
-    #           "Download Selected Data",
-    #           style = "unite",
-    #           color = "primary",
-    #           size = "lg"),
-    #         tags$p(
-    #           HTML("Download the data you’ve selected using the filters on this tab.<br>
-    #     The table provides a preview only — the exported <code>.csv</code> file will include the complete raw dataset.<br>
-    #     For more information about the data and metadata, please visit the
-    #     <a href='link-to-metadata-file' target='_blank'>EDI package here</a>."), #TODO add link to EDI
-    #           style = "font-style: italic; color: #555; text-align: center; margin-top: 10px;")
-    #       )
-    #     ),
-    #
-    #     # Data preview table
-    #     mainPanel(
-    #       width = 8,
-    #       h3("Preview of Selected Data"),
-    #       tags$p(
-    #         "This table updates automatically when you change filters in the sidebar.",
-    #         style = "font-style: italic; color: #555; margin-bottom: 10px;"),
-    #       div(
-    #         style = "margin-top: 10px;",
-    #         DT::dataTableOutput("g_preview_table")
-    #       )
-    #     )
-    #   )
-    # )
     )
     )
-    )
-)
+  )
