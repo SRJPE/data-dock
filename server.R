@@ -850,6 +850,39 @@ wq_missing_sites <- reactiveVal(character(0)) # filtering so message works
     }
   })
 
+  # reset all ----
+  observeEvent(input$clear_all_dl, {
+
+    # Reset location (selectInput)
+    updateSelectInput(
+      session,
+      inputId = "location_filter_dl",
+      selected = character(0)
+    )
+
+    # Reset analyte (selectizeInput)
+    updateSelectizeInput(
+      session,
+      inputId = "analyte_download",
+      selected = character(0)
+    )
+
+    # Reset year range slider (download tab)
+    updateSliderInput(
+      session, "year_range_dl",
+      value = c(min(wq_data$year), 2025)
+    )
+
+    # Reset include_weather checkbox (download tab)
+    updateCheckboxInput(
+      session,
+      inputId = "include_weather",
+      value = FALSE
+    )
+  })
+
+
+
 # shared filtering logic
 filter_wq_data <- function(locations, years, analytes, include_weather = FALSE) {
   out <- wq_data |>
