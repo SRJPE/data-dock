@@ -828,16 +828,27 @@ wq_missing_sites <- reactiveVal(character(0)) # filtering so message works
   })
 # Download WQ tab  --------------------------------------------------------------
 # sync Water Quality selections to Download tab
-observeEvent(input$navbar, {
-  if (input$navbar == "Download WQ Data") {
-    updateSelectInput(session, "location_filter_dl",
-                      selected = input$location_filter_wq)
-    updateSliderInput(session, "year_range_dl",
-                      value = input$year_range)
-    updateSelectizeInput(session, "analyte_download",
-                         selected = input$analyte)
-  }
-})
+# observeEvent(input$navbar, {
+#   if (input$navbar == "Download WQ Data") {
+#     updateSelectInput(session, "location_filter_dl",
+#                       selected = input$location_filter_wq)
+#     updateSliderInput(session, "year_range_dl",
+#                       value = input$year_range)
+#     updateSelectizeInput(session, "analyte_download",
+#                          selected = input$analyte)
+#   }
+# })
+
+  observeEvent(input$wq_tabs, {
+    if (input$wq_tabs == "Download Data") {
+      updateSelectInput(session, "location_filter_dl",
+                        selected = input$location_filter_wq)
+      updateSliderInput(session, "year_range_dl",
+                        value = input$year_range)
+      updateSelectizeInput(session, "analyte_download",
+                           selected = input$analyte)
+    }
+  })
 
 # shared filtering logic
 filter_wq_data <- function(locations, years, analytes, include_weather = FALSE) {
