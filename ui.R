@@ -44,8 +44,6 @@ ui <- fluidPage(
                      `actions-box` = FALSE)
                    )
                  ),
-               actionButton("clear_sites_wq", "Clear stations", class = "btn btn-default btn-sm"),
-
                div(
                  style = "min-width: 250px;",
                  sliderInput("year_range", "Year Range",
