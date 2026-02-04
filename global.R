@@ -6,6 +6,8 @@ library(shinyWidgets)
 library(lubridate)
 library(plotly)
 library(shinycssloaders)
+library(sf)
+library(janitor)
 
 # Colors ------------------------------------------------------------------
 colors_full <-  c("#9A8822", "#F5CDB4", "#F8AFA8", "#FDDDA0", "#74A089", #Royal 2
@@ -69,15 +71,16 @@ salmonid_habitat_extents <- readRDS("data-raw/salmonid_habitat_extents.Rds")
 # adding a new query to use as example data
 # randomly filling missing data
 # genetics_data_raw <- read_csv(here::here("data-raw","sample_query_drafted.csv")) |>
-genetics_data_raw <- read_csv(here::here("data-raw","sample_query_11-18-2025.csv")) |>
-  rename(run_name = genetic_run_name,
-         field_run_type_id = field_run_name) |>  # renaming for now to keep consistency with previous sample query
+genetics_data_raw <- read_csv(here::here("data-raw","genetics_query_for_dashboard_2022-2025_2026-02-03.csv")) |>
+  rename(run_name = final_run_designation,
+         field_run_type_id = field_run_type) |>  # renaming for now to keep consistency with previous sample query
   mutate(fork_length_mm = ifelse(is.na(fork_length_mm),
                                  sample(fork_length_mm[!is.na(fork_length_mm)], sum(is.na(fork_length_mm)), replace = TRUE),
                                  fork_length_mm),
          field_run_type_id = ifelse(is.na(field_run_type_id),
                                     sample(field_run_type_id[!is.na(field_run_type_id)], sum(is.na(field_run_type_id)), replace = TRUE),
-                                    field_run_type_id))
+                                    field_run_type_id)) |>
+  mutate(run_name = tolower(run_name))
 
 sample_location <- read_csv(here::here("data-raw","grunid_sample_location.csv"))
 
@@ -86,7 +89,10 @@ run_designation <- genetics_data_raw |>
          year= paste0(20,substr(sample_id, 4,5)),
          month = month(datetime_collected), # TODO currentlu there are only months 12 and 11 so it does not plot well
          sample_event = sub("^[^_]+_([^_]+)_.*$", "\\1", sample_id),
-         sample_event = as.numeric(sample_event)) |>
+         sample_event = as.numeric(sample_event),
+         gtseq_chr28_geno = tolower(gtseq_chr28_geno),
+         shlk_chr28_genotype = tolower(shlk_chr28_genotype),
+         genotype = ifelse(is.na(gtseq_chr28_geno), shlk_chr28_genotype, gtseq_chr28_geno)) |>
   left_join(select(sample_location, code, location_name)) |>
   mutate(map_label = case_when(location_name %in% c("Battle", "Clear", "Mill", "Deer", "Butte") ~ paste0(location_name, " Creek"),
                                location_name == "Sac-KNL" ~ "Sacramento River - Knights Landing",
@@ -95,7 +101,8 @@ run_designation <- genetics_data_raw |>
                                location_name == "Feather-RM17" ~ "Feather River - RM 17",
                                location_name == "Sac-Delta Entry" ~ "Sacramento River - Delta Entry",
                                location_name == "Yuba" ~ "Yuba River")) |>
-  filter(!is.na(month))
+  filter(!is.na(month), !is.na(genotype))
+
 # stock assignment (fall, spring) and phenotype(early, late heterozygot )
 run_designation_percent <- run_designation |>
   group_by(location_name, sample_event, year, run_name) |>
@@ -103,44 +110,8 @@ run_designation_percent <- run_designation |>
   group_by(location_name, year, sample_event) |>
   mutate(total_sample = sum(count),
          run_percent = (count/total_sample) * 100)
-# Database data ---------------------------------------------------------------
 
-# con <- DBI::dbConnect(drv = RPostgres::Postgres(),
-#                       host = "run-id-database.postgres.database.azure.com",
-#                       dbname = "runiddb-prod",
-#                       user = Sys.getenv("runid_db_user"),
-#                       password = Sys.getenv("runid_db_password"),
-#                       port = 5432)
-#
-# DBI::dbListTables(con)
-
-# For now the sample location is saved in data-raw
-# sample_location <- dbGetQuery(con, "select code, location_name, stream_name, description from sample_location")
-# sample <- dbGetQuery(con, "select * from sample")
-# write_csv(sample_location, here::here("data-raw","grunid_sample_location.csv"))
-# Emanuel provided this query (https://github.com/SRJPE/jpe-genetics-edi/blob/main/data-query.sql)
-
-# This is not being used
-# run_designation_raw <- dbGetQuery(
-#   con,
-#   "SELECT DISTINCT ON (gri.sample_id)
-#     gri.sample_id,
-#     rt.run_name,
-#     substring(gri.sample_id FROM '^[^_]+_((?:100|[1-9][0-9]?))_') AS sample_event,
-#     st.datetime_collected,
-#     st.fork_length_mm,
-#     st.field_run_type_id
-# FROM
-#     genetic_run_identification gri
-# JOIN run_type rt
-# ON rt.id = gri.run_type_id
-# JOIN sample st
-# ON st.id = gri.sample_id
-# ORDER BY
-#     gri.sample_id,
-#     gri.created_at DESC;
-# "
-# )
+# water quality data ------------------------------------------------------
 
 # water quality location metadata
 
@@ -199,7 +170,8 @@ left_join(wq_metadata |>  st_drop_geometry() |> select(station_id, station_descr
 
 wq_data <- wq_data_joined |>
   mutate(date = mdy(date),
-         value = as.numeric(value)) |>
+         value = as.numeric(value),
+         year = year(date)) |>
   filter(!is.na(station_description),
          analyte != "Latitude",
          analyte != "Longitude",
