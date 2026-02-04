@@ -153,9 +153,15 @@ server <- function(input, output, session) {
   )
 
   data_for_plot_g <- reactive({
+    if(input$data_plot_g == "Genotype") {
+      grouping_variable <- "gtseq_chr28_geno"
+    }
+    if(input$data_plot_g == "Run Type") {
+      grouping_variable <- "run_name"
+    }
     if (input$plot_type_g == "Monitoring Year") {
       df <- filtered_g_data() |>
-        group_by(year, map_label, run_name) |>
+        group_by(year, map_label, .data[[grouping_variable]]) |>
         summarize(count = n()) |>
         group_by(year, map_label) |>
         mutate(total_sample = sum(count),
@@ -165,7 +171,7 @@ server <- function(input, output, session) {
     if (input$plot_type_g == "Month") {
       df <- filtered_g_data() |>
         filter(!is.na(month)) |>
-        group_by(year, month, location_name, run_name) |>
+        group_by(year, month, location_name, .data[[grouping_variable]]) |>
         summarise(total_samples = n(), .groups = "drop") |>
         group_by(year, month, location_name) |>
         mutate(site_total = sum(total_samples),
@@ -179,7 +185,7 @@ server <- function(input, output, session) {
                               levels = 1:12,
                               labels = month.abb)) |>
         # filter(run_name != "Unknown") |>  # removing unknowns for now - plot will no longer be at a 100%
-        complete(location_name, year, month, fake_date, run_name, fill = list(run_percent = 0, site_total = 0))
+        complete(location_name, year, month, fake_date, .data[[grouping_variable]], fill = list(run_percent = 0, site_total = 0))
       } # adding this so when years are not present at a given location, there is still a facet (empty) for that year
     df
     })
@@ -193,22 +199,45 @@ server <- function(input, output, session) {
       return(plotly_empty(type = "scatter", mode = "lines") |>
                layout(title = "No data available for current selection."))
     }
-    run_col <- c("spring" = "#2E2585", "fall or late fall" = "#9F4A96", "unknown" = "gray", "winter" = "#94CBEC")
+    run_col <- c("spring" = "#2E2585",
+                 "fall or late fall" = "#9F4A96",
+                 "unknown" = "gray",
+                 "winter" = "#94CBEC")
+    if(input$data_plot_g == "Genotype") {
+      grouping_variable <- "gtseq_chr28_geno"
+      title_text <- "Genotype Proportion: "
+      title_text2 <- "Genotype: "
+      y_axis_text <- "Genotype Proportions"
+    }
+    if(input$data_plot_g == "Run Type") {
+      grouping_variable <- "run_name"
+      title_text <- "Run Assignment Proportion: "
+      title_text2 <- "Run Type: "
+      y_axis_text <- "Run Assignment Proportions"
+    }
 
-    # run_col <- c("Spring" = "#2E2585", "Winter" = "#94CBEC", "Spring/Winter" = "#5DA899", "Fall" = "#7E2954",
-    #              "LateFall" = "#C26A77", "Fall/LateFall" = "#9F4A96", "Unknown" = "gray", "Early/Late Heterozygous" = "#DCCD7D")
+    run_col <- c(
+      "spring" = "#2E2585",
+      "fall or late fall" = "#9F4A96",
+      "unknown" = "gray",
+      "winter" = "#94CBEC",
+      "early" = "#DCCD7D",
+      "late" =  "#5DA899",
+      "heterozygote" = "#C26A77"
+    )
 
      if (input$plot_type_g == "Monitoring Year") {
-      plot <- ggplot(df, aes(x = year, y = run_percent, fill = run_name, text = paste0("Monitoring Year: ", year, "<br>",
-                                                                                       "Run Assignment Proportion: ", signif(run_percent, 2), "<br>",
-                                                                                       "Run Type: ", run_name, "<br>",
-                                                                                       "Sample Size: ",
-                                                                                       total_sample))) +
+      plot <- ggplot(df, aes(x = year,
+                             y = run_percent,
+                             fill = .data[[grouping_variable]],
+                             text = paste0("Monitoring Year: ", year, "<br>", title_text,
+                                           signif(run_percent, 2), "<br>", title_text2, .data[[grouping_variable]], "<br>",
+                                           "Sample Size: ", total_sample))) +
         geom_bar(stat = "identity", position = "stack") +
         facet_wrap(~ map_label, ncol = 1) +
         scale_fill_manual(name = "Run type", values = run_col) +
         theme_minimal() +
-        labs(x = "", y = "Run Assignment Proportions")
+        labs(x = "", y = y_axis_text)
       # keeping line code, in case we decide to go back
         # geom_point() +
         # geom_line(aes(group = interaction(run_name, map_label))) +
@@ -230,15 +259,16 @@ server <- function(input, output, session) {
         )
       }
       n_years <- length(unique(df$year))
-      plot <- ggplot(df, aes(x = fake_date, y = run_percent, fill = run_name, text = paste0("Monitoring Year: ", year, "<br>",
-                                                                                            "Run Type Percent: ", signif(run_percent, 2), "<br>",
-                                                                                            "Run Type: ", run_name, "<br>",
-                                                                                            "Sample Size: ",
-                                                                                        site_total))) +
+      plot <- ggplot(df, aes(x = fake_date,
+                             y = run_percent,
+                             fill = .data[[grouping_variable]], text = paste0("Monitoring Year: ", year, "<br>",
+                                                            title_text, signif(run_percent, 2),
+                                                            "<br>", title_text2, .data[[grouping_variable]], "<br>",
+                                                            "Sample Size: ", site_total))) +
         geom_bar(stat = "identity", position = "stack") +
         facet_wrap(~ location_name + year, ncol = n_years) +
         scale_fill_manual(name = "Run type", values = run_col) +
-        labs(x = "", y = "Run Type Percent") +
+        labs(x = "", y = y_axis_text) +
         theme_minimal() +
         theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
         # add labels

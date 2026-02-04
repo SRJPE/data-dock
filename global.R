@@ -71,7 +71,7 @@ salmonid_habitat_extents <- readRDS("data-raw/salmonid_habitat_extents.Rds")
 # adding a new query to use as example data
 # randomly filling missing data
 # genetics_data_raw <- read_csv(here::here("data-raw","sample_query_drafted.csv")) |>
-genetics_data_raw <- read_csv(here::here("data-raw","genetics_query_for_dashboard_2022-2025_2025-12-23.csv")) |>
+genetics_data_raw <- read_csv(here::here("data-raw","genetics_query_for_dashboard_2022-2025_2026-02-03.csv")) |>
   rename(run_name = final_run_designation,
          field_run_type_id = field_run_type) |>  # renaming for now to keep consistency with previous sample query
   mutate(fork_length_mm = ifelse(is.na(fork_length_mm),
@@ -89,7 +89,8 @@ run_designation <- genetics_data_raw |>
          year= paste0(20,substr(sample_id, 4,5)),
          month = month(datetime_collected), # TODO currentlu there are only months 12 and 11 so it does not plot well
          sample_event = sub("^[^_]+_([^_]+)_.*$", "\\1", sample_id),
-         sample_event = as.numeric(sample_event)) |>
+         sample_event = as.numeric(sample_event),
+         gtseq_chr28_geno = tolower(gtseq_chr28_geno)) |>
   left_join(select(sample_location, code, location_name)) |>
   mutate(map_label = case_when(location_name %in% c("Battle", "Clear", "Mill", "Deer", "Butte") ~ paste0(location_name, " Creek"),
                                location_name == "Sac-KNL" ~ "Sacramento River - Knights Landing",
