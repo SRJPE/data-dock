@@ -121,7 +121,7 @@ server <- function(input, output, session) {
     else
       union(current, id)
 
-    updatePickerInput(session, "location_filter_wq", selected = new_sel)
+    updateSelectizeInput(session, "location_filter_g", selected = new_sel)
 
     # updateSelectInput(session, "location_filter_g", selected = new_sel)
   })
@@ -176,7 +176,7 @@ server <- function(input, output, session) {
           total_sample = sum(count),
           run_percent = (count / total_sample) * 100
         )
-      # filter(run_name != "Unknown") # removing unknowns for now
+
     }
     if (input$plot_type_g == "Month") {
       df <- filtered_g_data() |>
@@ -268,13 +268,6 @@ server <- function(input, output, session) {
         scale_fill_manual(values = run_col) +
         theme_minimal() +
         labs(x = "", y = y_axis_text, fill = "")
-      # keeping line code, in case we decide to go back
-      # geom_point() +
-      # geom_line(aes(group = interaction(run_name, map_label))) +
-      # theme_minimal() +
-      # scale_color_manual(values = run_col) +
-      # facet_wrap( ~ map_label, ncol = 1) +
-      # labs(x = "", y = "Percent", color = "")
     }
 
     if (input$plot_type_g == "Month") {
@@ -343,21 +336,15 @@ server <- function(input, output, session) {
           sort()
       }
 
-    current <- input$analyte
-    keep <- if (!is.null(current) &&
-                all(current %in% analyte_choices))
-      current
-    else
-      character(0)
-
     updateSelectizeInput(
       session,
       inputId = "analyte",
       choices  = analyte_choices,
-      selected = keep,
+      selected = NULL,
       server   = TRUE
     )
-  }, ignoreInit = FALSE)
+  }
+  )
 
   # keep date range in sync with year_range (main controls)
   # This makes the year slider behave like a shortcut preset for the exact date range
@@ -613,7 +600,7 @@ server <- function(input, output, session) {
   # reset all ----
   observeEvent(input$clear_all, {
     # Reset station picker
-    updatePickerInput(session, inputId = "location_filter_wq", selected = character(0))
+    updateSelectizeInput(session, inputId = "location_filter_wq", selected = character(0))
 
     # Reset analyte picker
     updateSelectizeInput(session, inputId = "analyte", selected = character(0))

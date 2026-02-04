@@ -26,12 +26,15 @@ ui <- fluidPage(
             style = "display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 10px;",
             div(
               style = "min-width: 200px;",
-              pickerInput(
+              selectizeInput(
                 inputId = "location_filter_wq",
                 label = tags$strong("Station"),
-                choices = wq_metadata$station_id_name[order(wq_metadata$station_id_name)],
+                choices = sort(unique(wq_metadata$station_id_name)),
                 multiple = TRUE,
-                options = list(`actions-box` = FALSE)
+                options = list(
+                  plugins = list('remove_button'),
+                  placeholder = 'Select a station'
+                )
               )
             ),
             div(
@@ -66,7 +69,8 @@ ui <- fluidPage(
                 choices = NULL,
                 selected = NULL,
                 multiple = TRUE,
-                options = list(placeholder = "Select an analyte")
+                options = list(plugins = list('remove_button'),
+                               placeholder = "Select an analyte")
               )
             ),
             div(style = "min-width: 200px;", selectInput(
@@ -144,11 +148,13 @@ ui <- fluidPage(
             width = 4,
             h4("Select Data to Download"),
             tags$hr(),
-            selectInput(
+            selectizeInput(
               "location_filter_dl",
               "Filter by Location:",
-              choices = wq_metadata$station_id_name,
-              multiple = TRUE
+              choices = sort(unique(wq_metadata$station_id_name)),
+              multiple = TRUE,
+              options = list(plugins = list('remove_button'),
+                             placeholder = "Select a station")
             ),
             sliderInput(
               "year_range_dl",
@@ -164,12 +170,18 @@ ui <- fluidPage(
               "Analyte:",
               choices = sort(unique(wq_data$analyte)),
               multiple = TRUE,
-              options = list(placeholder = "Select analyte")
+              options = list(plugins = list('remove_button'),
+                             placeholder = "Select an analyte")
             ),
             checkboxInput(
               inputId = "include_weather",
               label = "Include associated weather observations (Rain, Sky Conditions)",
               value = FALSE
+            ),
+            actionButton(
+              inputId = "clear_all_dl",
+              label = "Clear all",
+              icon = icon("eraser")
             ),
             tags$hr(),
             div(
@@ -208,12 +220,6 @@ ui <- fluidPage(
       )
     ),
 
-    actionButton(
-      inputId = "clear_all_dl",
-      label = "Clear all",
-      icon = icon("eraser")
-    ),
-
     ## Genetics Tab ---------------------------------------------------------
     tabPanel(
       "Genetics",
@@ -221,17 +227,19 @@ ui <- fluidPage(
         id = "genetics_tabs",
         tabPanel(
           "Visualize Data",
-          fluidRow(column(width = 12, )),
+          fluidRow(column(width = 12,
           div(
             style = "display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 10px;",
             div(
               style = "min-width: 200px;",
-              selectInput(
+              selectizeInput(
                 inputId = "location_filter_g",
                 label = tags$strong("Monitoring Site"),
                 choices = c(sort(unique(run_designation$map_label))),
                 selected = "Clear Creek",
-                multiple = TRUE
+                multiple = TRUE,
+                options = list(plugins = list('remove_button'),
+                               placeholder = "Select a site")
               )
             ),
             div(
@@ -327,7 +335,8 @@ ui <- fluidPage(
               )
             )
           ))
-        ),
+        )
+        )),
         ## Download Gen Data -----
         # TODO currently not very functional
         tabPanel("Download Data", sidebarLayout(
@@ -335,12 +344,14 @@ ui <- fluidPage(
             width = 4,
             h4("Select Data to Download"),
             tags$hr(),
-            selectInput(
+            selectizeInput(
               "location_filter_g",
-              "Filter by Location:",
+              "Filter by Monitoring Site:",
               choices = sort(unique(run_designation$map_label)),
               selected = "Clear Creek",
-              multiple = TRUE
+              multiple = TRUE,
+              options = list(plugins = list('remove_button'),
+                             placeholder = "Select a site")
             ),
             sliderInput(
               "year_range_g",
@@ -356,7 +367,8 @@ ui <- fluidPage(
               "Run Name:",
               choices = sort(unique(run_designation$run_name)),
               multiple = TRUE,
-              options = list(placeholder = "Select run name")
+              options = list(plugins = list('remove_button'),
+                             placeholder = "Select run name")
             ),
             tags$hr(),
             div(
