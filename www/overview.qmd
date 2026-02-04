@@ -3,6 +3,9 @@ title: "Downstream Dashboard"
 format: 
   html:
     embed-resources: true
+    self-contained-math: true
+    minimal: true
+    theme: flatly
 editor: visual
 ---
 

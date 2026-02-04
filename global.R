@@ -90,7 +90,9 @@ run_designation <- genetics_data_raw |>
          month = month(datetime_collected), # TODO currentlu there are only months 12 and 11 so it does not plot well
          sample_event = sub("^[^_]+_([^_]+)_.*$", "\\1", sample_id),
          sample_event = as.numeric(sample_event),
-         gtseq_chr28_geno = tolower(gtseq_chr28_geno)) |>
+         gtseq_chr28_geno = tolower(gtseq_chr28_geno),
+         shlk_chr28_genotype = tolower(shlk_chr28_genotype),
+         genotype = ifelse(is.na(gtseq_chr28_geno), shlk_chr28_genotype, gtseq_chr28_geno)) |>
   left_join(select(sample_location, code, location_name)) |>
   mutate(map_label = case_when(location_name %in% c("Battle", "Clear", "Mill", "Deer", "Butte") ~ paste0(location_name, " Creek"),
                                location_name == "Sac-KNL" ~ "Sacramento River - Knights Landing",
@@ -99,8 +101,7 @@ run_designation <- genetics_data_raw |>
                                location_name == "Feather-RM17" ~ "Feather River - RM 17",
                                location_name == "Sac-Delta Entry" ~ "Sacramento River - Delta Entry",
                                location_name == "Yuba" ~ "Yuba River")) |>
-  filter(!is.na(month))|>
-  filter(run_name != "unknown" | year != 2025)
+  filter(!is.na(month), !is.na(genotype))
 
 # stock assignment (fall, spring) and phenotype(early, late heterozygot )
 run_designation_percent <- run_designation |>
@@ -109,44 +110,8 @@ run_designation_percent <- run_designation |>
   group_by(location_name, year, sample_event) |>
   mutate(total_sample = sum(count),
          run_percent = (count/total_sample) * 100)
-# Database data ---------------------------------------------------------------
 
-# con <- DBI::dbConnect(drv = RPostgres::Postgres(),
-#                       host = "run-id-database.postgres.database.azure.com",
-#                       dbname = "runiddb-prod",
-#                       user = Sys.getenv("runid_db_user"),
-#                       password = Sys.getenv("runid_db_password"),
-#                       port = 5432)
-#
-# DBI::dbListTables(con)
-
-# For now the sample location is saved in data-raw
-# sample_location <- dbGetQuery(con, "select code, location_name, stream_name, description from sample_location")
-# sample <- dbGetQuery(con, "select * from sample")
-# write_csv(sample_location, here::here("data-raw","grunid_sample_location.csv"))
-# Emanuel provided this query (https://github.com/SRJPE/jpe-genetics-edi/blob/main/data-query.sql)
-
-# This is not being used
-# run_designation_raw <- dbGetQuery(
-#   con,
-#   "SELECT DISTINCT ON (gri.sample_id)
-#     gri.sample_id,
-#     rt.run_name,
-#     substring(gri.sample_id FROM '^[^_]+_((?:100|[1-9][0-9]?))_') AS sample_event,
-#     st.datetime_collected,
-#     st.fork_length_mm,
-#     st.field_run_type_id
-# FROM
-#     genetic_run_identification gri
-# JOIN run_type rt
-# ON rt.id = gri.run_type_id
-# JOIN sample st
-# ON st.id = gri.sample_id
-# ORDER BY
-#     gri.sample_id,
-#     gri.created_at DESC;
-# "
-# )
+# water quality data ------------------------------------------------------
 
 # water quality location metadata
 
