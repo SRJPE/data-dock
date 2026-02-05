@@ -19,6 +19,9 @@ ui <- fluidPage(
       "Water Quality",
       tabsetPanel(
         id = "wq_tabs",
+
+### Visualize ---------------------------------------------------------------
+
         tabPanel(
           "Visualize Data",
           fluidRow(column(width = 12, )),
@@ -42,25 +45,12 @@ ui <- fluidPage(
               sliderInput(
                 "year_range",
                 "Year Range",
-                min = 2020,
-                max = 2025,
-                value = c(2020, 2025),
-                step = 1,
-                sep = ""
+                min = as.Date(min(wq_data$date)),
+                max = as.Date(max(wq_data$date)),
+                value = c(as.Date(min(wq_data$date)), as.Date(max(wq_data$date))),
+                timeFormat = "%b %Y"
               )
             ),
-            div(
-              style = "min-width: 280px;",
-              dateRangeInput(
-                inputId = "date_range_wq",
-                label   = tags$strong("Exact Date Range"),
-                start   = as.Date("2020-01-01"),
-                end     = as.Date("2025-12-31"),
-                format  = "yyyy-mm-dd",
-                separator = " to "
-              )
-            ),
-
             div(
               style = "min-width: 200px;",
               selectizeInput(
@@ -79,35 +69,35 @@ ui <- fluidPage(
             actionButton("clear_all", "Clear All", icon = icon("eraser")),
           ),
           # --- Map Filter Panel ---
-          conditionalPanel(
-            condition = "input.which_view_wq == 'Map Filter'",
-            div(
-              style = "display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 10px;",
-              div(
-                style = "min-width: 250px;",
-                sliderInput(
-                  inputId = "year_range2",
-                  label = tags$strong("Year Range:"),
-                  min = 2020,
-                  max = 2025,
-                  value = c(2020, 2025),
-                  step = 1,
-                  sep = ""
-                )
-              ),
-              div(
-                style = "min-width: 280px;",
-                dateRangeInput(
-                  inputId = "date_range_wq2",
-                  label   = tags$strong("Exact Date Range:"),
-                  start   = as.Date("2020-01-01"),
-                  end     = as.Date("2025-12-31"),
-                  format  = "yyyy-mm-dd",
-                  separator = " to "
-                )
-              ),
-            )
-          ),
+          # conditionalPanel(
+          #   condition = "input.which_view_wq == 'Map Filter'",
+          #   div(
+          #     style = "display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 10px;",
+          #     div(
+          #       style = "min-width: 250px;",
+          #       sliderInput(
+          #         inputId = "year_range2",
+          #         label = tags$strong("Year Range:"),
+          #         min = 2020,
+          #         max = 2025,
+          #         value = c(2020, 2025),
+          #         step = 1,
+          #         sep = ""
+          #       )
+          #     ),
+          #     div(
+          #       style = "min-width: 280px;",
+          #       dateRangeInput(
+          #         inputId = "date_range_wq2",
+          #         label   = tags$strong("Exact Date Range:"),
+          #         start   = as.Date("2020-01-01"),
+          #         end     = as.Date("2025-12-31"),
+          #         format  = "yyyy-mm-dd",
+          #         separator = " to "
+          #       )
+          #     ),
+          #   )
+          # ),
 
           # === Map and Floating Plot Panel ===
           fluidRow(
@@ -142,7 +132,9 @@ ui <- fluidPage(
             )
           ))
         ),
-        ## Download WQ Data -----
+
+### Download ----------------------------------------------------------------
+
         tabPanel("Download Data", sidebarLayout(
           sidebarPanel(
             width = 4,
@@ -158,12 +150,11 @@ ui <- fluidPage(
             ),
             sliderInput(
               "year_range_dl",
-              "Year Range:",
-              min = 2020,
-              max = 2025,
-              value = c(2020, 2025),
-              step = 1,
-              sep = ""
+              "Year Range",
+              min = as.Date(min(wq_data$date)),
+              max = as.Date(max(wq_data$date)),
+              value = c(as.Date(min(wq_data$date)), as.Date(max(wq_data$date))),
+              timeFormat = "%b %Y"
             ),
             selectizeInput(
               "analyte_download",
@@ -225,6 +216,9 @@ ui <- fluidPage(
       "Genetics",
       tabsetPanel(
         id = "genetics_tabs",
+
+### Visualize ---------------------------------------------------------------
+
         tabPanel(
           "Visualize Data",
           fluidRow(column(width = 12,
@@ -273,36 +267,37 @@ ui <- fluidPage(
           ),
 
           # --- Map Filter Panel ---
-          conditionalPanel(
-            condition = "input.which_view_g == 'Map Filter'",
-            div(
-              style = "display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 10px;",
-              div(
-                style = "min-width: 250px;",
-                sliderInput(
-                  inputId = "year_range2_g",
-                  label = tags$strong("Year Range:"),
-                  min = as.numeric(min(run_designation$year)),
-                  max = as.numeric(max(run_designation$year)),
-                  value = c(as.numeric(min(
-                    run_designation$year
-                  )), as.numeric(max(
-                    run_designation$year
-                  ))),
-                  step = 1,
-                  sep = ""
-                )
-              ),
-              div(
-                style = "min-width: 200px;",
-                selectInput(
-                  "plot_type_g",
-                  "Data Summary Type",
-                  choices = c("Monitoring Year", "Month")
-                )
-              )
-            )
-          ),
+
+          # conditionalPanel(
+          #   condition = "input.which_view_g == 'Map Filter'",
+          #   div(
+          #     style = "display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 10px;",
+          #     div(
+          #       style = "min-width: 250px;",
+          #       sliderInput(
+          #         inputId = "year_range2_g",
+          #         label = tags$strong("Year Range:"),
+          #         min = as.numeric(min(run_designation$year)),
+          #         max = as.numeric(max(run_designation$year)),
+          #         value = c(as.numeric(min(
+          #           run_designation$year
+          #         )), as.numeric(max(
+          #           run_designation$year
+          #         ))),
+          #         step = 1,
+          #         sep = ""
+          #       )
+          #     ),
+          #     div(
+          #       style = "min-width: 200px;",
+          #       selectInput(
+          #         "plot_type_g",
+          #         "Data Summary Type",
+          #         choices = c("Monitoring Year", "Month")
+          #       )
+          #     )
+          #   )
+          # ),
 
           # === Map and Floating Plot Panel ===
           fluidRow(
@@ -337,7 +332,9 @@ ui <- fluidPage(
           ))
         )
         )),
-        ## Download Gen Data -----
+
+### Download ----------------------------------------------------------------
+
         # TODO currently not very functional
         tabPanel("Download Data", sidebarLayout(
           sidebarPanel(

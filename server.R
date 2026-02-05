@@ -11,7 +11,9 @@ server <- function(input, output, session) {
     )
   )
 
-  # Genetics Map v2 ---------------------------------------------------------
+
+# GENETICS ----------------------------------------------------------------
+  ## Map ---------------------------------------------------------
   # zoom to selection
   draw_and_zoom_selection_g <- function(sel_names) {
     map <- leafletProxy("g_map") |>
@@ -132,7 +134,9 @@ server <- function(input, output, session) {
   }, ignoreInit = TRUE)
 
 
-  # Genetics Plots v2 -------------------------------------------------------
+
+## Reactive Data --------------------------------------------------------
+
   filtered_g_data <- reactive({
     req(input$year_range_g)
     req(input$location_filter_g)
@@ -149,16 +153,6 @@ server <- function(input, output, session) {
     }
     data
   })
-
-  output$download_g_csv <- downloadHandler(
-    filename = function() {
-      paste0("genetics_", Sys.Date(), ".csv")
-    },
-    content = function(file) {
-      df <- filtered_g_data()
-      readr::write_csv(df, file)
-    }
-  )
 
   data_for_plot_g <- reactive({
     if (input$data_plot_g == "Greb 1L RoSA Genotype") {
@@ -209,10 +203,23 @@ server <- function(input, output, session) {
     df
   })
 
+## Download -----------------------------------------------------
+
+  output$download_g_csv <- downloadHandler(
+    filename = function() {
+      paste0("genetics_", Sys.Date(), ".csv")
+    },
+    content = function(file) {
+      df <- filtered_g_data()
+      readr::write_csv(df, file)
+    }
+  )
+
+## Plot ---------------------------------------------------------
+
   output$g_dynamic_plot <- renderPlotly({
 
     df <- data_for_plot_g()
-
 
     if (nrow(df) == 0) {
       return(
@@ -320,7 +327,101 @@ server <- function(input, output, session) {
   })
 
 
-  # Water Quality  Map --------------------------------------------------------------
+# WATER QUALITY -----------------------------------------------------------
+
+  ## Reactive data -----------------------------------------------------------
+
+  # shared filtering logic
+  filter_wq_data <- function(locations,
+                             years,
+                             analytes,
+                             include_weather = FALSE) {
+    out <- wq_data |>
+      dplyr::filter(date >= years[1],
+                    date <= years[2])
+
+    if (!is.null(locations) && length(locations) > 0) {
+      out <- out |> dplyr::filter(station_id_name %in% locations)
+    }
+
+    # handle analytes
+    if (!is.null(analytes) && length(analytes) > 0) {
+      out <- out |> dplyr::filter(analyte %in% analytes)
+    }
+
+    # add weather analytes if requested
+    if (include_weather) {
+      weather <- wq_quality_weather |>
+        dplyr::filter(
+          analyte %in% c("Rain", "Sky Conditions"),
+          lubridate::year(date) >= years[1],
+          lubridate::year(date) <= years[2]
+        )
+
+      # same location filtering to weather data
+      if (!is.null(locations) && length(locations) > 0) {
+        weather <- weather |> dplyr::filter(station_id_name %in% locations)
+      }
+
+      if (nrow(weather) == 0) {
+        showNotification(
+          "No weather data (Rain or Sky Conditions) available for the selected site(s) and year(s).",
+          type = "message",
+          duration = 6
+        )
+      } else {
+        weather <- weather |>
+          dplyr::mutate(value_text = value, value = NA_real_) |>
+          select(-value) |>
+          mutate(value = as.character(value_text)) |>
+          select(-value_text)
+
+        out <- out |>
+          dplyr::mutate(value = as.character(value))
+
+        out <- dplyr::bind_rows(out, weather)
+      }
+    }
+
+    out
+
+  }
+
+## Download handler --------------------------------------------------------
+
+  # reactives for both tabs
+  wq_download_data <- reactive({
+    filter_wq_data(
+      input$location_filter_wq,
+      input$year_range,
+      input$analyte
+      #include_weather = input$include_weather
+    )
+  })
+
+  dl_download_data <- reactive({
+    filter_wq_data(
+      input$location_filter_dl,
+      input$year_range_dl,
+      input$analyte_download,
+      include_weather = input$include_weather
+    )
+  })
+
+  # shared download handler function
+  make_download_handler <- function(data_fun) {
+    downloadHandler(
+      filename = function()
+        paste0("water_quality_", Sys.Date(), ".csv"),
+      content = function(file) {
+        readr::write_csv(data_fun(), file)
+      }
+    )
+  }
+
+## Visualize Tab -----------------------------------------------------------
+
+### Update Analyte Choices ----------------------------------
 
   observeEvent(input$location_filter_wq, {
     sel_stations <- input$location_filter_wq
@@ -349,86 +450,87 @@ server <- function(input, output, session) {
   # keep date range in sync with year_range (main controls)
   # This makes the year slider behave like a shortcut preset for the exact date range
 
-  sync_lock_main <- reactiveVal(FALSE)
-  sync_lock_map  <- reactiveVal(FALSE)
+  # sync_lock_main <- reactiveVal(FALSE)
+  # sync_lock_map  <- reactiveVal(FALSE)
+  #
+  # observeEvent(input$year_range, {
+  #   if (isTRUE(sync_lock_main()))
+  #     return()
+  #
+  #   sync_lock_main(TRUE)
+  #   on.exit(sync_lock_main(FALSE), add = TRUE)
+  #
+  #   yr <- input$year_range
+  #   updateDateRangeInput(
+  #     session,
+  #     "date_range_wq",
+  #     start = as.Date(sprintf("%d-01-01", yr[1])),
+  #     end   = as.Date(sprintf("%d-12-31", yr[2]))
+  #   )
+  # }, ignoreInit = TRUE)
+  #
+  # observeEvent(input$date_range_wq, {
+  #   if (isTRUE(sync_lock_main()))
+  #     return()
+  #
+  #   dr <- input$date_range_wq
+  #   req(!is.null(dr), length(dr) == 2, all(!is.na(dr)))
+  #
+  #   # Convert chosen dates into years
+  #   y1 <- as.integer(format(as.Date(dr[1]), "%Y"))
+  #   y2 <- as.integer(format(as.Date(dr[2]), "%Y"))
+  #
+  #   # If same as current slider, do nothing (avoids unnecessary updates)
+  #   cur <- input$year_range
+  #   if (!is.null(cur) &&
+  #       length(cur) == 2 && identical(c(y1, y2), as.integer(cur)))
+  #     return()
+  #
+  #   sync_lock_main(TRUE)
+  #   on.exit(sync_lock_main(FALSE), add = TRUE)
+  #
+  #   updateSliderInput(session, "year_range", value = c(y1, y2))
+  # }, ignoreInit = TRUE)
+  #
+  # observeEvent(input$year_range2, {
+  #   if (isTRUE(sync_lock_map()))
+  #     return()
+  #
+  #   sync_lock_map(TRUE)
+  #   on.exit(sync_lock_map(FALSE), add = TRUE)
+  #
+  #   yr <- input$year_range2
+  #   updateDateRangeInput(
+  #     session,
+  #     "date_range_wq2",
+  #     start = as.Date(sprintf("%d-01-01", yr[1])),
+  #     end   = as.Date(sprintf("%d-12-31", yr[2]))
+  #   )
+  # }, ignoreInit = TRUE)
+  #
+  # # slider
+  # observeEvent(input$date_range_wq2, {
+  #   if (isTRUE(sync_lock_map()))
+  #     return()
+  #
+  #   dr <- input$date_range_wq2
+  #   req(!is.null(dr), length(dr) == 2, all(!is.na(dr)))
+  #
+  #   y1 <- as.integer(format(as.Date(dr[1]), "%Y"))
+  #   y2 <- as.integer(format(as.Date(dr[2]), "%Y"))
+  #
+  #   cur <- input$year_range2
+  #   if (!is.null(cur) &&
+  #       length(cur) == 2 && identical(c(y1, y2), as.integer(cur)))
+  #     return()
+  #
+  #   sync_lock_map(TRUE)
+  #   on.exit(sync_lock_map(FALSE), add = TRUE)
+  #
+  #   updateSliderInput(session, "year_range2", value = c(y1, y2))
+  # }, ignoreInit = TRUE)
 
-  observeEvent(input$year_range, {
-    if (isTRUE(sync_lock_main()))
-      return()
-
-    sync_lock_main(TRUE)
-    on.exit(sync_lock_main(FALSE), add = TRUE)
-
-    yr <- input$year_range
-    updateDateRangeInput(
-      session,
-      "date_range_wq",
-      start = as.Date(sprintf("%d-01-01", yr[1])),
-      end   = as.Date(sprintf("%d-12-31", yr[2]))
-    )
-  }, ignoreInit = TRUE)
-
-  observeEvent(input$date_range_wq, {
-    if (isTRUE(sync_lock_main()))
-      return()
-
-    dr <- input$date_range_wq
-    req(!is.null(dr), length(dr) == 2, all(!is.na(dr)))
-
-    # Convert chosen dates into years
-    y1 <- as.integer(format(as.Date(dr[1]), "%Y"))
-    y2 <- as.integer(format(as.Date(dr[2]), "%Y"))
-
-    # If same as current slider, do nothing (avoids unnecessary updates)
-    cur <- input$year_range
-    if (!is.null(cur) &&
-        length(cur) == 2 && identical(c(y1, y2), as.integer(cur)))
-      return()
-
-    sync_lock_main(TRUE)
-    on.exit(sync_lock_main(FALSE), add = TRUE)
-
-    updateSliderInput(session, "year_range", value = c(y1, y2))
-  }, ignoreInit = TRUE)
-
-  observeEvent(input$year_range2, {
-    if (isTRUE(sync_lock_map()))
-      return()
-
-    sync_lock_map(TRUE)
-    on.exit(sync_lock_map(FALSE), add = TRUE)
-
-    yr <- input$year_range2
-    updateDateRangeInput(
-      session,
-      "date_range_wq2",
-      start = as.Date(sprintf("%d-01-01", yr[1])),
-      end   = as.Date(sprintf("%d-12-31", yr[2]))
-    )
-  }, ignoreInit = TRUE)
-
-  # slider
-  observeEvent(input$date_range_wq2, {
-    if (isTRUE(sync_lock_map()))
-      return()
-
-    dr <- input$date_range_wq2
-    req(!is.null(dr), length(dr) == 2, all(!is.na(dr)))
-
-    y1 <- as.integer(format(as.Date(dr[1]), "%Y"))
-    y2 <- as.integer(format(as.Date(dr[2]), "%Y"))
-
-    cur <- input$year_range2
-    if (!is.null(cur) &&
-        length(cur) == 2 && identical(c(y1, y2), as.integer(cur)))
-      return()
-
-    sync_lock_map(TRUE)
-    on.exit(sync_lock_map(FALSE), add = TRUE)
-
-    updateSliderInput(session, "year_range2", value = c(y1, y2))
-  }, ignoreInit = TRUE)
-
+  ### Map --------------------------------------------------------------
   # zoom to selection
   draw_and_zoom_selection <- function(sel_names) {
     map <- leafletProxy("wq_map") |>
@@ -566,38 +668,29 @@ server <- function(input, output, session) {
     draw_and_zoom_selection(input$location_filter_wq)
   }, ignoreInit = TRUE)
 
-  filtered_wq_data <- reactive({
-    req(input$analyte, length(input$analyte) > 0)
 
-    # Use the active date range input (so changing it triggers a reactive update)
-    dr <- if (!is.null(input$which_view_wq) &&
-              input$which_view_wq == "Map Filter") {
-      input$date_range_wq2
-    } else {
-      input$date_range_wq
-    }
-    req(!is.null(dr), length(dr) == 2, all(!is.na(dr)))
+### Reactive Data -------------------------------------------
 
-    data <- wq_data |>
-      dplyr::filter(analyte %in% input$analyte,
-                    as.Date(date) >= dr[1],
-                    as.Date(date) <= dr[2])
+  # filtered_wq_data <- reactive({
+  #   req(input$analyte, length(input$analyte) > 0)
+  #
+  #   data <- wq_data |>
+  #     dplyr::filter(analyte %in% input$analyte,
+  #                   as.Date(date) >= input$year_range[1],
+  #                   as.Date(date) <= input$year_range[2])
+  #
+  #   if (!is.null(input$location_filter_wq) &&
+  #       length(input$location_filter_wq) > 0 &&
+  #       !"All Locations" %in% input$location_filter_wq) {
+  #     data <- data |>
+  #       dplyr::filter(station_id_name %in% input$location_filter_wq)
+  #   }
+  #
+  #   data
+  # })
 
-    if (!is.null(input$location_filter_wq) &&
-        length(input$location_filter_wq) > 0 &&
-        !"All Locations" %in% input$location_filter_wq) {
-      data <- data |>
-        dplyr::filter(station_id_name %in% input$location_filter_wq)
-    }
+### Clear Button --------------------------------------------
 
-    data
-  })
-
-  observeEvent(input$location_filter_wq, {
-    draw_and_zoom_selection(input$location_filter_wq)
-  })
-
-  # reset all ----
   observeEvent(input$clear_all, {
     # Reset station picker
     updateSelectizeInput(session, inputId = "location_filter_wq", selected = character(0))
@@ -606,47 +699,58 @@ server <- function(input, output, session) {
     updateSelectizeInput(session, inputId = "analyte", selected = character(0))
 
     # Reset year sliders
-    updateSliderInput(session, "year_range", value = c(min(wq_data$year), 2025))
-    updateSliderInput(session, "year_range2", value = c(min(wq_data$year), 2025))
+    updateSliderInput(session, "year_range", value = c(min(wq_data$date), max(wq_data$date)), timeFormat = "%b %Y")
+    #updateSliderInput(session, "year_range2", value = c(min(wq_data$year), 2025))
 
     # Reset date ranges
-    updateDateRangeInput(
-      session,
-      "date_range_wq",
-      start = as.Date(sprintf("%d-01-01", min(wq_data$year))),
-      end   = as.Date(sprintf("%d-12-31", 2025))
-    )
-    updateDateRangeInput(
-      session,
-      "date_range_wq2",
-      start = as.Date(sprintf("%d-01-01", min(wq_data$year))),
-      end   = as.Date(sprintf("%d-12-31", 2025)) #setting to 2025 for now, ideally range will be max(wq_data$year), but latest date is 2023 right now
-    )
+    # updateDateRangeInput(
+    #   session,
+    #   "date_range_wq",
+    #   start = as.Date(sprintf("%d-01-01", min(wq_data$year))),
+    #   end   = as.Date(sprintf("%d-12-31", 2025))
+    # )
+    # updateDateRangeInput(
+    #   session,
+    #   "date_range_wq2",
+    #   start = as.Date(sprintf("%d-01-01", min(wq_data$year))),
+    #   end   = as.Date(sprintf("%d-12-31", 2025)) #setting to 2025 for now, ideally range will be max(wq_data$year), but latest date is 2023 right now
+    # )
 
     # Reset map (zoom + highlight)
     draw_and_zoom_selection(character(0))
   })
 
-  # ----
 
-  output$download_wq_csv <- downloadHandler(
-    filename = function() {
-      paste0("water_quality_", Sys.Date(), ".csv")
-    },
-    content = function(file) {
-      df <- filtered_wq_data()
-      readr::write_csv(df, file)
-    }
-  )
+### Download ------------------------------------------------
+
+  # output$download_wq_csv <- downloadHandler(
+  #   filename = function() {
+  #     paste0("water_quality_", Sys.Date(), ".csv")
+  #   },
+  #   content = function(file) {
+  #     df <- filtered_wq_data()
+  #     readr::write_csv(df, file)
+  #   }
+  # )
+  output$download_wq_csv <- make_download_handler(wq_download_data)
+
+### Messages ----------------------------------------------------------------
 
   wq_missing_sites <- reactiveVal(character(0)) # filtering so message works
+
+
+### Plot --------------------------------------------------------------------
 
   output$wq_dynamic_plot <- renderPlotly({
     req(!is.null(input$location_filter_wq) &&
           length(input$location_filter_wq) > 0)
     req(input$analyte, length(input$analyte) > 0)
 
-    df <- filtered_wq_data()
+    df <- filter_wq_data(
+      input$location_filter_wq,
+      input$year_range,
+      input$analyte
+    )
 
     selected_locs <- input$location_filter_wq %||% character(0)
 
@@ -1005,7 +1109,8 @@ server <- function(input, output, session) {
     gp
 
   })
-  # Download WQ tab  --------------------------------------------------------------
+
+  ## Download Tab  --------------------------------------------------------------
   # sync Water Quality selections to Download tab
   # observeEvent(input$navbar, {
   #   if (input$navbar == "Download WQ Data") {
@@ -1028,7 +1133,9 @@ server <- function(input, output, session) {
     }
   })
 
-  # reset all ----
+
+### Clear Button -----------------------------------------------
+
   observeEvent(input$clear_all_dl, {
     # Reset location (selectInput)
     updateSelectInput(session, inputId = "location_filter_dl", selected = character(0))
@@ -1037,98 +1144,14 @@ server <- function(input, output, session) {
     updateSelectizeInput(session, inputId = "analyte_download", selected = character(0))
 
     # Reset year range slider (download tab)
-    updateSliderInput(session, "year_range_dl", value = c(min(wq_data$year), 2025))
+    updateSliderInput(session, "year_range_dl", value = c(min(wq_data$date), max(wq_data$date)), timeFormat = "%b %Y")
 
     # Reset include_weather checkbox (download tab)
     updateCheckboxInput(session, inputId = "include_weather", value = FALSE)
   })
 
 
-
-  # shared filtering logic
-  filter_wq_data <- function(locations,
-                             years,
-                             analytes,
-                             include_weather = FALSE) {
-    out <- wq_data |>
-      dplyr::filter(lubridate::year(date) >= years[1],
-                    lubridate::year(date) <= years[2])
-
-    if (!is.null(locations) && length(locations) > 0) {
-      out <- out |> dplyr::filter(station_id_name %in% locations)
-    }
-
-    # handle analytes
-    if (!is.null(analytes) && length(analytes) > 0) {
-      out <- out |> dplyr::filter(analyte %in% analytes)
-    }
-
-    # add weather analytes if requested
-    if (include_weather) {
-      weather <- wq_quality_weather |>
-        dplyr::filter(
-          analyte %in% c("Rain", "Sky Conditions"),
-          lubridate::year(date) >= years[1],
-          lubridate::year(date) <= years[2]
-        )
-
-      # same location filtering to weather data
-      if (!is.null(locations) && length(locations) > 0) {
-        weather <- weather |> dplyr::filter(station_id_name %in% locations)
-      }
-
-      if (nrow(weather) == 0) {
-        showNotification(
-          "No weather data (Rain or Sky Conditions) available for the selected site(s) and year(s).",
-          type = "message",
-          duration = 6
-        )
-      } else {
-        weather <- weather |>
-          dplyr::mutate(value_text = value, value = NA_real_) |>
-          select(-value) |>
-          mutate(value = as.character(value_text)) |>
-          select(-value_text)
-
-        out <- out |>
-          dplyr::mutate(value = as.character(value))
-
-        out <- dplyr::bind_rows(out, weather)
-      }
-    }
-
-    out
-
-  }
-  # reactives for both tabs
-  wq_download_data <- reactive({
-    filter_wq_data(
-      input$location_filter_wq,
-      input$year_range,
-      input$analyte,
-      include_weather = input$include_weather
-    )
-  })
-
-  dl_download_data <- reactive({
-    filter_wq_data(
-      input$location_filter_dl,
-      input$year_range_dl,
-      input$analyte_download,
-      include_weather = input$include_weather
-    )
-  })
-
-  # shared download handler function
-  make_download_handler <- function(data_fun) {
-    downloadHandler(
-      filename = function()
-        paste0("water_quality_", Sys.Date(), ".csv"),
-      content = function(file) {
-        readr::write_csv(data_fun(), file)
-      }
-    )
-  }
+  # Table -------------------------------------------------------------------
 
   # assign to outputs
   output$download_wq_csv_dl <- make_download_handler(dl_download_data)
@@ -1146,4 +1169,9 @@ server <- function(input, output, session) {
       dplyr::select(date, station_id_name, analyte, value, unit) |>
       DT::datatable(options = list(pageLength = 10, scrollX = TRUE))
   })
+
+
+
+
+
 }
