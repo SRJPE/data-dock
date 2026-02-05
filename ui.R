@@ -38,7 +38,7 @@ ui <- fluidPage(
               style = "min-width: 250px;",
               sliderInput(
                 "year_range",
-                "Year Range",
+                tags$strong("Date Range"),
                 min = as.Date(min(wq_data$date)),
                 max = as.Date(max(wq_data$date)),
                 value = c(as.Date(min(wq_data$date)), as.Date(max(wq_data$date))),
@@ -49,7 +49,7 @@ ui <- fluidPage(
               style = "min-width: 200px;",
               selectizeInput(
                 inputId = "analyte",
-                label = "Analyte",
+                label = tags$strong("Analyte"),
                 choices = NULL,
                 selected = NULL,
                 multiple = TRUE,
@@ -57,7 +57,7 @@ ui <- fluidPage(
               )
             ),
             div(style = "min-width: 200px;", selectInput(
-              "plot_type", "Plot Type", choices = c("Time Series", "Box Plot")
+              "plot_type", tags$strong("Plot Type"), choices = c("Time Series", "Box Plot")
             )),
             actionButton("clear_all", "Clear All", icon = icon("eraser")),
           ),
@@ -68,11 +68,19 @@ ui <- fluidPage(
             column(
               width = 8,
               plotlyOutput("wq_dynamic_plot", height = "600px"),
+              conditionalPanel(condition = "input.plot_type == 'Time Series'",
               tags$p(
                 "Note: Vertical dashed lines with a short horizontal cap indicate non-detect values.
                              Their height corresponds to the reporting limit (MDL/MRL).",
                 style = "font-size: 0.9em; font-style: italic; color: #555; margin-top:5px;"
               )
+            ),
+            conditionalPanel(condition = "input.plot_type == 'Box Plot'",
+                             tags$p(
+                               "Note: Boxplots for some stations may not be displayed if more than 50% of the data at that location are non-detects.",
+                               style = "font-size: 0.9em; font-style: italic; color: #555; margin-top:5px;"
+                             )
+            )
             )
           ),
           fluidRow(column(
@@ -105,14 +113,14 @@ ui <- fluidPage(
             tags$hr(),
             selectizeInput(
               "location_filter_dl",
-              "Filter by Location:",
+              "Station",
               choices = sort(unique(wq_metadata$station_id_name)),
               multiple = TRUE,
               options = list(plugins = list('remove_button'), placeholder = "Select a station")
             ),
             sliderInput(
               "year_range_dl",
-              "Year Range",
+              "Date Range",
               min = as.Date(min(wq_data$date)),
               max = as.Date(max(wq_data$date)),
               value = c(as.Date(min(wq_data$date)), as.Date(max(wq_data$date))),
@@ -120,7 +128,7 @@ ui <- fluidPage(
             ),
             selectizeInput(
               "analyte_download",
-              "Analyte:",
+              "Analyte",
               choices = sort(unique(wq_data$analyte)),
               multiple = TRUE,
               options = list(plugins = list('remove_button'), placeholder = "Select an analyte")
@@ -202,7 +210,7 @@ ui <- fluidPage(
                 style = "min-width: 250px;",
                 sliderInput(
                   "year_range_g",
-                  "Year Range",
+                  tags$strong("Year Range"),
                   min = as.numeric(min(run_designation$year)),
                   max = as.numeric(max(run_designation$year)),
                   value = c(as.numeric(min(
@@ -217,13 +225,13 @@ ui <- fluidPage(
                 style = "min-width: 200px;",
                 selectInput(
                   "plot_type_g",
-                  "Data Summary Type",
+                  tags$strong("Data Summary Type"),
                   choices = c("Monitoring Year", "Month")
                 )
               ),
               div(style = "min-width: 200px;", selectInput(
                 "data_plot_g",
-                "Data Type",
+                tags$strong("Data Type"),
                 choices = c("Run Type", "Greb 1L RoSA Genotype")
               )),
               actionButton("clear_all_g", "Clear All", icon = icon("eraser")),
@@ -273,7 +281,7 @@ ui <- fluidPage(
             tags$hr(),
             selectizeInput(
               "location_filter_dl_g",
-              "Filter by Monitoring Site:",
+              "Monitoring Site",
               choices = sort(unique(run_designation$map_label)),
               selected = "Clear Creek",
               multiple = TRUE,
@@ -281,7 +289,7 @@ ui <- fluidPage(
             ),
             sliderInput(
               "year_range_dl_g",
-              "Year Range:",
+              "Year Range",
               min = as.numeric(min(run_designation$year)),
               max = as.numeric(max(run_designation$year)),
               value = c(as.numeric(min(
@@ -292,7 +300,7 @@ ui <- fluidPage(
             ),
             selectizeInput(
               "run_download",
-              "Run Name:",
+              "Run Name",
               choices = sort(unique(run_designation$run_name)),
               multiple = TRUE,
               options = list(plugins = list('remove_button'), placeholder = "Select run name")

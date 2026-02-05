@@ -728,6 +728,17 @@ server <- function(input, output, session) {
       ) |>
       dplyr::ungroup()
 
+    # For boxplots, we are not going to summarize data if 50% or more are non-detecs
+    prop_nd <- df |>
+      group_by(analyte, station_id_name) |>
+      tally() |>
+      left_join(df |>
+                  filter(detection_status != "Not detected") |>
+                  group_by(analyte, station_id_name) |>
+                  tally() |>
+                  rename(n_detected = n)) |>
+      mutate(prop_detected = n_detected/n)
+
     # normalize unit per analyte
     unit_lu <- df |>
       dplyr::filter(!is.na(unit)) |>
@@ -746,14 +757,14 @@ server <- function(input, output, session) {
       )
 
 
-    df_plot <- df_plot |>
-      dplyr::arrange(analyte, station_id_name, date) |>
-      dplyr::group_by(analyte, station_id_name) |>
-      dplyr::mutate(
-        nd_flag = tolower(trimws(detection_status)) %in% c("not detected", "not detected."),
-        seg_id  = cumsum(dplyr::lag(nd_flag, default = FALSE))
-      ) |>
-      dplyr::ungroup()
+    # df_plot <- df_plot |>
+    #   dplyr::arrange(analyte, station_id_name, date) |>
+    #   dplyr::group_by(analyte, station_id_name) |>
+    #   dplyr::mutate(
+    #     nd_flag = tolower(trimws(detection_status)) %in% c("not detected", "not detected."),
+    #     seg_id  = cumsum(dplyr::lag(nd_flag, default = FALSE))
+    #   ) |>
+    #   dplyr::ungroup()
 
     if (plot_type == "Time Series") {
       detected <- df_plot |>
@@ -928,8 +939,20 @@ server <- function(input, output, session) {
 
       # TODO add units to the box plots (just like line plot)
     } else if (plot_type == "Box Plot") {
+      boxplot_data <- df |>
+        left_join(prop_nd) |>
+        filter(prop_detected >= 0.5)
+      if (nrow(boxplot_data) == 0) {
+        return(
+          plotly_empty(type = "scatter", mode = "lines") |>
+            layout(title = "No data available for current selection.
+                   When more than 50% of the data are non-detects, boxplots are not generated.
+                   Please refer to the Time Series plots.")
+        )
+      } else {
+
       p <- ggplot(
-        df |> dplyr::filter(!is.na(value)),
+        boxplot_data |> dplyr::filter(!is.na(value)),
         aes(
           x = station_id,
           y = value,
@@ -953,7 +976,8 @@ server <- function(input, output, session) {
         theme_bw() +
         theme(legend.position = "none")
 
-    } else {
+    }
+      } else {
       return(NULL)
     }
 
@@ -987,6 +1011,19 @@ server <- function(input, output, session) {
     gp
 
   })
+
+
+  ### Plot Caption ------------------------------------------------------------
+
+  # output$wq_plot_caption <- renderUI({
+  #   tags$p(
+  #     style = "text-align: center; color: #666; font-style: italic; margin-top: 10px;",
+  #     paste("Figure 1: Data from", input$date_range[1], "to", input$date_range[2])
+  #   )
+  # })
+
+
+
 
   ## Download Tab  --------------------------------------------------------------
   # sync Water Quality selections to Download tab
