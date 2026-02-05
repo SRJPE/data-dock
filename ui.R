@@ -10,17 +10,14 @@ ui <- fluidPage(
     id = "navbar",
 
     ## Overview Tab --------------------------------------------------------
-    tabPanel(
-      "Overview",
-      includeHTML("www/overview.html")
-    ),
+    tabPanel("Overview", includeHTML("www/overview.html")),
     ## Water Quality Tab ---------------------------------------------------
     tabPanel(
       "Water Quality",
       tabsetPanel(
         id = "wq_tabs",
 
-### Visualize ---------------------------------------------------------------
+        ### Visualize ---------------------------------------------------------------
 
         tabPanel(
           "Visualize Data",
@@ -34,10 +31,7 @@ ui <- fluidPage(
                 label = tags$strong("Station"),
                 choices = sort(unique(wq_metadata$station_id_name)),
                 multiple = TRUE,
-                options = list(
-                  plugins = list('remove_button'),
-                  placeholder = 'Select a station'
-                )
+                options = list(plugins = list('remove_button'), placeholder = 'Select a station')
               )
             ),
             div(
@@ -59,8 +53,7 @@ ui <- fluidPage(
                 choices = NULL,
                 selected = NULL,
                 multiple = TRUE,
-                options = list(plugins = list('remove_button'),
-                               placeholder = "Select an analyte")
+                options = list(plugins = list('remove_button'), placeholder = "Select an analyte")
               )
             ),
             div(style = "min-width: 200px;", selectInput(
@@ -68,36 +61,6 @@ ui <- fluidPage(
             )),
             actionButton("clear_all", "Clear All", icon = icon("eraser")),
           ),
-          # --- Map Filter Panel ---
-          # conditionalPanel(
-          #   condition = "input.which_view_wq == 'Map Filter'",
-          #   div(
-          #     style = "display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 10px;",
-          #     div(
-          #       style = "min-width: 250px;",
-          #       sliderInput(
-          #         inputId = "year_range2",
-          #         label = tags$strong("Year Range:"),
-          #         min = 2020,
-          #         max = 2025,
-          #         value = c(2020, 2025),
-          #         step = 1,
-          #         sep = ""
-          #       )
-          #     ),
-          #     div(
-          #       style = "min-width: 280px;",
-          #       dateRangeInput(
-          #         inputId = "date_range_wq2",
-          #         label   = tags$strong("Exact Date Range:"),
-          #         start   = as.Date("2020-01-01"),
-          #         end     = as.Date("2025-12-31"),
-          #         format  = "yyyy-mm-dd",
-          #         separator = " to "
-          #       )
-          #     ),
-          #   )
-          # ),
 
           # === Map and Floating Plot Panel ===
           fluidRow(
@@ -133,7 +96,7 @@ ui <- fluidPage(
           ))
         ),
 
-### Download ----------------------------------------------------------------
+        ### Download ----------------------------------------------------------------
 
         tabPanel("Download Data", sidebarLayout(
           sidebarPanel(
@@ -145,8 +108,7 @@ ui <- fluidPage(
               "Filter by Location:",
               choices = sort(unique(wq_metadata$station_id_name)),
               multiple = TRUE,
-              options = list(plugins = list('remove_button'),
-                             placeholder = "Select a station")
+              options = list(plugins = list('remove_button'), placeholder = "Select a station")
             ),
             sliderInput(
               "year_range_dl",
@@ -161,8 +123,7 @@ ui <- fluidPage(
               "Analyte:",
               choices = sort(unique(wq_data$analyte)),
               multiple = TRUE,
-              options = list(plugins = list('remove_button'),
-                             placeholder = "Select an analyte")
+              options = list(plugins = list('remove_button'), placeholder = "Select an analyte")
             ),
             checkboxInput(
               inputId = "include_weather",
@@ -217,123 +178,91 @@ ui <- fluidPage(
       tabsetPanel(
         id = "genetics_tabs",
 
-### Visualize ---------------------------------------------------------------
+        ### Visualize ---------------------------------------------------------------
 
-        tabPanel(
-          "Visualize Data",
-          fluidRow(column(width = 12,
-          div(
-            style = "display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 10px;",
-            div(
-              style = "min-width: 200px;",
-              selectizeInput(
-                inputId = "location_filter_g",
-                label = tags$strong("Monitoring Site"),
-                choices = c(sort(unique(run_designation$map_label))),
-                selected = "Clear Creek",
-                multiple = TRUE,
-                options = list(plugins = list('remove_button'),
-                               placeholder = "Select a site")
-              )
-            ),
-            div(
-              style = "min-width: 250px;",
-              sliderInput(
-                "year_range_g",
-                "Year Range",
-                min = as.numeric(min(run_designation$year)),
-                max = as.numeric(max(run_designation$year)),
-                value = c(as.numeric(min(
-                  run_designation$year
-                )), max(run_designation$year)),
-                step = 1,
-                sep = "",
-                ticks = TRUE
-              )
-            ),
-            div(
-              style = "min-width: 200px;",
-              selectInput(
-                "plot_type_g",
-                "Data Summary Type",
-                choices = c("Monitoring Year", "Month")
-              )
-            ),
-            div(style = "min-width: 200px;", selectInput(
-              "data_plot_g",
-              "Data Type",
-              choices = c("Run Type", "Greb 1L RoSA Genotype")
-            )),
-          ),
-
-          # --- Map Filter Panel ---
-
-          # conditionalPanel(
-          #   condition = "input.which_view_g == 'Map Filter'",
-          #   div(
-          #     style = "display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 10px;",
-          #     div(
-          #       style = "min-width: 250px;",
-          #       sliderInput(
-          #         inputId = "year_range2_g",
-          #         label = tags$strong("Year Range:"),
-          #         min = as.numeric(min(run_designation$year)),
-          #         max = as.numeric(max(run_designation$year)),
-          #         value = c(as.numeric(min(
-          #           run_designation$year
-          #         )), as.numeric(max(
-          #           run_designation$year
-          #         ))),
-          #         step = 1,
-          #         sep = ""
-          #       )
-          #     ),
-          #     div(
-          #       style = "min-width: 200px;",
-          #       selectInput(
-          #         "plot_type_g",
-          #         "Data Summary Type",
-          #         choices = c("Monitoring Year", "Month")
-          #       )
-          #     )
-          #   )
-          # ),
-
-          # === Map and Floating Plot Panel ===
-          fluidRow(
-            column(width = 4, leafletOutput("g_map", height = "600px")),
-            column(
-              width = 8,
-              plotlyOutput("g_dynamic_plot", height = "600px"),
-              tags$p(
-                "Note: The year is representative of a monitoring year (Nov-May), see [data collection methods](insert link) for more detail.",
-                style = "font-size: 0.9em; font-style: italic; color: #555; margin-top:5px;"
-              )
-            )
-          ),
-          fluidRow(column(
+        tabPanel("Visualize Data", fluidRow(
+          column(
             width = 12,
             div(
-              style = "margin-top: 20px; text-align: right;",
-              downloadBttn(
-                "download_g_csv",
-                "Download Selected Data",
-                style = "unite",
-                color = "primary",
-                size = "sm"
+              style = "display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 10px;",
+              div(
+                style = "min-width: 200px;",
+                selectizeInput(
+                  inputId = "location_filter_g",
+                  label = tags$strong("Monitoring Site"),
+                  choices = c(sort(unique(
+                    run_designation$map_label
+                  ))),
+                  selected = "Clear Creek",
+                  multiple = TRUE,
+                  options = list(plugins = list('remove_button'), placeholder = "Select a site")
+                )
               ),
-              tags$p(
-                tags$span("Download the data currently selected in the map and filters."),
-                tags$br(),
-                tags$span("For custom queries, visit the Download tab."),
-                style = "margin-bottom: 5px; font-style: italic; color: #555;"
+              div(
+                style = "min-width: 250px;",
+                sliderInput(
+                  "year_range_g",
+                  "Year Range",
+                  min = as.numeric(min(run_designation$year)),
+                  max = as.numeric(max(run_designation$year)),
+                  value = c(as.numeric(min(
+                    run_designation$year
+                  )), max(run_designation$year)),
+                  step = 1,
+                  sep = "",
+                  ticks = TRUE
+                )
+              ),
+              div(
+                style = "min-width: 200px;",
+                selectInput(
+                  "plot_type_g",
+                  "Data Summary Type",
+                  choices = c("Monitoring Year", "Month")
+                )
+              ),
+              div(style = "min-width: 200px;", selectInput(
+                "data_plot_g",
+                "Data Type",
+                choices = c("Run Type", "Greb 1L RoSA Genotype")
+              )),
+            ),
+
+            # === Map and Floating Plot Panel ===
+            fluidRow(
+              column(width = 4, leafletOutput("g_map", height = "600px")),
+              column(
+                width = 8,
+                plotlyOutput("g_dynamic_plot", height = "600px"),
+                tags$p(
+                  "Note: The year is representative of a monitoring year (Nov-May), see [data collection methods](insert link) for more detail.",
+                  style = "font-size: 0.9em; font-style: italic; color: #555; margin-top:5px;"
+                )
               )
-            )
-          ))
-        )
+            ),
+            fluidRow(column(
+              width = 12,
+              div(
+                style = "margin-top: 20px; text-align: right;",
+                downloadBttn(
+                  "download_g_csv",
+                  "Download Selected Data",
+                  style = "unite",
+                  color = "primary",
+                  size = "sm"
+                ),
+                tags$p(
+                  tags$span("Download the data currently selected in the map and filters."),
+                  tags$br(),
+                  tags$span("For custom queries, visit the Download tab."),
+                  style = "margin-bottom: 5px; font-style: italic; color: #555;"
+                )
+              )
+            ))
+          )
         )),
 
-### Download ----------------------------------------------------------------
+        ### Download ----------------------------------------------------------------
 
         # TODO currently not very functional
         tabPanel("Download Data", sidebarLayout(
@@ -347,8 +276,7 @@ ui <- fluidPage(
               choices = sort(unique(run_designation$map_label)),
               selected = "Clear Creek",
               multiple = TRUE,
-              options = list(plugins = list('remove_button'),
-                             placeholder = "Select a site")
+              options = list(plugins = list('remove_button'), placeholder = "Select a site")
             ),
             sliderInput(
               "year_range_g",
@@ -364,8 +292,7 @@ ui <- fluidPage(
               "Run Name:",
               choices = sort(unique(run_designation$run_name)),
               multiple = TRUE,
-              options = list(plugins = list('remove_button'),
-                             placeholder = "Select run name")
+              options = list(plugins = list('remove_button'), placeholder = "Select run name")
             ),
             tags$hr(),
             div(

@@ -2,17 +2,12 @@ server <- function(input, output, session) {
   # Welcome -----------------------------------------------------------------
   # DELETE WHEN FINALIZED
   showModal(
-    modalDialog(
-      title = "Welcome to the Downstream Dashboard!",
-      tagList(
-        tags$h5("NOTE: This tool is in development!")
-      ),
-      easyClose = TRUE
-    )
+    modalDialog(title = "Welcome to the Downstream Dashboard!", tagList(
+      tags$h5("NOTE: This tool is in development!")
+    ), easyClose = TRUE)
   )
 
-
-# GENETICS ----------------------------------------------------------------
+  # GENETICS ----------------------------------------------------------------
   ## Map ---------------------------------------------------------
   # zoom to selection
   draw_and_zoom_selection_g <- function(sel_names) {
@@ -135,7 +130,7 @@ server <- function(input, output, session) {
 
 
 
-## Reactive Data --------------------------------------------------------
+  ## Reactive Data --------------------------------------------------------
 
   filtered_g_data <- reactive({
     req(input$year_range_g)
@@ -203,7 +198,7 @@ server <- function(input, output, session) {
     df
   })
 
-## Download -----------------------------------------------------
+  ## Download -----------------------------------------------------
 
   output$download_g_csv <- downloadHandler(
     filename = function() {
@@ -215,10 +210,9 @@ server <- function(input, output, session) {
     }
   )
 
-## Plot ---------------------------------------------------------
+  ## Plot ---------------------------------------------------------
 
   output$g_dynamic_plot <- renderPlotly({
-
     df <- data_for_plot_g()
 
     if (nrow(df) == 0) {
@@ -271,7 +265,7 @@ server <- function(input, output, session) {
                        )
                      )) +
         geom_bar(stat = "identity", position = "stack") +
-        facet_wrap( ~ map_label, ncol = 1) +
+        facet_wrap(~ map_label, ncol = 1) +
         scale_fill_manual(values = run_col) +
         theme_minimal() +
         labs(x = "", y = y_axis_text, fill = "")
@@ -310,7 +304,7 @@ server <- function(input, output, session) {
                        )
                      )) +
         geom_bar(stat = "identity", position = "stack") +
-        facet_wrap( ~ location_name + year, ncol = n_years) +
+        facet_wrap(~ location_name + year, ncol = n_years) +
         scale_fill_manual(name = "Run type", values = run_col) +
         labs(x = "", y = y_axis_text) +
         theme_minimal() +
@@ -327,7 +321,7 @@ server <- function(input, output, session) {
   })
 
 
-# WATER QUALITY -----------------------------------------------------------
+  # WATER QUALITY -----------------------------------------------------------
 
   ## Reactive data -----------------------------------------------------------
 
@@ -337,8 +331,7 @@ server <- function(input, output, session) {
                              analytes,
                              include_weather = FALSE) {
     out <- wq_data |>
-      dplyr::filter(date >= years[1],
-                    date <= years[2])
+      dplyr::filter(date >= years[1], date <= years[2])
 
     if (!is.null(locations) && length(locations) > 0) {
       out <- out |> dplyr::filter(station_id_name %in% locations)
@@ -387,7 +380,7 @@ server <- function(input, output, session) {
 
   }
 
-## Download handler --------------------------------------------------------
+  ## Download handler --------------------------------------------------------
 
   # reactives for both tabs
   wq_download_data <- reactive({
@@ -419,9 +412,9 @@ server <- function(input, output, session) {
     )
   }
 
-## Visualize Tab -----------------------------------------------------------
+  ## Visualize Tab -----------------------------------------------------------
 
-### Update Analyte Choices ----------------------------------
+  ### Update Analyte Choices ----------------------------------
 
   observeEvent(input$location_filter_wq, {
     sel_stations <- input$location_filter_wq
@@ -444,91 +437,7 @@ server <- function(input, output, session) {
       selected = NULL,
       server   = TRUE
     )
-  }
-  )
-
-  # keep date range in sync with year_range (main controls)
-  # This makes the year slider behave like a shortcut preset for the exact date range
-
-  # sync_lock_main <- reactiveVal(FALSE)
-  # sync_lock_map  <- reactiveVal(FALSE)
-  #
-  # observeEvent(input$year_range, {
-  #   if (isTRUE(sync_lock_main()))
-  #     return()
-  #
-  #   sync_lock_main(TRUE)
-  #   on.exit(sync_lock_main(FALSE), add = TRUE)
-  #
-  #   yr <- input$year_range
-  #   updateDateRangeInput(
-  #     session,
-  #     "date_range_wq",
-  #     start = as.Date(sprintf("%d-01-01", yr[1])),
-  #     end   = as.Date(sprintf("%d-12-31", yr[2]))
-  #   )
-  # }, ignoreInit = TRUE)
-  #
-  # observeEvent(input$date_range_wq, {
-  #   if (isTRUE(sync_lock_main()))
-  #     return()
-  #
-  #   dr <- input$date_range_wq
-  #   req(!is.null(dr), length(dr) == 2, all(!is.na(dr)))
-  #
-  #   # Convert chosen dates into years
-  #   y1 <- as.integer(format(as.Date(dr[1]), "%Y"))
-  #   y2 <- as.integer(format(as.Date(dr[2]), "%Y"))
-  #
-  #   # If same as current slider, do nothing (avoids unnecessary updates)
-  #   cur <- input$year_range
-  #   if (!is.null(cur) &&
-  #       length(cur) == 2 && identical(c(y1, y2), as.integer(cur)))
-  #     return()
-  #
-  #   sync_lock_main(TRUE)
-  #   on.exit(sync_lock_main(FALSE), add = TRUE)
-  #
-  #   updateSliderInput(session, "year_range", value = c(y1, y2))
-  # }, ignoreInit = TRUE)
-  #
-  # observeEvent(input$year_range2, {
-  #   if (isTRUE(sync_lock_map()))
-  #     return()
-  #
-  #   sync_lock_map(TRUE)
-  #   on.exit(sync_lock_map(FALSE), add = TRUE)
-  #
-  #   yr <- input$year_range2
-  #   updateDateRangeInput(
-  #     session,
-  #     "date_range_wq2",
-  #     start = as.Date(sprintf("%d-01-01", yr[1])),
-  #     end   = as.Date(sprintf("%d-12-31", yr[2]))
-  #   )
-  # }, ignoreInit = TRUE)
-  #
-  # # slider
-  # observeEvent(input$date_range_wq2, {
-  #   if (isTRUE(sync_lock_map()))
-  #     return()
-  #
-  #   dr <- input$date_range_wq2
-  #   req(!is.null(dr), length(dr) == 2, all(!is.na(dr)))
-  #
-  #   y1 <- as.integer(format(as.Date(dr[1]), "%Y"))
-  #   y2 <- as.integer(format(as.Date(dr[2]), "%Y"))
-  #
-  #   cur <- input$year_range2
-  #   if (!is.null(cur) &&
-  #       length(cur) == 2 && identical(c(y1, y2), as.integer(cur)))
-  #     return()
-  #
-  #   sync_lock_map(TRUE)
-  #   on.exit(sync_lock_map(FALSE), add = TRUE)
-  #
-  #   updateSliderInput(session, "year_range2", value = c(y1, y2))
-  # }, ignoreInit = TRUE)
+  })
 
   ### Map --------------------------------------------------------------
   # zoom to selection
@@ -656,40 +565,12 @@ server <- function(input, output, session) {
     updateSelectInput(session, "location_filter_wq", selected = new_sel)
   })
 
-  #
-  #   observeEvent(input$clear_sites_wq, {
-  #     updatePickerInput(session, "location_filter_wq", selected = character(0))
-  #     draw_and_zoom_selection(character(0))
-  #   }, ignoreInit = TRUE)
-
-
   # redraw highlight + zoom on dropdown change
   observeEvent(input$location_filter_wq, {
     draw_and_zoom_selection(input$location_filter_wq)
   }, ignoreInit = TRUE)
 
-
-### Reactive Data -------------------------------------------
-
-  # filtered_wq_data <- reactive({
-  #   req(input$analyte, length(input$analyte) > 0)
-  #
-  #   data <- wq_data |>
-  #     dplyr::filter(analyte %in% input$analyte,
-  #                   as.Date(date) >= input$year_range[1],
-  #                   as.Date(date) <= input$year_range[2])
-  #
-  #   if (!is.null(input$location_filter_wq) &&
-  #       length(input$location_filter_wq) > 0 &&
-  #       !"All Locations" %in% input$location_filter_wq) {
-  #     data <- data |>
-  #       dplyr::filter(station_id_name %in% input$location_filter_wq)
-  #   }
-  #
-  #   data
-  # })
-
-### Clear Button --------------------------------------------
+  ### Clear Button --------------------------------------------
 
   observeEvent(input$clear_all, {
     # Reset station picker
@@ -699,58 +580,35 @@ server <- function(input, output, session) {
     updateSelectizeInput(session, inputId = "analyte", selected = character(0))
 
     # Reset year sliders
-    updateSliderInput(session, "year_range", value = c(min(wq_data$date), max(wq_data$date)), timeFormat = "%b %Y")
-    #updateSliderInput(session, "year_range2", value = c(min(wq_data$year), 2025))
-
-    # Reset date ranges
-    # updateDateRangeInput(
-    #   session,
-    #   "date_range_wq",
-    #   start = as.Date(sprintf("%d-01-01", min(wq_data$year))),
-    #   end   = as.Date(sprintf("%d-12-31", 2025))
-    # )
-    # updateDateRangeInput(
-    #   session,
-    #   "date_range_wq2",
-    #   start = as.Date(sprintf("%d-01-01", min(wq_data$year))),
-    #   end   = as.Date(sprintf("%d-12-31", 2025)) #setting to 2025 for now, ideally range will be max(wq_data$year), but latest date is 2023 right now
-    # )
+    updateSliderInput(session,
+                      "year_range",
+                      value = c(min(wq_data$date), max(wq_data$date)),
+                      timeFormat = "%b %Y")
 
     # Reset map (zoom + highlight)
     draw_and_zoom_selection(character(0))
   })
 
 
-### Download ------------------------------------------------
+  ### Download ------------------------------------------------
 
-  # output$download_wq_csv <- downloadHandler(
-  #   filename = function() {
-  #     paste0("water_quality_", Sys.Date(), ".csv")
-  #   },
-  #   content = function(file) {
-  #     df <- filtered_wq_data()
-  #     readr::write_csv(df, file)
-  #   }
-  # )
   output$download_wq_csv <- make_download_handler(wq_download_data)
 
-### Messages ----------------------------------------------------------------
+  ### Messages ----------------------------------------------------------------
 
   wq_missing_sites <- reactiveVal(character(0)) # filtering so message works
 
 
-### Plot --------------------------------------------------------------------
+  ### Plot --------------------------------------------------------------------
 
   output$wq_dynamic_plot <- renderPlotly({
     req(!is.null(input$location_filter_wq) &&
           length(input$location_filter_wq) > 0)
     req(input$analyte, length(input$analyte) > 0)
 
-    df <- filter_wq_data(
-      input$location_filter_wq,
-      input$year_range,
-      input$analyte
-    )
+    df <- filter_wq_data(input$location_filter_wq,
+                         input$year_range,
+                         input$analyte)
 
     selected_locs <- input$location_filter_wq %||% character(0)
 
@@ -804,52 +662,6 @@ server <- function(input, output, session) {
       ) |>
       dplyr::ungroup()
 
-    # if (plot_type == "Time Series") {
-    #   detected <- df |>
-    #     dplyr::filter(!is.na(value) & !nd_flag) # splitting detected vs non-detected using the flag
-    #
-    #   nd <- df |>
-    #     dplyr::filter(nd_flag) |>
-    #     dplyr::mutate(nd_height = dplyr::case_when(
-    #       reports_to == "MDL" ~ as.numeric(mdl),
-    #       reports_to == "MRL" ~ as.numeric(mrl),
-    #       TRUE ~ NA_real_),
-    #       x_minus = date - lubridate::days(10),
-    #       x_plus  = date + lubridate::days(10)
-    #       ) |>
-    #     dplyr::filter(!is.na(nd_height))
-    #
-    #   # base plot so facets exist
-    #   p <- ggplot(df, aes(x = date)) +
-    #     facet_wrap(~ analyte, scales = "free_y", ncol = 1) +
-    #     labs(x = "", y = y_lab, color = "Location") +
-    #     theme_minimal()
-    #
-    #
-    #   # lines/points for detected ONLY, with group resetting after non-detects
-    #   if (nrow(detected) > 0) {
-    #     p <- p +
-    #       geom_line(data = detected,
-    #                 aes(y = value,
-    #                     color = station_id_name,
-    #                     group = interaction(station_id_name, seg_id)), linewidth = 0.6) +
-    #       geom_point(data = detected,
-    #                  aes(y = value, color = station_id_name),
-    #                  size = 1, alpha = 0.6)
-    #     }
-    #
-    #   # Non-detect markers (vertical + short horizontal at MDL/MRL)
-    #   if (nrow(nd) > 0) {
-    #     p <- p +
-    #       geom_segment(data = nd,
-    #                    aes(x = date, xend = date, y = 0, yend = nd_height, color = station_id_name),
-    #                    linewidth = 0.6, linetype = 5, inherit.aes = FALSE) +
-    #       geom_segment(data = nd,
-    #                    aes(x = x_minus, xend = x_plus, y = nd_height, yend = nd_height, color = station_id_name),
-    #                    linewidth = 0.6, lineend = "square", inherit.aes = FALSE)
-    #     }
-    #   }
-
     # normalize unit per analyte
     unit_lu <- df |>
       dplyr::filter(!is.na(unit)) |>
@@ -902,7 +714,7 @@ server <- function(input, output, session) {
       }
 
       p <- ggplot(df_plot, aes(x = date)) +
-        facet_wrap( ~ analyte_label, scales = "free_y", ncol = 1) +
+        facet_wrap(~ analyte_label, scales = "free_y", ncol = 1) +
         labs(x = "", y = y_axis_lab, color = "Location") +
         theme_minimal()
 
@@ -1069,7 +881,7 @@ server <- function(input, output, session) {
         )
       ) +
         geom_boxplot(outlier.shape = NA) +
-        facet_wrap( ~ analyte, scales = "free_y", ncol = 2) +
+        facet_wrap(~ analyte, scales = "free_y", ncol = 2) +
         labs(x = "", y = "value", fill = "Station") +
         scale_fill_manual(values = tol_muted) +
         theme_bw() +
@@ -1112,16 +924,6 @@ server <- function(input, output, session) {
 
   ## Download Tab  --------------------------------------------------------------
   # sync Water Quality selections to Download tab
-  # observeEvent(input$navbar, {
-  #   if (input$navbar == "Download WQ Data") {
-  #     updateSelectInput(session, "location_filter_dl",
-  #                       selected = input$location_filter_wq)
-  #     updateSliderInput(session, "year_range_dl",
-  #                       value = input$year_range)
-  #     updateSelectizeInput(session, "analyte_download",
-  #                          selected = input$analyte)
-  #   }
-  # })
 
   observeEvent(input$wq_tabs, {
     if (input$wq_tabs == "Download Data") {
@@ -1133,8 +935,7 @@ server <- function(input, output, session) {
     }
   })
 
-
-### Clear Button -----------------------------------------------
+  ### Clear Button -----------------------------------------------
 
   observeEvent(input$clear_all_dl, {
     # Reset location (selectInput)
@@ -1144,12 +945,14 @@ server <- function(input, output, session) {
     updateSelectizeInput(session, inputId = "analyte_download", selected = character(0))
 
     # Reset year range slider (download tab)
-    updateSliderInput(session, "year_range_dl", value = c(min(wq_data$date), max(wq_data$date)), timeFormat = "%b %Y")
+    updateSliderInput(session,
+                      "year_range_dl",
+                      value = c(min(wq_data$date), max(wq_data$date)),
+                      timeFormat = "%b %Y")
 
     # Reset include_weather checkbox (download tab)
     updateCheckboxInput(session, inputId = "include_weather", value = FALSE)
   })
-
 
   # Table -------------------------------------------------------------------
 
@@ -1169,9 +972,4 @@ server <- function(input, output, session) {
       dplyr::select(date, station_id_name, analyte, value, unit) |>
       DT::datatable(options = list(pageLength = 10, scrollX = TRUE))
   })
-
-
-
-
-
 }
