@@ -52,7 +52,7 @@ additional_rst <- readxl::read_xlsx("data-raw/sample_locations_20220830.xlsx") |
   mutate(stream = tolower(stream_name),
          site = tolower(location_name),
          label = case_when(site == "sac-delta entry" ~ "Sacramento River - Delta Entry",
-                           site == "feather-rm17" ~ "Feather River - RM17")
+                           site == "feather-rm17" ~ "Feather River - RM 17")
         ) |>
   select(stream, site, geometry, label)
 

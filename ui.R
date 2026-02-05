@@ -226,6 +226,7 @@ ui <- fluidPage(
                 "Data Type",
                 choices = c("Run Type", "Greb 1L RoSA Genotype")
               )),
+              actionButton("clear_all_g", "Clear All", icon = icon("eraser")),
             ),
 
             # === Map and Floating Plot Panel ===
@@ -271,7 +272,7 @@ ui <- fluidPage(
             h4("Select Data to Download"),
             tags$hr(),
             selectizeInput(
-              "location_filter_g",
+              "location_filter_dl_g",
               "Filter by Monitoring Site:",
               choices = sort(unique(run_designation$map_label)),
               selected = "Clear Creek",
@@ -279,11 +280,13 @@ ui <- fluidPage(
               options = list(plugins = list('remove_button'), placeholder = "Select a site")
             ),
             sliderInput(
-              "year_range_g",
+              "year_range_dl_g",
               "Year Range:",
-              min = 2020,
-              max = 2025,
-              value = c(2020, 2025),
+              min = as.numeric(min(run_designation$year)),
+              max = as.numeric(max(run_designation$year)),
+              value = c(as.numeric(min(
+                run_designation$year
+              )), max(run_designation$year)),
               step = 1,
               sep = ""
             ),
@@ -293,6 +296,11 @@ ui <- fluidPage(
               choices = sort(unique(run_designation$run_name)),
               multiple = TRUE,
               options = list(plugins = list('remove_button'), placeholder = "Select run name")
+            ),
+            actionButton(
+              inputId = "clear_all_dl_g",
+              label = "Clear all",
+              icon = icon("eraser")
             ),
             tags$hr(),
             div(
@@ -325,7 +333,7 @@ ui <- fluidPage(
               "This table updates automatically when you change filters in the sidebar.",
               style = "font-style: italic; color: #555; margin-bottom: 10px;"
             ),
-            div(style = "margin-top: 10px;", DT::dataTableOutput("g_preview_table"))
+            div(style = "margin-top: 10px;", DT::dataTableOutput("dl_preview_table_g"))
           )
         ))
       )

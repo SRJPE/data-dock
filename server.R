@@ -8,7 +8,20 @@ server <- function(input, output, session) {
   )
 
   # GENETICS ----------------------------------------------------------------
-  ## Map ---------------------------------------------------------
+  # shared download handler function
+  make_download_handler <- function(data_fun) {
+    downloadHandler(
+      filename = function()
+        paste0("genetics_", Sys.Date(), ".csv"),
+      content = function(file) {
+        readr::write_csv(data_fun(), file)
+      }
+    )
+  }
+
+## Visualize ---------------------------------------------------------------
+
+  ### Map ---------------------------------------------------------
   # zoom to selection
   draw_and_zoom_selection_g <- function(sel_names) {
     map <- leafletProxy("g_map") |>
@@ -130,7 +143,7 @@ server <- function(input, output, session) {
 
 
 
-  ## Reactive Data --------------------------------------------------------
+  ### Reactive Data --------------------------------------------------------
 
   filtered_g_data <- reactive({
     req(input$year_range_g)
@@ -198,19 +211,11 @@ server <- function(input, output, session) {
     df
   })
 
-  ## Download -----------------------------------------------------
+  ### Download ------------------------------------------------
 
-  output$download_g_csv <- downloadHandler(
-    filename = function() {
-      paste0("genetics_", Sys.Date(), ".csv")
-    },
-    content = function(file) {
-      df <- filtered_g_data()
-      readr::write_csv(df, file)
-    }
-  )
+  output$download_g_csv <- make_download_handler(filtered_g_data())
 
-  ## Plot ---------------------------------------------------------
+  ### Plot ---------------------------------------------------------
 
   output$g_dynamic_plot <- renderPlotly({
     df <- data_for_plot_g()
@@ -320,7 +325,68 @@ server <- function(input, output, session) {
 
   })
 
+  ### Clear Button --------------------------------------------
 
+  observeEvent(input$clear_all_g, {
+    # Reset station picker
+    updateSelectizeInput(session, inputId = "location_filter_g", selected = character(0))
+
+    # Reset year sliders
+    updateSliderInput(session,
+                      "year_range_g",
+                      value = c(as.numeric(min(
+                        run_designation$year
+                      )), max(run_designation$year)))
+
+    updateSelectInput(session, "plot_type_g","Monitoring Year")
+    updateSelectInput(session, "data_plot_g","Run Type")
+
+    # Reset map (zoom + highlight)
+    draw_and_zoom_selection(character(0))
+  })
+
+  ## Download Tab  --------------------------------------------------------------
+  # sync Genetics selections to Download tab
+
+  observeEvent(input$genetics_tabs, {
+    if (input$genetics_tabs == "Download Data") {
+      updateSelectizeInput(session,
+                        "location_filter_dl_g",
+                        selected = input$location_filter_g)
+      updateSliderInput(session, "year_range_dl_g", value = input$year_range_g)
+      updateSelectizeInput(session, "run_download", selected = sort(unique(run_designation$run_name)))
+    }
+  })
+
+  ### Clear Button -----------------------------------------------
+
+  observeEvent(input$clear_all_dl_g, {
+    # Reset location (selectInput)
+    updateSelectInput(session, inputId = "location_filter_dl_g", selected = character(0))
+
+    # Reset analyte (selectizeInput)
+    updateSelectizeInput(session, inputId = "run_download", selected = character(0))
+
+    # Reset year range slider (download tab)
+    updateSliderInput(session,
+                      "year_range_dl_g",
+                      value = c(as.numeric(min(
+                        run_designation$year
+                      )), max(run_designation$year)))
+  })
+
+  # Table -------------------------------------------------------------------
+
+  dl_download_data_g <- reactive({filtered_g_data() |>
+                                   filter(run_name %in% input$run_download)})
+  # assign to outputs
+  output$download_g_csv_dl <- make_download_handler()
+
+  output$dl_preview_table_g <- DT::renderDataTable({
+    dl_download_data_g() |>
+      #dplyr::select(date, station_id_name, analyte, value, unit) |>
+      DT::datatable(options = list(pageLength = 10, scrollX = TRUE))
+  })
   # WATER QUALITY -----------------------------------------------------------
 
   ## Reactive data -----------------------------------------------------------
