@@ -941,7 +941,11 @@ server <- function(input, output, session) {
     } else if (plot_type == "Box Plot") {
       boxplot_data <- df |>
         left_join(prop_nd) |>
-        filter(prop_detected >= 0.5)
+        filter(prop_detected >= 0.5) |>
+        # replace values for non detects with the detection limit
+        mutate(value = case_when(is.na(value) & detection_status == "Not detected" & reports_to == "MRL" ~ mrl,
+                                 is.na(value) & detection_status == "Not detected" & reports_to == "MDL" ~ mdl,
+                                 T ~ value))
       if (nrow(boxplot_data) == 0) {
         return(
           plotly_empty(type = "scatter", mode = "lines") |>
@@ -1011,18 +1015,6 @@ server <- function(input, output, session) {
     gp
 
   })
-
-
-  ### Plot Caption ------------------------------------------------------------
-
-  # output$wq_plot_caption <- renderUI({
-  #   tags$p(
-  #     style = "text-align: center; color: #666; font-style: italic; margin-top: 10px;",
-  #     paste("Figure 1: Data from", input$date_range[1], "to", input$date_range[2])
-  #   )
-  # })
-
-
 
 
   ## Download Tab  --------------------------------------------------------------
