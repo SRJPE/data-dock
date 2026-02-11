@@ -575,7 +575,7 @@ server <- function(input, output, session) {
       addCircleMarkers(
         data = subset(wq_metadata, status == "Active"),
         layerId = ~ station_id_name,
-        label = ~ paste(station_id_name, "-", station_description),
+        label = ~ paste(station_id_name),
         radius = 6,
         stroke = TRUE,
         weight = 1,
@@ -587,7 +587,7 @@ server <- function(input, output, session) {
       addCircleMarkers(
         data    = wq_metadata,
         layerId = ~ station_id_name,
-        label   = ~ paste(station_id_name, "-", station_description),
+        label   = ~ paste(station_id_name),
         radius = 6,
         stroke = TRUE,
         weight = 1,
