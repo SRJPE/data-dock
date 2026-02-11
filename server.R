@@ -856,12 +856,36 @@ server <- function(input, output, session) {
 
       # Non-detect markers (vertical + short horizontal at MDL/MRL)
       if (nrow(nd) > 0) {
+        # Apply a small x-jitter when more than 1 site is selected
+        n_sites_selected <- length(unique(nd$station_id_name))
+
+        if (n_sites_selected > 1) {
+          station_levels <- sort(unique(nd$station_id_name))
+
+          offsets_hours <- seq(-36, 36, length.out = n_sites_selected)
+
+          nd$date_j <- nd$date + as.difftime(
+            offsets_hours[match(nd$station_id_name, station_levels)],
+            units = "hours"
+          )
+
+          # shift the horizontal tick endpoints by the same amount
+          nd$x_minus_j <- nd$x_minus + (nd$date_j - nd$date)
+          nd$x_plus_j  <- nd$x_plus  + (nd$date_j - nd$date)
+
+        } else {
+          # 0 or 1 site -> no jitter
+          nd$date_j <- nd$date
+          nd$x_minus_j <- nd$x_minus
+          nd$x_plus_j  <- nd$x_plus
+        }
+
         p <- p +
           geom_segment(
             data = nd,
             aes(
-              x = date,
-              xend = date,
+              x = date_j,
+              xend = date_j,
               y = 0,
               yend = nd_height,
               color = station_id_name,
@@ -889,8 +913,8 @@ server <- function(input, output, session) {
           geom_segment(
             data = nd,
             aes(
-              x = x_minus,
-              xend = x_plus,
+              x = x_minus_j,
+              xend = x_plus_j,
               y = nd_height,
               yend = nd_height,
               color = station_id_name,
