@@ -415,6 +415,7 @@ server <- function(input, output, session) {
           analyte %in% c("Rain", "Sky Conditions"),
           date >= years[1],
           date <= years[2]
+
         )
 
       # same location filtering to weather data
@@ -561,6 +562,8 @@ server <- function(input, output, session) {
 
   output$wq_map <- renderLeaflet({
     leaflet() |>
+      addTiles() |>
+      htmlwidgets::onRender("function(el, x) {this.zoomControl.setPosition('bottomleft');}") |>
       addMapPane("Lines-Habitat", zIndex = 430) |>
       addTiles(urlTemplate = "https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}", attribution = 'Basemap © Esri, GEBCO, NOAA, CHS, etc.') |>
       addPolylines(
