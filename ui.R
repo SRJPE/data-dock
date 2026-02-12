@@ -26,13 +26,28 @@ ui <- fluidPage(
             style = "display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 10px;",
             div(
               style = "min-width: 200px;",
+
+              {
+                stations <- sort(unique(wq_metadata$station_id_name))
+
+                # Pad single-digit station codes at the very start
+                stations_label <- stringr::str_replace(
+                  stations,
+                  "^([A-Za-z]+)(\\d)([A-Za-z]?)(\\s*-\\s*)",
+                  "\\10\\2\\3\\4"
+                )
+
+                # Sort by the padded display label
+                ord <- order(stations_label)
+
               selectizeInput(
                 inputId = "location_filter_wq",
                 label = tags$strong("Station"),
-                choices = sort(unique(wq_metadata$station_id_name)),
+                choices = stats::setNames(stations[ord], stations_label[ord]),
                 multiple = TRUE,
                 options = list(plugins = list('remove_button'), placeholder = 'Select a station')
               )
+              }
             ),
             div(
               style = "min-width: 250px;",
