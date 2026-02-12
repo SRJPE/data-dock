@@ -413,8 +413,8 @@ server <- function(input, output, session) {
       weather <- wq_quality_weather |>
         dplyr::filter(
           analyte %in% c("Rain", "Sky Conditions"),
-          lubridate::year(date) >= years[1],
-          lubridate::year(date) <= years[2]
+          date >= years[1],
+          date <= years[2]
         )
 
       # same location filtering to weather data
@@ -453,8 +453,8 @@ server <- function(input, output, session) {
     filter_wq_data(
       input$location_filter_wq,
       input$year_range,
-      input$analyte
-      #include_weather = input$include_weather
+      input$analyte,
+      include_weather = input$include_weather
     )
   })
 
