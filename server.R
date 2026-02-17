@@ -208,6 +208,26 @@ server <- function(input, output, session) {
           fill = list(run_percent = 0, site_total = 0)
         )
     } # adding this so when years are not present at a given location, there is still a facet (empty) for that year
+
+    # consistent order for both run type/Greb 1L RoSA Genotype bar plots
+    if (input$data_plot_g == "Run Type") {
+      run_order <- c(
+        "spring",
+        "winter",
+        "fall or late fall",
+        "greb1l heterozygote")
+
+      df <- df |>
+        dplyr::mutate(run_name = factor(run_name, levels = run_order))
+    }
+
+    if (input$data_plot_g == "Greb 1L RoSA Genotype") {
+
+      geno_order <- c("early", "heterozygote", "late")
+
+      df <- df |>
+        dplyr::mutate(genotype = factor(genotype, levels = geno_order))
+    }
     df
   })
 
