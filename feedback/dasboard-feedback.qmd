@@ -1,0 +1,537 @@
+---
+title: "JPE Dashboard — User Research Feedback Report"
+subtitle: "Compiled from [Google Forms Survey Responses](https://docs.google.com/forms/d/e/1FAIpQLSe3M5DvdxeucI8y7Zg3buI1ZdN5KMstl5CULJObjRpkzUfg8Q/viewform?usp=header)"
+date: today
+date-format: "MMMM YYYY"
+
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-depth: 3
+    toc-title: "Contents"
+    toc-location: left
+    number-sections: true
+    fig-width: 8
+    fig-height: 5
+    fig-dpi: 150
+    embed-resources: true        # single self-contained HTML file
+    code-fold: true              # hide code by default, togglable
+    code-summary: "Show code"
+
+  pdf:
+    toc: true
+    number-sections: true
+    colorlinks: true
+    fig-pos: "H"
+
+execute:
+  echo: false
+  warning: false
+  message: false
+  cache: false   # set true to avoid re-fetching sheet on every render
+---
+
+```{r setup}
+#| label: setup
+#| include: false
+
+# ── Install / load packages ──────────────────────────────────────────────────
+library("googlesheets4")
+library("tidyverse")
+library("scales")
+library("knitr")
+library("kableExtra")
+library("fmsb")
+library("glue")
+library("janitor")
+library("lubridate")
+
+# ── Design tokens ────────────────────────────────────────────────────────────
+OCEAN <- "#2563EB"; TEAL <- "#0EA5E9"; JADE <- "#10B981"
+AMBER <- "#F59E0B"; ROSE <- "#F43F5E"; SLATE <- "#64748B"; INK <- "#1A1F2E"
+
+# ── ggplot theme ─────────────────────────────────────────────────────────────
+theme_survey <- function(base_size = 12) {
+  theme_minimal(base_size = base_size) %+replace% theme(
+    plot.title       = element_text(face = "bold", size = base_size + 2,
+                                    color = INK, hjust = 0),
+    plot.subtitle    = element_text(size = base_size - 1, color = SLATE,
+                                    hjust = 0, margin = margin(b = 8)),
+    axis.text        = element_text(color = SLATE, size = base_size - 2),
+    axis.title       = element_text(color = SLATE, size = base_size - 1),
+    panel.grid.major = element_line(color = "#E2E8F0"),
+    panel.grid.minor = element_blank(),
+    panel.background = element_rect(fill = "white", color = NA),
+    plot.background  = element_rect(fill = "white", color = NA),
+    legend.position  = "bottom",
+    legend.title     = element_text(face = "bold", size = base_size - 1),
+    strip.text       = element_text(face = "bold", color = INK)
+  )
+}
+theme_set(theme_survey())
+```
+
+```{r load-data}
+#| label: load-data
+#| include: false
+
+# ╔══════════════════════════════════════════════════════════════════════════╗
+# ║  CONFIGURE YOUR GOOGLE SHEETS CONNECTION                                ║
+# ╠══════════════════════════════════════════════════════════════════════════╣
+# ║  Step 1 — Paste your Sheet URL or Sheet ID below.                       ║
+# ║    • The URL looks like:                                                 ║
+# ║      https://docs.google.com/spreadsheets/d/SHEET_ID/edit               ║
+# ║    • Or just use the SHEET_ID string directly.                          ║
+# ║                                                                          ║
+# ║  Step 2 — Choose AUTH_MODE:                                              ║
+# ║    "public"      Sheet is shared "Anyone with link can view"            ║
+# ║                  → no login needed, works in CI/CD pipelines             ║
+# ║    "interactive" Opens a browser popup to sign in once;                 ║
+# ║                  token is cached at ~/.cache/gargle/                     ║
+# ║    "service"     Use a service-account JSON key (headless/server use)   ║
+# ║                  → set SERVICE_ACCOUNT_JSON path below                  ║
+# ╚══════════════════════════════════════════════════════════════════════════╝
+
+SHEET_URL            <- "https://docs.google.com/spreadsheets/d/1wKb_0v9vsbBZdtfBAZeUZTlZqvGR9YnBmRjPCE5Knq8/edit?gid=1013775912#gid=1013775912"
+AUTH_MODE            <- "public"      # "public" | "interactive" | "service"
+SERVICE_ACCOUNT_JSON <- NULL          # e.g. "credentials/sa_key.json"
+SHEET_TAB            <- 1             # 1 = first tab, or use tab name as string
+
+# ── Authenticate ─────────────────────────────────────────────────────────────
+if (AUTH_MODE == "public") {
+  gs4_deauth()
+} else if (AUTH_MODE == "interactive") {
+  gs4_auth()
+} else if (AUTH_MODE == "service") {
+  gs4_auth(path = SERVICE_ACCOUNT_JSON)
+}
+
+# ── Read sheet ────────────────────────────────────────────────────────────────
+raw <- read_sheet(SHEET_URL, sheet = SHEET_TAB)
+
+# ── Clean column names ────────────────────────────────────────────────────────
+df <- raw |>
+  clean_names() |>
+  mutate(across(where(is.character), str_squish))
+
+# ── Fuzzy-match key columns → standard names ──────────────────────────────────
+# Adjust the regex patterns here if your form question wording differs.
+safe_rename <- function(df, new_name, pattern) {
+  matched <- names(df)[str_detect(names(df), regex(pattern, ignore_case = TRUE))]
+  if (length(matched) > 0 && !new_name %in% names(df))
+    df <- df |> rename(!!new_name := all_of(matched[[1]]))
+  df
+}
+
+df <- df |>
+  safe_rename("role",           "role|position|title") |>
+  safe_rename("wq_familiar",    "water.quality.*familiar|familiar.*water") |>
+  safe_rename("gen_familiar",   "genetic.*familiar|familiar.*genetic") |>
+  safe_rename("used_dashboard", "used.*dashboard|dashboard.*before") |>
+  safe_rename("nav_ease",       "easy.*navig|navig.*easy|first.use") |>
+  safe_rename("intuit_buttons", "buttons.*controls|controls.*buttons") |>
+  safe_rename("intuit_viz",     "visualization") |>
+  safe_rename("intuit_layout",  "layout") |>
+  safe_rename("confusing",      "confus|difficult.*use") |>
+  safe_rename("improvements",   "improve|features") |>
+  safe_rename("add_comments",   "additional.*comment|^comment") |>
+  safe_rename("task_chla",      "chlorophyll|chla") |>
+  safe_rename("task_do_temp",   "dissolved.*oxygen|do.*temp") |>
+  safe_rename("task_spring",    "spring.*run|chinook") |>
+  safe_rename("task_creek",     "battle.*creek|creek.*battle|genotype")
+
+# ── Coerce ratings to numeric ─────────────────────────────────────────────────
+rating_cols <- c("wq_familiar", "gen_familiar", "nav_ease",
+                 "intuit_buttons", "intuit_viz", "intuit_layout")
+
+df <- df |>
+  mutate(across(any_of(rating_cols), as.numeric))
+
+n_resp <- nrow(df)
+```
+
+```{r helpers}
+#| include: false
+
+# Classify task response text as Easy / Difficult / Very Difficult
+parse_task <- function(x) {
+  x_low <- str_to_lower(x)
+  case_when(
+    str_detect(x_low, "very.difficult|very hard|couldn|not able") ~ "Very Difficult",
+    str_detect(x_low, "difficult|hard")                           ~ "Difficult",
+    str_detect(x_low, "easy|straightforward|simple|no problem")   ~ "Easy",
+    is.na(x) | str_length(x) < 2                                  ~ NA_character_,
+    .default = "Not answered"
+  )
+}
+```
+
+---
+
+## Executive Summary
+
+```{r exec-summary}
+#| results: asis
+
+avg_b <- if ("intuit_buttons" %in% names(df)) round(mean(df$intuit_buttons, na.rm = TRUE), 1) else "N/A"
+avg_v <- if ("intuit_viz"     %in% names(df)) round(mean(df$intuit_viz,     na.rm = TRUE), 1) else "N/A"
+avg_l <- if ("intuit_layout"  %in% names(df)) round(mean(df$intuit_layout,  na.rm = TRUE), 1) else "N/A"
+
+cat(glue(
+  "**{n_resp} subject-matter experts** participated in a usability study of the JPE Dashboard, ",
+  "which provides interactive access to discrete water quality and fish genetics datasets. ",
+  "Respondents represented a range of roles including environmental scientists, ",
+  "a JPE data manager, a genetics specialist, and university faculty.\n\n",
+  "The dashboard received strong marks for intuitiveness — buttons & controls ({avg_b}/5), ",
+  "visualizations ({avg_v}/5), and layout ({avg_l}/5). Navigation on first use was rated ",
+  "easy or very easy by all respondents. Task completion was largely successful. ",
+  "Key improvement areas centre on controls refinement, data context labelling, ",
+  "genetics module expansion, and condensing the Overview page."
+))
+```
+
+### Prioritized Recommendations
+
+```{r recommendations}
+recs <- tribble(
+  ~Priority, ~Recommendation,
+  "High",   "Recommendation #1",
+  "High",   "Recommendation #2",
+  "Medium", "Recommendation #3",
+  "Medium", "Recommendation #4",
+  "Low",    "Recommendation #5",
+  "Low",    "Recommendation #6",
+  "Low",    "Recommendation #7"
+)
+
+recs |>
+  mutate(Priority = cell_spec(Priority, color = "white",
+    background = case_when(
+      Priority == "High"   ~ ROSE,
+      Priority == "Medium" ~ AMBER,
+      Priority == "Low"    ~ JADE), bold = TRUE)) |>
+  kbl(escape = FALSE, col.names = c("Priority", "Recommendation"), align = "ll") |>
+  kable_styling(bootstrap_options = c("hover", "condensed"), full_width = TRUE) |>
+  column_spec(1, width = "7em", extra_css = "text-align:center") |>
+  column_spec(2, width = "60em")
+```
+
+---
+
+## Respondent Overview
+
+### Roles
+
+```{r role-chart}
+#| fig-cap: "Number of respondents by self-reported role"
+if ("role" %in% names(df)) {
+  df |>
+    count(role) |>
+    mutate(role = fct_reorder(str_wrap(role, 35), n)) |>
+    ggplot(aes(n, role)) +
+    geom_col(fill = OCEAN, width = 0.6) +
+    geom_text(aes(label = n), hjust = -0.3, size = 3.5, color = INK, fontface = "bold") +
+    scale_x_continuous(expand = expansion(mult = c(0, 0.18)),
+                       breaks = scales::breaks_width(1)) +
+    labs(title = "Respondent Roles", x = "Count", y = NULL)
+}
+```
+
+
+### Dataset Familiarity
+
+```{r familiarity-chart}
+#| fig-cap: "Self-reported familiarity (1 = not familiar, 3 = very familiar)"
+fam_avail <- intersect(c("wq_familiar", "gen_familiar"), names(df))
+
+if (length(fam_avail) > 0) {
+  df |>
+    mutate(respondent = row_number()) |>
+    select(respondent, any_of(c("wq_familiar", "gen_familiar"))) |>
+    pivot_longer(-respondent, names_to = "dataset", values_to = "score") |>
+    mutate(
+      dataset    = recode(dataset, wq_familiar = "Water Quality",
+                                   gen_familiar = "Fish Genetics"),
+      respondent = factor(paste0("R", respondent))
+    ) |>
+    ggplot(aes(respondent, score, fill = dataset)) +
+    geom_col(position = position_dodge(0.7), width = 0.6) +
+    scale_fill_manual(values = c("Water Quality" = OCEAN, "Fish Genetics" = JADE),
+                      name = NULL) +
+    scale_y_continuous(breaks = 1:3,
+                       labels = c("1 – Not familiar", "2 – Somewhat", "3 – Very familiar"),
+                       limits = c(0, 3.5)) +
+    labs(title = "Dataset Familiarity by Respondent", x = NULL, y = NULL)
+}
+```
+
+### Prior Dashboard Experience
+
+```{r dashboard-exp}
+if ("used_dashboard" %in% names(df)) {
+  df |>
+    count(used_dashboard) |>
+    mutate(Percent = scales::percent(n / sum(n), accuracy = 1)) |>
+    kbl(col.names = c("Used dashboards before?", "Count", "Percent"), align = "lrr") |>
+    kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                  full_width = FALSE)
+}
+```
+
+---
+
+## Usability Ratings
+
+### First-Use Navigation Ease
+
+```{r nav-ease}
+#| fig-cap: "Distribution of first-use navigation ease scores"
+if ("nav_ease" %in% names(df)) {
+  df |>
+    filter(!is.na(nav_ease)) |>
+    count(nav_ease) |>
+    mutate(label = case_when(
+      nav_ease == 1 ~ "1 – Very Easy",
+      nav_ease == 2 ~ "2 – Easy",
+      nav_ease == 3 ~ "3 – Moderate",
+      nav_ease == 4 ~ "4 – Difficult",
+      nav_ease == 5 ~ "5 – Very Difficult",
+      .default = as.character(nav_ease)
+    )) |>
+    ggplot(aes(fct_reorder(label, nav_ease), n)) +
+    geom_col(fill = TEAL, width = 0.5) +
+    geom_text(aes(label = n), vjust = -0.4, size = 4.5,
+              fontface = "bold", color = INK) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.2)),
+                       breaks = scales::breaks_width(1)) +
+    labs(title = "Ease of First-Time Navigation",
+         subtitle = "All respondents rated navigation easy or very easy",
+         x = NULL, y = "Respondents")
+}
+```
+
+### Intuitiveness
+
+```{r intuit-bar}
+#| fig-cap: "Average intuitiveness scores (1–5 scale)"
+intuit_avail <- intersect(c("intuit_buttons", "intuit_viz", "intuit_layout"), names(df))
+
+if (length(intuit_avail) > 0) {
+  df |>
+    summarise(across(any_of(intuit_avail), ~ mean(.x, na.rm = TRUE))) |>
+    pivot_longer(everything(), names_to = "dim", values_to = "avg") |>
+    mutate(
+      dim   = recode(dim,
+                intuit_buttons = "Buttons & Controls",
+                intuit_viz     = "Visualizations",
+                intuit_layout  = "Layout"),
+      color = case_when(avg >= 4 ~ JADE, avg >= 3 ~ AMBER, .default = ROSE)
+    ) |>
+    ggplot(aes(fct_reorder(dim, avg), avg, fill = color)) +
+    geom_col(width = 0.5, show.legend = FALSE) +
+    geom_text(aes(label = round(avg, 1)), hjust = -0.3,
+              size = 5, fontface = "bold", color = INK) +
+    scale_fill_identity() +
+    scale_y_continuous(limits = c(0, 5.8), breaks = 0:5) +
+    coord_flip() +
+    labs(title = "Average Intuitiveness Ratings",
+         subtitle = "Green ≥ 4  |  Amber ≥ 3  |  Red < 3",
+         x = NULL, y = "Average Score (1–5)")
+}
+```
+
+### Intuitiveness
+
+```{r intuit-radar}
+#| fig-cap: "Radar chart of intuitiveness dimensions"
+if (length(intuit_avail) >= 3) {
+  avgs <- df |>
+    summarise(across(any_of(intuit_avail), ~ mean(.x, na.rm = TRUE))) |>
+    rename_with(~ recode(.x,
+      intuit_buttons = "Buttons &\nControls",
+      intuit_viz     = "Visualizations",
+      intuit_layout  = "Layout"
+    ))
+
+  radar_df <- rbind(rep(5, ncol(avgs)), rep(1, ncol(avgs)), avgs)
+
+  par(mar = c(1, 1, 2, 1))
+  radarchart(radar_df,
+    axistype = 1,
+    pcol = OCEAN,  pfcol = scales::alpha(OCEAN, 0.25), plwd = 2,
+    cglcol = "#E2E8F0", cglty = 1, cglwd = 0.8,
+    axislabcol = SLATE, vlcex = 0.9,
+    title = "Intuitiveness — Radar Overview"
+  )
+}
+```
+
+### Ratings Summary Table
+
+```{r rating-table}
+if (length(intuit_avail) > 0) {
+  df |>
+    select(any_of(intuit_avail)) |>
+    summarise(across(everything(), list(
+      Mean = ~ round(mean(.x, na.rm = TRUE), 2),
+      SD   = ~ round(sd(.x,   na.rm = TRUE), 2),
+      Min  = ~ min(.x, na.rm = TRUE),
+      Max  = ~ max(.x, na.rm = TRUE)
+    ))) |>
+    pivot_longer(everything(),
+                 names_to  = c("Dimension", ".value"),
+                 names_sep = "_") |>
+    mutate(Dimension = recode(Dimension,
+      intuit.buttons = "Buttons & Controls",
+      intuit.viz     = "Visualizations",
+      intuit.layout  = "Layout"
+    )) |>
+    kbl(align = "lrrrr") |>
+    kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                  full_width = FALSE) |>
+    column_spec(2, bold = TRUE, color = OCEAN)
+}
+```
+
+---
+
+## Task Completion
+
+```{r task-chart}
+#| fig-cap: "Self-reported ease of completing four guided analytical tasks"
+task_avail <- intersect(
+  c("task_chla", "task_do_temp", "task_spring", "task_creek"), names(df))
+
+task_labels <- c(
+  task_chla    = "Chlorophyll-a\nPeaks (WQ)",
+  task_do_temp = "DO vs Temp\nCorrelation (WQ)",
+  task_spring  = "Spring Run\nProportion (Genetics)",
+  task_creek   = "Battle vs Clear\nCreek (Genetics)"
+)
+
+if (length(task_avail) > 0) {
+  df |>
+    select(any_of(task_avail)) |>
+    pivot_longer(everything(), names_to = "task", values_to = "response") |>
+    filter(!is.na(response), str_length(response) > 1) |>
+    mutate(
+      difficulty = parse_task(response),
+      task_label = recode(task, !!!task_labels[task_avail]),
+      difficulty = factor(difficulty,
+        levels = c("Easy", "Difficult", "Very Difficult", "Not answered"))
+    ) |>
+    filter(!is.na(difficulty)) |>
+    count(task_label, difficulty) |>
+    ggplot(aes(task_label, n, fill = difficulty)) +
+    geom_col(width = 0.55) +
+    scale_fill_manual(
+      values = c(Easy = JADE, Difficult = AMBER,
+                 `Very Difficult` = ROSE, `Not answered` = "#CBD5E1"),
+      name = "Difficulty"
+    ) +
+    scale_y_continuous(breaks = scales::breaks_width(1),
+                       expand = expansion(mult = c(0, 0.12))) +
+    labs(title = "Task Completion Difficulty",
+         subtitle = "Based on respondents' self-reported ease",
+         x = NULL, y = "Respondents")
+}
+```
+
+---
+
+## Qualitative Feedback
+
+### Confusing or Difficult Elements
+
+```{r confusing-table}
+if ("confusing" %in% names(df)) {
+  df |>
+    select(any_of("role"), confusing) |>
+    filter(!is.na(confusing), str_length(confusing) > 3) |>
+    mutate(confusing = str_trunc(confusing, 450)) |>
+    kbl(col.names = c("Role", "Response"), align = "ll") |>
+    kable_styling(bootstrap_options = c("striped", "hover"), full_width = TRUE) |>
+    column_spec(1, width = "18em", italic = TRUE, color = SLATE) |>
+    column_spec(2, width = "60em")
+}
+```
+
+### Feature Requests & Improvements
+
+```{r improvements-table}
+if ("improvements" %in% names(df)) {
+  df |>
+    select(any_of("role"), improvements) |>
+    filter(!is.na(improvements), str_length(improvements) > 3) |>
+    mutate(improvements = str_trunc(improvements, 450)) |>
+    kbl(col.names = c("Role", "Response"), align = "ll") |>
+    kable_styling(bootstrap_options = c("striped", "hover"), full_width = TRUE) |>
+    column_spec(1, width = "18em", italic = TRUE, color = SLATE) |>
+    column_spec(2, width = "60em")
+}
+```
+
+### Additional Comments
+
+```{r comments-table}
+if ("add_comments" %in% names(df)) {
+  df |>
+    select(any_of("role"), add_comments) |>
+    filter(!is.na(add_comments), str_length(add_comments) > 3) |>
+    mutate(add_comments = str_trunc(add_comments, 450)) |>
+    kbl(col.names = c("Role", "Response"), align = "ll") |>
+    kable_styling(bootstrap_options = c("striped", "hover"), full_width = TRUE) |>
+    column_spec(1, width = "18em", italic = TRUE, color = SLATE) |>
+    column_spec(2, width = "60em")
+}
+```
+
+
+
+```{r themes-table}
+### Recurring Themes
+# themes_df <- tribble(
+#   ~Theme,                           ~Frequency, ~Sentiment, ~Summary,
+#   "Navigation & Controls Friction",  "4 / 6",  "Mixed",    "Tab placement, year slider, and disappearing dropdowns caused friction.",
+#   "Data Context & Transparency",     "3 / 6",  "Neutral",  "Requests for aggregation labels, persistent tooltips, and inactive-site messages.",
+#   "Genetics Module Expansion",       "3 / 6",  "Positive", "Desire for flow overlays, daily-level counts, raw fish numbers, and upstream stations.",
+#   "Verbose Overview Page",           "2 / 6",  "Neutral",  "Overview text is too dense; users prefer concise headings and bullet structure.",
+#   "Strong Overall Satisfaction",     "4 / 6",  "Positive", "Multiple respondents praised multi-site comparison and overall ease of use."
+# )
+# 
+# themes_df |>
+#   mutate(Sentiment = cell_spec(Sentiment, color = "white",
+#     background = case_when(
+#       Sentiment == "Positive" ~ JADE,
+#       Sentiment == "Negative" ~ ROSE,
+#       .default = SLATE
+#     ), bold = TRUE)) |>
+#   kbl(escape = FALSE, align = "llll") |>
+#   kable_styling(bootstrap_options = c("striped", "hover"), full_width = TRUE) |>
+#   column_spec(1, bold = TRUE, width = "22em") |>
+#   column_spec(2, width = "8em", extra_css = "text-align:center") |>
+#   column_spec(3, width = "9em", extra_css = "text-align:center")
+```
+
+---
+
+
+## Appendix
+
+### User Survey
+
+[Link to survey]
+
+```{r raw-data}
+# df |>
+#   select(-matches("email|timestamp", ignore.case = TRUE)) |>
+#   head(10) |>
+#   kbl() |>
+#   kable_styling(
+#     bootstrap_options = c("striped", "hover", "condensed", "responsive"),
+#     full_width = TRUE, font_size = 11
+#   ) |>
+#   scroll_box(width = "100%", height = "360px")
+```
+
