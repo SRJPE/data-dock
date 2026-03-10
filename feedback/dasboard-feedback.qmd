@@ -1,6 +1,6 @@
 ---
 title: "JPE Dashboard — User Research Feedback Report"
-subtitle: "Compiled from [Google Forms Survey Responses](https://docs.google.com/forms/d/e/1FAIpQLSe3M5DvdxeucI8y7Zg3buI1ZdN5KMstl5CULJObjRpkzUfg8Q/viewform?usp=header)"
+subtitle: "Compiled from [Google Forms Survey Responses](https://docs.google.com/forms/d/e/1FAIpQLSe3M5DvdxeucI8y7Zg3buI1ZdN5KMstl5CULJObjRpkzUfg8Q/viewform?usp=header). \n\n **DRAFT - in development**"
 date: today
 date-format: "MMMM YYYY"
 
@@ -179,15 +179,14 @@ avg_v <- if ("intuit_viz"     %in% names(df)) round(mean(df$intuit_viz,     na.r
 avg_l <- if ("intuit_layout"  %in% names(df)) round(mean(df$intuit_layout,  na.rm = TRUE), 1) else "N/A"
 
 cat(glue(
-  "**{n_resp} subject-matter experts** participated in a usability study of the JPE Dashboard, ",
+  "**{n_resp} test users** participated in a usability study of the JPE Dashboard, ",
   "which provides interactive access to discrete water quality and fish genetics datasets. ",
-  "Respondents represented a range of roles including environmental scientists, ",
-  "a JPE data manager, a genetics specialist, and university faculty.\n\n",
-  "The dashboard received strong marks for intuitiveness — buttons & controls ({avg_b}/5), ",
-  "visualizations ({avg_v}/5), and layout ({avg_l}/5). Navigation on first use was rated ",
-  "easy or very easy by all respondents. Task completion was largely successful. ",
-  "Key improvement areas centre on controls refinement, data context labelling, ",
-  "genetics module expansion, and condensing the Overview page."
+  "Respondents represented a range of roles including staff from goverment and academic agencies.\n\n",
+  "The dashboard received strong marks for intuitiveness: buttons & controls ({avg_b}/5), ",
+  "visualizations ({avg_v}/5), and layout ({avg_l}/5) *these will get updated with actual scores*. Navigation on first use was rated ",
+  "*[add general rate]* by all respondents. Task completion was *[successful/difficult/easy/etc]*. ",
+  "Key improvement areas centre on *[controls refinement/data context labelling/ ",
+  "genetics module expansion/etc]*."
 ))
 ```
 
@@ -196,13 +195,13 @@ cat(glue(
 ```{r recommendations}
 recs <- tribble(
   ~Priority, ~Recommendation,
-  "High",   "Recommendation #1",
-  "High",   "Recommendation #2",
-  "Medium", "Recommendation #3",
-  "Medium", "Recommendation #4",
-  "Low",    "Recommendation #5",
-  "Low",    "Recommendation #6",
-  "Low",    "Recommendation #7"
+  "High",   "Recommendation #1 here",
+  "High",   "Recommendation #2 here",
+  "Medium", "Recommendation #3 here",
+  "Medium", "Recommendation #4 here",
+  "Low",    "Recommendation #5 here",
+  "Low",    "Recommendation #6 here",
+  "Low",    "Recommendation #7 here"
 )
 
 recs |>
@@ -223,19 +222,21 @@ recs |>
 
 ### Roles
 
+pending: grouping of participant roles
+
 ```{r role-chart}
-#| fig-cap: "Number of respondents by self-reported role"
-if ("role" %in% names(df)) {
-  df |>
-    count(role) |>
-    mutate(role = fct_reorder(str_wrap(role, 35), n)) |>
-    ggplot(aes(n, role)) +
-    geom_col(fill = OCEAN, width = 0.6) +
-    geom_text(aes(label = n), hjust = -0.3, size = 3.5, color = INK, fontface = "bold") +
-    scale_x_continuous(expand = expansion(mult = c(0, 0.18)),
-                       breaks = scales::breaks_width(1)) +
-    labs(title = "Respondent Roles", x = "Count", y = NULL)
-}
+# #| fig-cap: "Number of respondents by self-reported role"
+# if ("role" %in% names(df)) {
+#   df |>
+#     count(role) |>
+#     mutate(role = fct_reorder(str_wrap(role, 35), n)) |>
+#     ggplot(aes(n, role)) +
+#     geom_col(fill = OCEAN, width = 0.6) +
+#     geom_text(aes(label = n), hjust = -0.3, size = 3.5, color = INK, fontface = "bold") +
+#     scale_x_continuous(expand = expansion(mult = c(0, 0.18)),
+#                        breaks = scales::breaks_width(1)) +
+#     labs(title = "Respondent Roles", x = "Count", y = NULL)
+# }
 ```
 
 
@@ -253,7 +254,7 @@ if (length(fam_avail) > 0) {
     mutate(
       dataset    = recode(dataset, wq_familiar = "Water Quality",
                                    gen_familiar = "Fish Genetics"),
-      respondent = factor(paste0("R", respondent))
+      respondent = factor(paste0("Participant ", respondent))
     ) |>
     ggplot(aes(respondent, score, fill = dataset)) +
     geom_col(position = position_dodge(0.7), width = 0.6) +
@@ -283,32 +284,32 @@ if ("used_dashboard" %in% names(df)) {
 
 ## Usability Ratings
 
-### First-Use Navigation Ease
 
 ```{r nav-ease}
-#| fig-cap: "Distribution of first-use navigation ease scores"
-if ("nav_ease" %in% names(df)) {
-  df |>
-    filter(!is.na(nav_ease)) |>
-    count(nav_ease) |>
-    mutate(label = case_when(
-      nav_ease == 1 ~ "1 – Very Easy",
-      nav_ease == 2 ~ "2 – Easy",
-      nav_ease == 3 ~ "3 – Moderate",
-      nav_ease == 4 ~ "4 – Difficult",
-      nav_ease == 5 ~ "5 – Very Difficult",
-      .default = as.character(nav_ease)
-    )) |>
-    ggplot(aes(fct_reorder(label, nav_ease), n)) +
-    geom_col(fill = TEAL, width = 0.5) +
-    geom_text(aes(label = n), vjust = -0.4, size = 4.5,
-              fontface = "bold", color = INK) +
-    scale_y_continuous(expand = expansion(mult = c(0, 0.2)),
-                       breaks = scales::breaks_width(1)) +
-    labs(title = "Ease of First-Time Navigation",
-         subtitle = "All respondents rated navigation easy or very easy",
-         x = NULL, y = "Respondents")
-}
+### First-Use Navigation Ease
+# #| fig-cap: "Distribution of first-use navigation ease scores"
+# if ("nav_ease" %in% names(df)) {
+#   df |>
+#     filter(!is.na(nav_ease)) |>
+#     count(nav_ease) |>
+#     mutate(label = case_when(
+#       nav_ease == 1 ~ "1 – Very Easy",
+#       nav_ease == 2 ~ "2 – Easy",
+#       nav_ease == 3 ~ "3 – Moderate",
+#       nav_ease == 4 ~ "4 – Difficult",
+#       nav_ease == 5 ~ "5 – Very Difficult",
+#       .default = as.character(nav_ease)
+#     )) |>
+#     ggplot(aes(fct_reorder(label, nav_ease), n)) +
+#     geom_col(fill = TEAL, width = 0.5) +
+#     geom_text(aes(label = n), vjust = -0.4, size = 4.5,
+#               fontface = "bold", color = INK) +
+#     scale_y_continuous(expand = expansion(mult = c(0, 0.2)),
+#                        breaks = scales::breaks_width(1)) +
+#     labs(title = "Ease of First-Time Navigation",
+#          subtitle = "All respondents rated navigation easy or very easy",
+#          x = NULL, y = "Respondents")
+# }
 ```
 
 ### Intuitiveness
@@ -341,57 +342,32 @@ if (length(intuit_avail) > 0) {
 }
 ```
 
-### Intuitiveness
 
-```{r intuit-radar}
-#| fig-cap: "Radar chart of intuitiveness dimensions"
-if (length(intuit_avail) >= 3) {
-  avgs <- df |>
-    summarise(across(any_of(intuit_avail), ~ mean(.x, na.rm = TRUE))) |>
-    rename_with(~ recode(.x,
-      intuit_buttons = "Buttons &\nControls",
-      intuit_viz     = "Visualizations",
-      intuit_layout  = "Layout"
-    ))
-
-  radar_df <- rbind(rep(5, ncol(avgs)), rep(1, ncol(avgs)), avgs)
-
-  par(mar = c(1, 1, 2, 1))
-  radarchart(radar_df,
-    axistype = 1,
-    pcol = OCEAN,  pfcol = scales::alpha(OCEAN, 0.25), plwd = 2,
-    cglcol = "#E2E8F0", cglty = 1, cglwd = 0.8,
-    axislabcol = SLATE, vlcex = 0.9,
-    title = "Intuitiveness — Radar Overview"
-  )
-}
-```
-
-### Ratings Summary Table
 
 ```{r rating-table}
-if (length(intuit_avail) > 0) {
-  df |>
-    select(any_of(intuit_avail)) |>
-    summarise(across(everything(), list(
-      Mean = ~ round(mean(.x, na.rm = TRUE), 2),
-      SD   = ~ round(sd(.x,   na.rm = TRUE), 2),
-      Min  = ~ min(.x, na.rm = TRUE),
-      Max  = ~ max(.x, na.rm = TRUE)
-    ))) |>
-    pivot_longer(everything(),
-                 names_to  = c("Dimension", ".value"),
-                 names_sep = "_") |>
-    mutate(Dimension = recode(Dimension,
-      intuit.buttons = "Buttons & Controls",
-      intuit.viz     = "Visualizations",
-      intuit.layout  = "Layout"
-    )) |>
-    kbl(align = "lrrrr") |>
-    kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
-                  full_width = FALSE) |>
-    column_spec(2, bold = TRUE, color = OCEAN)
-}
+# ### Ratings Summary Table
+# if (length(intuit_avail) > 0) {
+#   df |>
+#     select(any_of(intuit_avail)) |>
+#     summarise(across(everything(), list(
+#       Mean = ~ round(mean(.x, na.rm = TRUE), 2),
+#       SD   = ~ round(sd(.x,   na.rm = TRUE), 2),
+#       Min  = ~ min(.x, na.rm = TRUE),
+#       Max  = ~ max(.x, na.rm = TRUE)
+#     ))) |>
+#     pivot_longer(everything(),
+#                  names_to  = c("Dimension", ".value"),
+#                  names_sep = "_") |>
+#     mutate(Dimension = recode(Dimension,
+#       intuit.buttons = "Buttons & Controls",
+#       intuit.viz     = "Visualizations",
+#       intuit.layout  = "Layout"
+#     )) |>
+#     kbl(align = "lrrrr") |>
+#     kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+#                   full_width = FALSE) |>
+#     column_spec(2, bold = TRUE, color = OCEAN)
+# }
 ```
 
 ---
@@ -404,10 +380,10 @@ task_avail <- intersect(
   c("task_chla", "task_do_temp", "task_spring", "task_creek"), names(df))
 
 task_labels <- c(
-  task_chla    = "Chlorophyll-a\nPeaks (WQ)",
-  task_do_temp = "DO vs Temp\nCorrelation (WQ)",
-  task_spring  = "Spring Run\nProportion (Genetics)",
-  task_creek   = "Battle vs Clear\nCreek (Genetics)"
+  task_chla    = "Task #1",
+  task_do_temp = "Task #2",
+  task_spring  = "Task #3",
+  task_creek   = "Task #4"
 )
 
 if (length(task_avail) > 0) {
@@ -433,7 +409,7 @@ if (length(task_avail) > 0) {
     scale_y_continuous(breaks = scales::breaks_width(1),
                        expand = expansion(mult = c(0, 0.12))) +
     labs(title = "Task Completion Difficulty",
-         subtitle = "Based on respondents' self-reported ease",
+         subtitle = "Based on respondents' self-reported ease for use-case testing",
          x = NULL, y = "Respondents")
 }
 ```
@@ -444,47 +420,50 @@ if (length(task_avail) > 0) {
 
 ### Confusing or Difficult Elements
 
+pending: summary of feedback
 ```{r confusing-table}
-if ("confusing" %in% names(df)) {
-  df |>
-    select(any_of("role"), confusing) |>
-    filter(!is.na(confusing), str_length(confusing) > 3) |>
-    mutate(confusing = str_trunc(confusing, 450)) |>
-    kbl(col.names = c("Role", "Response"), align = "ll") |>
-    kable_styling(bootstrap_options = c("striped", "hover"), full_width = TRUE) |>
-    column_spec(1, width = "18em", italic = TRUE, color = SLATE) |>
-    column_spec(2, width = "60em")
-}
+# if ("confusing" %in% names(df)) {
+#   df |>
+#     select(any_of("role"), confusing) |>
+#     filter(!is.na(confusing), str_length(confusing) > 3) |>
+#     mutate(confusing = str_trunc(confusing, 450)) |>
+#     kbl(col.names = c("Role", "Response"), align = "ll") |>
+#     kable_styling(bootstrap_options = c("striped", "hover"), full_width = TRUE) |>
+#     column_spec(1, width = "18em", italic = TRUE, color = SLATE) |>
+#     column_spec(2, width = "60em")
+# }
 ```
 
 ### Feature Requests & Improvements
 
+pending: summary of feedback
+
 ```{r improvements-table}
-if ("improvements" %in% names(df)) {
-  df |>
-    select(any_of("role"), improvements) |>
-    filter(!is.na(improvements), str_length(improvements) > 3) |>
-    mutate(improvements = str_trunc(improvements, 450)) |>
-    kbl(col.names = c("Role", "Response"), align = "ll") |>
-    kable_styling(bootstrap_options = c("striped", "hover"), full_width = TRUE) |>
-    column_spec(1, width = "18em", italic = TRUE, color = SLATE) |>
-    column_spec(2, width = "60em")
-}
+# if ("improvements" %in% names(df)) {
+#   df |>
+#     select(any_of("role"), improvements) |>
+#     filter(!is.na(improvements), str_length(improvements) > 3) |>
+#     mutate(improvements = str_trunc(improvements, 450)) |>
+#     kbl(col.names = c("Role", "Response"), align = "ll") |>
+#     kable_styling(bootstrap_options = c("striped", "hover"), full_width = TRUE) |>
+#     column_spec(1, width = "18em", italic = TRUE, color = SLATE) |>
+#     column_spec(2, width = "60em")
+# }
 ```
 
-### Additional Comments
 
 ```{r comments-table}
-if ("add_comments" %in% names(df)) {
-  df |>
-    select(any_of("role"), add_comments) |>
-    filter(!is.na(add_comments), str_length(add_comments) > 3) |>
-    mutate(add_comments = str_trunc(add_comments, 450)) |>
-    kbl(col.names = c("Role", "Response"), align = "ll") |>
-    kable_styling(bootstrap_options = c("striped", "hover"), full_width = TRUE) |>
-    column_spec(1, width = "18em", italic = TRUE, color = SLATE) |>
-    column_spec(2, width = "60em")
-}
+### Additional Comments
+# if ("add_comments" %in% names(df)) {
+#   df |>
+#     select(any_of("role"), add_comments) |>
+#     filter(!is.na(add_comments), str_length(add_comments) > 3) |>
+#     mutate(add_comments = str_trunc(add_comments, 450)) |>
+#     kbl(col.names = c("Role", "Response"), align = "ll") |>
+#     kable_styling(bootstrap_options = c("striped", "hover"), full_width = TRUE) |>
+#     column_spec(1, width = "18em", italic = TRUE, color = SLATE) |>
+#     column_spec(2, width = "60em")
+# }
 ```
 
 
