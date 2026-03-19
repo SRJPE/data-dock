@@ -177,16 +177,42 @@ parse_task <- function(x) {
 avg_b <- if ("intuit_buttons" %in% names(df)) round(mean(df$intuit_buttons, na.rm = TRUE), 1) else "N/A"
 avg_v <- if ("intuit_viz"     %in% names(df)) round(mean(df$intuit_viz,     na.rm = TRUE), 1) else "N/A"
 avg_l <- if ("intuit_layout"  %in% names(df)) round(mean(df$intuit_layout,  na.rm = TRUE), 1) else "N/A"
+n_resp <- nrow(df)
+
+# Precompute nav ease summary
+nav_summary <- if ("nav_ease" %in% names(df)) {
+  n_easy <- sum(df$nav_ease <= 2, na.rm = TRUE)
+  glue("{n_easy} of {n_resp} participants rated it easy or very easy")
+} else "straightforward"
+
+# Precompute task completion summary
+task_cols_avail <- intersect(c("task_chla", "task_do_temp", "task_spring", "task_creek"), names(df))
+
+n_easy_tasks <- if (length(task_cols_avail) > 0) {
+  df |>
+    select(all_of(task_cols_avail)) |>
+    pivot_longer(everything(), values_to = "response") |>
+    filter(!is.na(response), str_length(response) > 1) |>
+    mutate(easy = str_detect(str_to_lower(response), "easy|straightforward|simple")) |>
+    summarise(pct = round(mean(easy) * 100)) |>
+    pull(pct)
+} else NA
 
 cat(glue(
-  "**{n_resp} test users** participated in a usability study of the JPE Dashboard, ",
-  "which provides interactive access to discrete water quality and fish genetics datasets. ",
-  "Respondents represented a range of roles including staff from goverment and academic agencies.\n\n",
-  "The dashboard received strong marks for intuitiveness: buttons & controls ({avg_b}/5), ",
-  "visualizations ({avg_v}/5), and layout ({avg_l}/5) *these will get updated with actual scores*. Navigation on first use was rated ",
-  "*[add general rate]* by all respondents. Task completion was *[successful/difficult/easy/etc]*. ",
-  "Key improvement areas centre on *[controls refinement/data context labelling/ ",
-  "genetics module expansion/etc]*."
+  "**{n_resp} test users** participated in a usability evaluation of the JPE Dashboard, ",
+  "an interactive tool for exploring discrete water quality and fish genetics datasets. ",
+  "Participants represented a range of professional roles, including staff from government ",
+  "and academic agencies.\n\n",
+  "The dashboard received positive usability ratings across key interface components:\n\n",
+  "- Buttons and controls average score: **{avg_b}/5**\n",
+  "- Visualizations average score: **{avg_v}/5**\n",
+  "- Layout and organization average score: **{avg_l}/5**\n\n",
+  "Initial navigation was rated positively, with {nav_summary}. ",
+  "{if (!is.na(n_easy_tasks)) glue('Across four guided analytical tasks, {n_easy_tasks}% of responses indicated the task was completed easily.') else ''}\n\n",
+  "Qualitative feedback highlighted four recurring themes: navigation and interface structure, ",
+  "controls and filter interactions, data visualization and coverage, and system language and ",
+  "messaging. Recommended improvements primarily relate to refining interactive controls, ",
+  "clarifying how data is presented, and expanding functionality in the genetics module."
 ))
 ```
 
@@ -222,21 +248,48 @@ recs |>
 
 ### Roles
 
-pending: grouping of participant roles
 
 ```{r role-chart}
-# #| fig-cap: "Number of respondents by self-reported role"
-# if ("role" %in% names(df)) {
-#   df |>
-#     count(role) |>
-#     mutate(role = fct_reorder(str_wrap(role, 35), n)) |>
-#     ggplot(aes(n, role)) +
-#     geom_col(fill = OCEAN, width = 0.6) +
-#     geom_text(aes(label = n), hjust = -0.3, size = 3.5, color = INK, fontface = "bold") +
-#     scale_x_continuous(expand = expansion(mult = c(0, 0.18)),
-#                        breaks = scales::breaks_width(1)) +
-#     labs(title = "Respondent Roles", x = "Count", y = NULL)
-# }
+#| results: asis
+
+# Step 1 — define the lookup table
+role_categories <- tribble(
+  ~role_pattern,  ~role_category,
+  "genetic specialist|genetic", "Environmental Scientist",
+  "environmental scientist|scientist", "Environmental Scientist",
+  "data manager|jpe data", "Data Manager",
+  "consultant|design", "Dashboard / Data Analyst",
+  "faculty|professor|academic|ucd", "Researcher / Academic"
+)
+
+# Step 2 — add role_category column to df
+df <- df |>
+  mutate(
+    role_lower    = str_to_lower(role),
+    role_category = map_chr(role_lower, function(x) {
+      idx <- detect_index(role_categories$role_pattern,
+                          ~ str_detect(x, regex(.x, ignore_case = TRUE)))
+      if (idx > 0) role_categories$role_category[idx] else "Other"
+    })
+  )
+
+# Step 3 — summarise and print
+role_summary <- df |>
+  count(role_category) |>
+  arrange(desc(n))
+
+cat("A total of **", nrow(df), "** individuals participated in this study. ",
+    "Respondents represented a range of professional backgrounds:\n\n", sep = "")
+
+role_summary |>
+  pwalk(function(role_category, n) {
+    pct <- round((n / nrow(df)) * 100)
+    cat(glue("- **{role_category}** ({n} respondent{if (n > 1) 's' else ''}; {pct}% of total)\n\n"))
+  })
+
+cat(glue("\n\nFive of {nrow(df)} respondents ",
+         "({round(mean(df$used_dashboard == 'Yes') * 100)}%) ",
+         "reported prior experience using data dashboards.\n"))
 ```
 
 
@@ -632,11 +685,13 @@ for (grp in theme_levels) {
 # }
 ```
 
-### Feature Requests & Improvements
-
-pending: summary of feedback
 
 ```{r improvements-table}
+
+### Feature Requests & Improvements
+
+# pending: summary of feedback
+
 # if ("improvements" %in% names(df)) {
 #   df |>
 #     select(any_of("role"), improvements) |>
