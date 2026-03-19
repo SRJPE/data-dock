@@ -418,10 +418,208 @@ if (length(task_avail) > 0) {
 
 ## Qualitative Feedback
 
+
+```{r qualitative-feedback, results='asis'}
+# =============================================================================
+# QUALITATIVE THEMES — reads classifications directly from your Excel sheet
+# No keyword matching. Uses exactly what you coded in Quantitative_themes tab.
+# =============================================================================
+
+# ── SECTION A: Load your pre-coded classifications from Excel ─────────────────
+
+library(readxl)
+library(here)
+
+themes <- readxl::read_xlsx(here("feedback", "quantitative_themes.xlsx"))
+
+# Read the response + category block (rows 7–12, columns A–D)
+# Adjust the path to wherever your Excel file lives
+coded_raw <- themes |> 
+  slice(1:6) |>
+  clean_names() |>
+  rename(
+    confusing    = 1,
+    improvements = 2,
+    add_comments = 3,
+    categories   = 4
+  ) |>
+  mutate(respondent = row_number())   # anonymous ID — no role column
+
+# Read your curated quotes table (rows 16–20, columns A–B)
+quotes_raw <- themes |> 
+  row_to_names(row_number = 10) |>
+  clean_names() |> 
+  select(category, quote) |> 
+  rename(theme = category, quotes_block = quote) 
+
+
+# ── SECTION B: Reshape responses — one row per response × theme ───────────────
+
+qual_cols <- c("confusing", "improvements", "add_comments")
+
+col_labels <- c(
+  confusing    = "Confusing / Difficult Elements",
+  improvements = "Feature Requests & Improvements",
+  add_comments = "Additional Comments"
+)
+
+# Long format: one row per respondent × question
+qual_long <- coded_raw |>
+  pivot_longer(
+    cols      = all_of(qual_cols),
+    names_to  = "question",
+    values_to = "response"
+  ) |>
+  filter(!is.na(response), str_length(str_squish(response)) > 5) |>
+  mutate(question_label = recode(question, !!!col_labels))
+
+# Explode the comma-separated categories column into one row per theme
+qual_exploded <- qual_long |>
+  filter(!is.na(categories)) |>
+  mutate(theme = str_split(categories, ",\\s*")) |>
+  unnest(theme) |>
+  mutate(theme = str_trim(theme))
+
+# Consistent factor order matching your sheet
+theme_levels <- c(
+  "Navigation/Interface",
+  "Controls/Filters",
+  "Visualization/Data",
+  "Language/Messages"
+)
+
+theme_colors <- c(
+  "Navigation/Interface" = "#2563EB",
+  "Controls/Filters"     = "#F43F5E",
+  "Visualization/Data"   = "#10B981",
+  "Language/Messages"    = "#F59E0B"
+)
+
+qual_exploded <- qual_exploded |>
+  mutate(theme = factor(theme, levels = theme_levels))
+
+
+# ── SECTION C: Parse your curated quotes into one row per quote ───────────────
+
+quotes_long <- quotes_raw |>
+  mutate(
+    quote = str_split(quotes_block, "\n\n")
+  ) |>
+  unnest(quote) |>
+  mutate(
+    quote = str_trim(quote),
+    # Remove outer wrapping quotes (curly and straight)
+    quote = str_remove_all(quote, '^[\u201c\u201d"]+|[\u201c\u201d"]+$'),
+    # Remove any parenthetical notes like "(Partly layout / partly feedback)"
+    quote = str_remove(quote, "^\\(.*?\\)\\s*"),
+    # Clean up any leftover leading/trailing punctuation
+    quote = str_trim(quote),
+    theme = factor(theme, levels = theme_levels)
+  ) |>
+  filter(str_length(quote) > 5)
+
+# ── SECTION D: Theme frequency bar chart (the one you liked) ─────────────────
+
+qual_exploded |>
+  count(theme) |>
+  mutate(theme = fct_reorder(theme, n)) |>
+  ggplot(aes(n, theme, fill = as.character(theme))) +
+  geom_col(width = 0.6, show.legend = FALSE) +
+  geom_text(aes(label = n), hjust = -0.3,
+            size = 4.5, fontface = "bold", color = INK) +
+  scale_fill_manual(values = theme_colors) +
+  scale_x_continuous(
+    expand = expansion(mult = c(0, 0.2)),
+    breaks = scales::breaks_width(1)
+  ) +
+  labs(
+    title    = "Qualitative Feedback by Theme",
+    subtitle = "Number of responses coded to each theme (responses may appear in multiple themes)",
+    x        = "Number of coded responses",
+    y        = NULL
+  )
+
+
+# ── SECTION E: Quoted evidence panel — one block per theme ───────────────────
+# Displays your curated quotes under each theme heading, styled as a table.
+# No respondent info shown — fully anonymous.
+
+# quotes_long |>
+#   arrange(theme) |>
+#   group_by(theme) |>
+#   mutate(quote = paste0("\u201c", quote, "\u201d")) |>   # add typographic quotes
+#   summarise(quotes_combined = paste(quote, collapse = "\n\n"), .groups = "drop") |>
+#   kbl(
+#     col.names = c("Theme", "Representative Quotes"),
+#     align     = "ll"
+#   ) |>
+#   kable_styling(
+#     bootstrap_options = c("hover", "condensed"),
+#     full_width        = TRUE
+#   ) |>
+#   column_spec(1, bold = TRUE, width = "16em",
+#               color = "white",
+#               background = theme_colors[as.character(quotes_long$theme |> unique() |> sort())]) |>
+#   column_spec(2, width = "64em",
+#               extra_css = "white-space: pre-wrap; line-height: 1.8;")
+
+
+# ── SECTION F: One styled callout card per theme (alternative to table) ───────
+# This version renders each theme as its own mini-section with a colored
+# header and indented quotes — better for HTML output.
+# Wrap this chunk in results: asis in your Quarto doc.
+
+for (grp in theme_levels) {
+
+  quotes_for_theme <- quotes_long |>
+    dplyr::filter(theme == grp) |>
+    dplyr::pull(quote) |>
+    stringr::str_split("\\r\\n\\r\\n|\\n\\n") |>
+    unlist() |>
+    stringr::str_squish() |>
+    stringr::str_remove_all('^“|”$|^"|"$')
+
+  quotes_for_theme <- quotes_for_theme[stringr::str_length(quotes_for_theme) > 0]
+
+  if (length(quotes_for_theme) == 0) next
+
+  color <- theme_colors[[grp]]
+
+  bullet_quotes <- paste0(
+    "<li>&ldquo;", quotes_for_theme, "&rdquo;</li>",
+    collapse = "\n"
+  )
+
+  cat(glue::glue('
+<div style="border-left: 4px solid {color}; padding: 10px 16px; margin-bottom: 20px; background: #FAFAFA;">
+  <strong>{grp}</strong>
+  <ul style="margin-top: 8px; margin-bottom: 0;">
+    {bullet_quotes}
+  </ul>
+</div>
+
+'))
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r confusing-table}
+
 ### Confusing or Difficult Elements
 
-pending: summary of feedback
-```{r confusing-table}
+# pending: summary of feedback
+
 # if ("confusing" %in% names(df)) {
 #   df |>
 #     select(any_of("role"), confusing) |>
