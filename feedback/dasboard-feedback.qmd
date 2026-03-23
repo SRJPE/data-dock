@@ -1,5 +1,5 @@
 ---
-title: "JPE Dashboard — User Research Feedback Report"
+title: "Downstream Dashboard Dashboard — User Research Feedback Report"
 subtitle: "Compiled from [Google Forms Survey Responses](https://docs.google.com/forms/d/e/1FAIpQLSe3M5DvdxeucI8y7Zg3buI1ZdN5KMstl5CULJObjRpkzUfg8Q/viewform?usp=header). \n\n **DRAFT - in development**"
 date: today
 date-format: "MMMM YYYY"
@@ -7,6 +7,7 @@ date-format: "MMMM YYYY"
 format:
   html:
     theme: cosmo
+    checkbox: true
     toc: true
     toc-depth: 3
     toc-title: "Contents"
@@ -281,42 +282,44 @@ role_summary <- df |>
 cat("A total of **", nrow(df), "** individuals participated in this study. ",
     "Respondents represented a range of professional backgrounds:\n\n", sep = "")
 
-role_summary |>
-  pwalk(function(role_category, n) {
-    pct <- round((n / nrow(df)) * 100)
-    cat(glue("- **{role_category}** ({n} respondent{if (n > 1) 's' else ''}; {pct}% of total)\n\n"))
-  })
+# role_summary |>
+#   pwalk(function(role_category, n) {
+#     pct <- round((n / nrow(df)) * 100)
+#     cat(glue("- **{role_category}** ({n} respondent{if (n > 1) 's' else ''}; {pct}% of total)\n\n"))
+#   })
 
 cat(glue("\n\nFive of {nrow(df)} respondents ",
          "({round(mean(df$used_dashboard == 'Yes') * 100)}%) ",
-         "reported prior experience using data dashboards.\n"))
+         "reported prior experience using other data dashboards.\n"))
 ```
 
 
 ### Dataset Familiarity
 
 ```{r familiarity-chart}
-#| fig-cap: "Self-reported familiarity (1 = not familiar, 3 = very familiar)"
+#| fig-cap: "Average self-reported familiarity (1 = not familiar, 3 = very familiar)"
+
 fam_avail <- intersect(c("wq_familiar", "gen_familiar"), names(df))
 
 if (length(fam_avail) > 0) {
   df |>
-    mutate(respondent = row_number()) |>
-    select(respondent, any_of(c("wq_familiar", "gen_familiar"))) |>
-    pivot_longer(-respondent, names_to = "dataset", values_to = "score") |>
-    mutate(
-      dataset    = recode(dataset, wq_familiar = "Water Quality",
-                                   gen_familiar = "Fish Genetics"),
-      respondent = factor(paste0("Participant ", respondent))
-    ) |>
-    ggplot(aes(respondent, score, fill = dataset)) +
-    geom_col(position = position_dodge(0.7), width = 0.6) +
-    scale_fill_manual(values = c("Water Quality" = OCEAN, "Fish Genetics" = JADE),
-                      name = NULL) +
-    scale_y_continuous(breaks = 1:3,
-                       labels = c("1 – Not familiar", "2 – Somewhat", "3 – Very familiar"),
-                       limits = c(0, 3.5)) +
-    labs(title = "Dataset Familiarity by Respondent", x = NULL, y = NULL)
+    select(any_of(c("wq_familiar", "gen_familiar"))) |>
+    summarise(across(everything(), ~ mean(.x, na.rm = TRUE))) |>
+    pivot_longer(everything(), names_to = "dataset", values_to = "avg") |>
+    mutate(dataset = recode(dataset,
+                            wq_familiar  = "Water Quality",
+                            gen_familiar = "Fish Genetics")) |>
+    ggplot(aes(avg, dataset, fill = dataset)) +
+    geom_col(width = 0.4, show.legend = FALSE) +
+    geom_text(aes(label = round(avg, 1)), hjust = -0.3,
+              size = 4.5, fontface = "bold", color = INK) +
+    scale_fill_manual(values = c("Water Quality" = OCEAN, "Fish Genetics" = JADE)) +
+    scale_x_continuous(
+      limits = c(0, 3.5),
+      breaks = 1:3,
+      labels = c("1\nNot familiar", "2\nSomewhat", "3\nVery familiar")
+    ) +
+    labs(title = "Average Dataset Familiarity", x = NULL, y = NULL)
 }
 ```
 
@@ -326,10 +329,17 @@ if (length(fam_avail) > 0) {
 if ("used_dashboard" %in% names(df)) {
   df |>
     count(used_dashboard) |>
-    mutate(Percent = scales::percent(n / sum(n), accuracy = 1)) |>
-    kbl(col.names = c("Used dashboards before?", "Count", "Percent"), align = "lrr") |>
-    kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
-                  full_width = FALSE)
+    mutate(`Percent of total participants` =
+             scales::percent(n / sum(n), accuracy = 1)) |>
+    select(used_dashboard, `Percent of total participants`) |>
+    kbl(
+      col.names = c("Used dashboards before?", "Percent of total participants"),
+      align = "lr"
+    ) |>
+    kable_styling(
+      bootstrap_options = c("striped", "hover", "condensed"),
+      full_width = FALSE
+    )
 }
 ```
 
@@ -427,6 +437,8 @@ if (length(intuit_avail) > 0) {
 
 ## Task Completion
 
+Participants completed four guided analytical tasks designed to assess the dashboard’s ability to support typical data exploration workflows. These tasks required users to navigate the interface, filter and compare datasets, and interpret both water quality, and fish genetics information across multiple sites and time periods
+
 ```{r task-chart}
 #| fig-cap: "Self-reported ease of completing four guided analytical tasks"
 task_avail <- intersect(
@@ -471,6 +483,7 @@ if (length(task_avail) > 0) {
 
 ## Qualitative Feedback
 
+Participants were asked to provide open-ended feedback following completion of the usability tasks. Responses addressed overall ease of use, navigation, clarity of visualizations, and potential areas for improvement. Individual comments were reviewed and organized into recurring themes, which are summarized below.
 
 ```{r qualitative-feedback, results='asis'}
 # =============================================================================
@@ -573,24 +586,24 @@ quotes_long <- quotes_raw |>
 
 # ── SECTION D: Theme frequency bar chart (the one you liked) ─────────────────
 
-qual_exploded |>
-  count(theme) |>
-  mutate(theme = fct_reorder(theme, n)) |>
-  ggplot(aes(n, theme, fill = as.character(theme))) +
-  geom_col(width = 0.6, show.legend = FALSE) +
-  geom_text(aes(label = n), hjust = -0.3,
-            size = 4.5, fontface = "bold", color = INK) +
-  scale_fill_manual(values = theme_colors) +
-  scale_x_continuous(
-    expand = expansion(mult = c(0, 0.2)),
-    breaks = scales::breaks_width(1)
-  ) +
-  labs(
-    title    = "Qualitative Feedback by Theme",
-    subtitle = "Number of responses coded to each theme (responses may appear in multiple themes)",
-    x        = "Number of coded responses",
-    y        = NULL
-  )
+# qual_exploded |>
+#   count(theme) |>
+#   mutate(theme = fct_reorder(theme, n)) |>
+#   ggplot(aes(n, theme, fill = as.character(theme))) +
+#   geom_col(width = 0.6, show.legend = FALSE) +
+#   geom_text(aes(label = n), hjust = -0.3,
+#             size = 4.5, fontface = "bold", color = INK) +
+#   scale_fill_manual(values = theme_colors) +
+#   scale_x_continuous(
+#     expand = expansion(mult = c(0, 0.2)),
+#     breaks = scales::breaks_width(1)
+#   ) +
+#   labs(
+#     title    = "Qualitative Feedback by Theme",
+#     subtitle = "Number of responses coded to each theme (responses may appear in multiple themes)",
+#     x        = "Number of coded responses",
+#     y        = NULL
+#   )
 
 
 # ── SECTION E: Quoted evidence panel — one block per theme ───────────────────
@@ -750,6 +763,59 @@ for (grp in theme_levels) {
 
 
 ## Appendix
+
+### Appendix A: Action Item Checklist 
+
+This checklist summarizes recommended improvements identified from participant feedback, 
+organized by theme. Items can be used to prioritize development tasks.
+
+#### Navigation / Interface
+
+- [ ] Relocate the Water Quality and Genetics tabs from the top of the page to a more
+      conventional location (e.g. sidebar or persistent top nav)
+- [ ] Restructure the Overview page — replace long paragraphs with concise topic
+      sentences and bullet points
+- [ ] Add a clear section heading that states the dashboard purpose upfront
+- [ ] Sort station names alphabetically with station ID in parentheses
+
+#### Controls / Filters
+
+- [ ] Replace the year slider with checkboxes or a date range picker
+- [ ] Remove tick marks between years on the year toggle to prevent user confusion
+- [ ] Relabel the year toggle to say "Water Year" instead of "Year"
+- [ ] Fix the site/analyte dropdowns so options do not disappear unexpectedly
+      when switching between sites
+- [ ] Allow users to select within-year date ranges for more granular filtering
+
+#### Visualization / Data
+
+- [ ] Add river labels to the water quality map
+- [ ] Add water quality monitoring stations upstream of Sacramento at Hood
+- [ ] Display raw fish counts alongside proportions in the genetics module
+- [ ] Add daily or event-level catch data rather than annual totals only
+- [ ] Add water year type and flow/export data overlays to the genetics dashboard
+- [ ] Build a comparison view for field length-at-date assignments vs. genetic
+      run assignments
+- [ ] Replace the single large box plot with time-series summary plots
+      (monthly or annual)
+- [ ] Add an option to toggle between average, maximum, minimum, and
+      7-day average values
+- [ ] Add links or connections to EDI pages for metadata, citations, and downloads
+- [ ] Clarify the difference between surface and bottom sensor measurements
+      (e.g. "Dissolved Oxygen" vs. "(bottom) Dissolved Oxygen")
+- [ ] Indicate whether more historical data or future data will be available
+
+#### Language / Messages
+
+- [ ] Add a "No data available" message when a user selects an inactive monitoring site
+- [ ] Clarify what "inactive" means in the site selector (currently inactive vs.
+      inactive across full time range)
+- [ ] Add a persistent data exclusion note at the bottom of the plot when
+      multiple locations are selected
+- [ ] Add a chart subtitle or title note specifying what data is shown
+      (e.g. "Average daily concentrations")
+- [ ] Add a label reminding users that water quality data shown is
+      discrete monthly samples
 
 ### User Survey
 
