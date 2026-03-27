@@ -47,7 +47,8 @@ library("fmsb")
 library("glue")
 library("janitor")
 library("lubridate")
-
+library(readxl)
+library(here)
 # ── Design tokens ────────────────────────────────────────────────────────────
 OCEAN <- "#2563EB"; TEAL <- "#0EA5E9"; JADE <- "#10B981"
 AMBER <- "#F59E0B"; ROSE <- "#F43F5E"; SLATE <- "#64748B"; INK <- "#1A1F2E"
@@ -77,27 +78,11 @@ theme_set(theme_survey())
 #| label: load-data
 #| include: false
 
-# ╔══════════════════════════════════════════════════════════════════════════╗
-# ║  CONFIGURE YOUR GOOGLE SHEETS CONNECTION                                ║
-# ╠══════════════════════════════════════════════════════════════════════════╣
-# ║  Step 1 — Paste your Sheet URL or Sheet ID below.                       ║
-# ║    • The URL looks like:                                                 ║
-# ║      https://docs.google.com/spreadsheets/d/SHEET_ID/edit               ║
-# ║    • Or just use the SHEET_ID string directly.                          ║
-# ║                                                                          ║
-# ║  Step 2 — Choose AUTH_MODE:                                              ║
-# ║    "public"      Sheet is shared "Anyone with link can view"            ║
-# ║                  → no login needed, works in CI/CD pipelines             ║
-# ║    "interactive" Opens a browser popup to sign in once;                 ║
-# ║                  token is cached at ~/.cache/gargle/                     ║
-# ║    "service"     Use a service-account JSON key (headless/server use)   ║
-# ║                  → set SERVICE_ACCOUNT_JSON path below                  ║
-# ╚══════════════════════════════════════════════════════════════════════════╝
 
 SHEET_URL            <- "https://docs.google.com/spreadsheets/d/1wKb_0v9vsbBZdtfBAZeUZTlZqvGR9YnBmRjPCE5Knq8/edit?gid=1013775912#gid=1013775912"
 AUTH_MODE            <- "public"      # "public" | "interactive" | "service"
-SERVICE_ACCOUNT_JSON <- NULL          # e.g. "credentials/sa_key.json"
-SHEET_TAB            <- 1             # 1 = first tab, or use tab name as string
+SERVICE_ACCOUNT_JSON <- NULL          
+SHEET_TAB            <- 1           
 
 # ── Authenticate ─────────────────────────────────────────────────────────────
 if (AUTH_MODE == "public") {
@@ -253,7 +238,7 @@ recs |>
 ```{r role-chart}
 #| results: asis
 
-# Step 1 — define the lookup table
+# define the lookup table
 role_categories <- tribble(
   ~role_pattern,  ~role_category,
   "genetic specialist|genetic", "Environmental Scientist",
@@ -263,7 +248,7 @@ role_categories <- tribble(
   "faculty|professor|academic|ucd", "Researcher / Academic"
 )
 
-# Step 2 — add role_category column to df
+# add role_category column to df
 df <- df |>
   mutate(
     role_lower    = str_to_lower(role),
@@ -274,7 +259,7 @@ df <- df |>
     })
   )
 
-# Step 3 — summarise and print
+# summarise and print
 role_summary <- df |>
   count(role_category) |>
   arrange(desc(n))
@@ -282,15 +267,10 @@ role_summary <- df |>
 cat("A total of **", nrow(df), "** individuals participated in this study. ",
     "Respondents represented a range of professional backgrounds:\n\n", sep = "")
 
-# role_summary |>
-#   pwalk(function(role_category, n) {
-#     pct <- round((n / nrow(df)) * 100)
-#     cat(glue("- **{role_category}** ({n} respondent{if (n > 1) 's' else ''}; {pct}% of total)\n\n"))
-#   })
 
-cat(glue("\n\nFive of {nrow(df)} respondents ",
-         "({round(mean(df$used_dashboard == 'Yes') * 100)}%) ",
-         "reported prior experience using other data dashboards.\n"))
+# cat(glue("\n\nFive of {nrow(df)} respondents ",
+#          "({round(mean(df$used_dashboard == 'Yes') * 100)}%) ",
+#          "reported prior experience using other data dashboards.\n"))
 ```
 
 
@@ -347,34 +327,6 @@ if ("used_dashboard" %in% names(df)) {
 
 ## Usability Ratings
 
-
-```{r nav-ease}
-### First-Use Navigation Ease
-# #| fig-cap: "Distribution of first-use navigation ease scores"
-# if ("nav_ease" %in% names(df)) {
-#   df |>
-#     filter(!is.na(nav_ease)) |>
-#     count(nav_ease) |>
-#     mutate(label = case_when(
-#       nav_ease == 1 ~ "1 – Very Easy",
-#       nav_ease == 2 ~ "2 – Easy",
-#       nav_ease == 3 ~ "3 – Moderate",
-#       nav_ease == 4 ~ "4 – Difficult",
-#       nav_ease == 5 ~ "5 – Very Difficult",
-#       .default = as.character(nav_ease)
-#     )) |>
-#     ggplot(aes(fct_reorder(label, nav_ease), n)) +
-#     geom_col(fill = TEAL, width = 0.5) +
-#     geom_text(aes(label = n), vjust = -0.4, size = 4.5,
-#               fontface = "bold", color = INK) +
-#     scale_y_continuous(expand = expansion(mult = c(0, 0.2)),
-#                        breaks = scales::breaks_width(1)) +
-#     labs(title = "Ease of First-Time Navigation",
-#          subtitle = "All respondents rated navigation easy or very easy",
-#          x = NULL, y = "Respondents")
-# }
-```
-
 ### Intuitiveness
 
 ```{r intuit-bar}
@@ -406,51 +358,38 @@ if (length(intuit_avail) > 0) {
 ```
 
 
-
-```{r rating-table}
-# ### Ratings Summary Table
-# if (length(intuit_avail) > 0) {
-#   df |>
-#     select(any_of(intuit_avail)) |>
-#     summarise(across(everything(), list(
-#       Mean = ~ round(mean(.x, na.rm = TRUE), 2),
-#       SD   = ~ round(sd(.x,   na.rm = TRUE), 2),
-#       Min  = ~ min(.x, na.rm = TRUE),
-#       Max  = ~ max(.x, na.rm = TRUE)
-#     ))) |>
-#     pivot_longer(everything(),
-#                  names_to  = c("Dimension", ".value"),
-#                  names_sep = "_") |>
-#     mutate(Dimension = recode(Dimension,
-#       intuit.buttons = "Buttons & Controls",
-#       intuit.viz     = "Visualizations",
-#       intuit.layout  = "Layout"
-#     )) |>
-#     kbl(align = "lrrrr") |>
-#     kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
-#                   full_width = FALSE) |>
-#     column_spec(2, bold = TRUE, color = OCEAN)
-# }
-```
-
 ---
 
 ## Task Completion
 
-Participants completed four guided analytical tasks designed to assess the dashboard’s ability to support typical data exploration workflows. These tasks required users to navigate the interface, filter and compare datasets, and interpret both water quality, and fish genetics information across multiple sites and time periods
+Participants completed four guided analytical tasks designed to assess the dashboard's 
+ability to support typical data exploration workflows. These tasks required users to 
+navigate the interface, filter and compare datasets, and interpret both water quality 
+and fish genetics information across multiple sites and time periods. The table below 
+describes each task, and the figure summarizes how participants rated the ease of 
+completing them.
+
+- **Task 1 (Water Quality):** Identify whether peaks in chlorophyll-a concentrations 
+  occurred at San Pablo Bay sites (D41, D41A, NZ325) during 2022–2023.
+- **Task 2 (Water Quality):** Determine whether changes in dissolved oxygen levels 
+  correlate with shifts in water temperature across San Joaquin sites 
+  (C10, D12, D16, D26, P8).
+- **Task 3 (Fish Genetics):** Estimate the proportion of Chinook salmon samples on 
+  Deer Creek classified as spring run in 2025.
+- **Task 4 (Fish Genetics):** Identify which creek — Battle or Clear Creek — had a 
+  greater number of early Greb 1L RoSA genotypes between 2023 and 2025.
+
 
 ```{r task-chart}
 #| fig-cap: "Self-reported ease of completing four guided analytical tasks"
 task_avail <- intersect(
   c("task_chla", "task_do_temp", "task_spring", "task_creek"), names(df))
-
 task_labels <- c(
   task_chla    = "Task #1",
   task_do_temp = "Task #2",
   task_spring  = "Task #3",
   task_creek   = "Task #4"
 )
-
 if (length(task_avail) > 0) {
   df |>
     select(any_of(task_avail)) |>
@@ -486,20 +425,12 @@ if (length(task_avail) > 0) {
 Participants were asked to provide open-ended feedback following completion of the usability tasks. Responses addressed overall ease of use, navigation, clarity of visualizations, and potential areas for improvement. Individual comments were reviewed and organized into recurring themes, which are summarized below.
 
 ```{r qualitative-feedback, results='asis'}
-# =============================================================================
-# QUALITATIVE THEMES — reads classifications directly from your Excel sheet
-# No keyword matching. Uses exactly what you coded in Quantitative_themes tab.
-# =============================================================================
+# QUALITATIVE THEMES — reads classifications directly from Excel sheet
 
-# ── SECTION A: Load your pre-coded classifications from Excel ─────────────────
-
-library(readxl)
-library(here)
-
-themes <- readxl::read_xlsx(here("feedback", "quantitative_themes.xlsx"))
+themes <- readxl::read_xlsx(here("feedback", "quantitative_themes.xlsx")) # I have added a v2 since I wanted to double-check that 
 
 # Read the response + category block (rows 7–12, columns A–D)
-# Adjust the path to wherever your Excel file lives
+
 coded_raw <- themes |> 
   slice(1:6) |>
   clean_names() |>
@@ -511,7 +442,7 @@ coded_raw <- themes |>
   ) |>
   mutate(respondent = row_number())   # anonymous ID — no role column
 
-# Read your curated quotes table (rows 16–20, columns A–B)
+# Read curated quotes table (rows 16–20, columns A–B)
 quotes_raw <- themes |> 
   row_to_names(row_number = 10) |>
   clean_names() |> 
@@ -519,7 +450,7 @@ quotes_raw <- themes |>
   rename(theme = category, quotes_block = quote) 
 
 
-# ── SECTION B: Reshape responses — one row per response × theme ───────────────
+# Reshape responses, one row per response × theme ───────────────
 
 qual_cols <- c("confusing", "improvements", "add_comments")
 
@@ -551,21 +482,19 @@ theme_levels <- c(
   "Navigation/Interface",
   "Controls/Filters",
   "Visualization/Data",
-  "Language/Messages"
-)
+  "Language/Messages")
 
 theme_colors <- c(
   "Navigation/Interface" = "#2563EB",
   "Controls/Filters"     = "#F43F5E",
   "Visualization/Data"   = "#10B981",
-  "Language/Messages"    = "#F59E0B"
-)
+  "Language/Messages"    = "#F59E0B")
 
 qual_exploded <- qual_exploded |>
   mutate(theme = factor(theme, levels = theme_levels))
 
 
-# ── SECTION C: Parse your curated quotes into one row per quote ───────────────
+# Parse curated quotes into one row per quote ───────────────
 
 quotes_long <- quotes_raw |>
   mutate(
@@ -584,56 +513,8 @@ quotes_long <- quotes_raw |>
   ) |>
   filter(str_length(quote) > 5)
 
-# ── SECTION D: Theme frequency bar chart (the one you liked) ─────────────────
 
-# qual_exploded |>
-#   count(theme) |>
-#   mutate(theme = fct_reorder(theme, n)) |>
-#   ggplot(aes(n, theme, fill = as.character(theme))) +
-#   geom_col(width = 0.6, show.legend = FALSE) +
-#   geom_text(aes(label = n), hjust = -0.3,
-#             size = 4.5, fontface = "bold", color = INK) +
-#   scale_fill_manual(values = theme_colors) +
-#   scale_x_continuous(
-#     expand = expansion(mult = c(0, 0.2)),
-#     breaks = scales::breaks_width(1)
-#   ) +
-#   labs(
-#     title    = "Qualitative Feedback by Theme",
-#     subtitle = "Number of responses coded to each theme (responses may appear in multiple themes)",
-#     x        = "Number of coded responses",
-#     y        = NULL
-#   )
-
-
-# ── SECTION E: Quoted evidence panel — one block per theme ───────────────────
-# Displays your curated quotes under each theme heading, styled as a table.
-# No respondent info shown — fully anonymous.
-
-# quotes_long |>
-#   arrange(theme) |>
-#   group_by(theme) |>
-#   mutate(quote = paste0("\u201c", quote, "\u201d")) |>   # add typographic quotes
-#   summarise(quotes_combined = paste(quote, collapse = "\n\n"), .groups = "drop") |>
-#   kbl(
-#     col.names = c("Theme", "Representative Quotes"),
-#     align     = "ll"
-#   ) |>
-#   kable_styling(
-#     bootstrap_options = c("hover", "condensed"),
-#     full_width        = TRUE
-#   ) |>
-#   column_spec(1, bold = TRUE, width = "16em",
-#               color = "white",
-#               background = theme_colors[as.character(quotes_long$theme |> unique() |> sort())]) |>
-#   column_spec(2, width = "64em",
-#               extra_css = "white-space: pre-wrap; line-height: 1.8;")
-
-
-# ── SECTION F: One styled callout card per theme (alternative to table) ───────
-# This version renders each theme as its own mini-section with a colored
-# header and indented quotes — better for HTML output.
-# Wrap this chunk in results: asis in your Quarto doc.
+# One styled callout card per theme ───────
 
 for (grp in theme_levels) {
 
@@ -670,95 +551,6 @@ for (grp in theme_levels) {
 
 
 
-
-
-
-
-
-
-
-
-
-
-```{r confusing-table}
-
-### Confusing or Difficult Elements
-
-# pending: summary of feedback
-
-# if ("confusing" %in% names(df)) {
-#   df |>
-#     select(any_of("role"), confusing) |>
-#     filter(!is.na(confusing), str_length(confusing) > 3) |>
-#     mutate(confusing = str_trunc(confusing, 450)) |>
-#     kbl(col.names = c("Role", "Response"), align = "ll") |>
-#     kable_styling(bootstrap_options = c("striped", "hover"), full_width = TRUE) |>
-#     column_spec(1, width = "18em", italic = TRUE, color = SLATE) |>
-#     column_spec(2, width = "60em")
-# }
-```
-
-
-```{r improvements-table}
-
-### Feature Requests & Improvements
-
-# pending: summary of feedback
-
-# if ("improvements" %in% names(df)) {
-#   df |>
-#     select(any_of("role"), improvements) |>
-#     filter(!is.na(improvements), str_length(improvements) > 3) |>
-#     mutate(improvements = str_trunc(improvements, 450)) |>
-#     kbl(col.names = c("Role", "Response"), align = "ll") |>
-#     kable_styling(bootstrap_options = c("striped", "hover"), full_width = TRUE) |>
-#     column_spec(1, width = "18em", italic = TRUE, color = SLATE) |>
-#     column_spec(2, width = "60em")
-# }
-```
-
-
-```{r comments-table}
-### Additional Comments
-# if ("add_comments" %in% names(df)) {
-#   df |>
-#     select(any_of("role"), add_comments) |>
-#     filter(!is.na(add_comments), str_length(add_comments) > 3) |>
-#     mutate(add_comments = str_trunc(add_comments, 450)) |>
-#     kbl(col.names = c("Role", "Response"), align = "ll") |>
-#     kable_styling(bootstrap_options = c("striped", "hover"), full_width = TRUE) |>
-#     column_spec(1, width = "18em", italic = TRUE, color = SLATE) |>
-#     column_spec(2, width = "60em")
-# }
-```
-
-
-
-```{r themes-table}
-### Recurring Themes
-# themes_df <- tribble(
-#   ~Theme,                           ~Frequency, ~Sentiment, ~Summary,
-#   "Navigation & Controls Friction",  "4 / 6",  "Mixed",    "Tab placement, year slider, and disappearing dropdowns caused friction.",
-#   "Data Context & Transparency",     "3 / 6",  "Neutral",  "Requests for aggregation labels, persistent tooltips, and inactive-site messages.",
-#   "Genetics Module Expansion",       "3 / 6",  "Positive", "Desire for flow overlays, daily-level counts, raw fish numbers, and upstream stations.",
-#   "Verbose Overview Page",           "2 / 6",  "Neutral",  "Overview text is too dense; users prefer concise headings and bullet structure.",
-#   "Strong Overall Satisfaction",     "4 / 6",  "Positive", "Multiple respondents praised multi-site comparison and overall ease of use."
-# )
-# 
-# themes_df |>
-#   mutate(Sentiment = cell_spec(Sentiment, color = "white",
-#     background = case_when(
-#       Sentiment == "Positive" ~ JADE,
-#       Sentiment == "Negative" ~ ROSE,
-#       .default = SLATE
-#     ), bold = TRUE)) |>
-#   kbl(escape = FALSE, align = "llll") |>
-#   kable_styling(bootstrap_options = c("striped", "hover"), full_width = TRUE) |>
-#   column_spec(1, bold = TRUE, width = "22em") |>
-#   column_spec(2, width = "8em", extra_css = "text-align:center") |>
-#   column_spec(3, width = "9em", extra_css = "text-align:center")
-```
-
 ---
 
 
@@ -772,50 +564,51 @@ organized by theme. Items can be used to prioritize development tasks.
 #### Navigation / Interface
 
 - [ ] Relocate the Water Quality and Genetics tabs from the top of the page to a more
-      conventional location (e.g. sidebar or persistent top nav)
-- [ ] Restructure the Overview page — replace long paragraphs with concise topic
-      sentences and bullet points
-- [ ] Add a clear section heading that states the dashboard purpose upfront
-- [ ] Sort station names alphabetically with station ID in parentheses
+      conventional location (e.g. sidebar or persistent top nav) - *LOW*
+- [ ] Restructure the Overview page — replace long paragraphs with concise topic 
+      sentences and bullet points - *LOW*
+- [ ] Add a clear section heading that states the dashboard purpose upfront - *LOW*
+- [ ] Sort station names alphabetically with station ID in parentheses - *LOW*
+- [ ] Remove auto-zoom to selected sites  - *LOW*
+- [ ] Add color differentiation for selected sites that are active vs inactive  - *LOW*
+
 
 #### Controls / Filters
 
-- [ ] Replace the year slider with checkboxes or a date range picker
-- [ ] Remove tick marks between years on the year toggle to prevent user confusion
-- [ ] Relabel the year toggle to say "Water Year" instead of "Year"
+- [ ] Replace the year slider with checkboxes or a date range picker - *HIGH*
+- [ ] Remove tick marks between years on the year toggle to prevent user confusion - *MEDIUM*
+- [ ] Relabel the year toggle to say "Water Year" instead of "Year" - *LOW*
 - [ ] Fix the site/analyte dropdowns so options do not disappear unexpectedly
-      when switching between sites
-- [ ] Allow users to select within-year date ranges for more granular filtering
+      when switching between sites - *LOW*
+- [ ] Allow users to select within-year date ranges for more granular filtering - *LOW*
 
 #### Visualization / Data
 
-- [ ] Add river labels to the water quality map
-- [ ] Add water quality monitoring stations upstream of Sacramento at Hood
-- [ ] Display raw fish counts alongside proportions in the genetics module
-- [ ] Add daily or event-level catch data rather than annual totals only
-- [ ] Add water year type and flow/export data overlays to the genetics dashboard
+- [ ] Add river labels to the water quality map - *MEDIUM*
+- [ ] Add city labels to the water quality map - *MEDIUM*
+- [ ] Add water quality monitoring stations upstream of Sacramento at Hood - *?*
+- [ ] Display raw fish counts alongside proportions in the genetics module - *LOW (ADD EXPLANATION OF TOOLTIP)*
+- [ ] Add daily or event-level catch data rather than annual totals only - *?*
+- [ ] Add water year type and flow/export data overlays to the genetics dashboard - *MEDUIM*
 - [ ] Build a comparison view for field length-at-date assignments vs. genetic
-      run assignments
+      run assignments - *MEDIUM*
 - [ ] Replace the single large box plot with time-series summary plots
-      (monthly or annual)
+      (monthly or annual) - *?*
 - [ ] Add an option to toggle between average, maximum, minimum, and
-      7-day average values
-- [ ] Add links or connections to EDI pages for metadata, citations, and downloads
+      7-day average values - *NA (EXPLAIN WATER DATA COLLECTED ONCE A MONTH)*
+- [ ] Add links or connections to EDI pages for metadata, citations, and downloads - *LOW*
 - [ ] Clarify the difference between surface and bottom sensor measurements
-      (e.g. "Dissolved Oxygen" vs. "(bottom) Dissolved Oxygen")
-- [ ] Indicate whether more historical data or future data will be available
+      (e.g. "Dissolved Oxygen" vs. "(bottom) Dissolved Oxygen") - *MEDIUM*
+- [ ] Indicate whether more historical data or future data will be available - *LOW*
 
 #### Language / Messages
 
-- [ ] Add a "No data available" message when a user selects an inactive monitoring site
 - [ ] Clarify what "inactive" means in the site selector (currently inactive vs.
-      inactive across full time range)
-- [ ] Add a persistent data exclusion note at the bottom of the plot when
-      multiple locations are selected
+      inactive across full time range) - *LOW*
 - [ ] Add a chart subtitle or title note specifying what data is shown
-      (e.g. "Average daily concentrations")
+      (e.g. "Average daily concentrations") - *MEDUIM*
 - [ ] Add a label reminding users that water quality data shown is
-      discrete monthly samples
+      discrete monthly samples - *LOW - ADD EXPLANATION*
 
 ### User Survey
 
