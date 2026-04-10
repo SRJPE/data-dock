@@ -221,19 +221,27 @@ ui <- fluidPage(
                   options = list(plugins = list('remove_button'), placeholder = "Select a site")
                 )
               ),
+              # REPLACE WITH:
               div(
                 style = "min-width: 250px;",
-                sliderInput(
-                  "year_range_g",
-                  tags$strong("Water Year Range"),
-                  min = as.numeric(min(run_designation$year)),
-                  max = as.numeric(max(run_designation$year)),
-                  value = c(as.numeric(min(
-                    run_designation$year
-                  )), max(run_designation$year)),
-                  step = 1,
-                  sep = "",
-                  ticks = TRUE
+                selectizeInput(
+                  inputId = "year_range_g",
+                  label   = tags$strong("Water Year Range"),
+                  choices = sort(unique(run_designation$year)),
+                  selected = sort(unique(run_designation$year)),  # all selected by default
+                  multiple = TRUE,
+                  options  = list(plugins = list('remove_button'), placeholder = "Select year(s)")
+                )
+              ),
+              div(
+                style = "min-width: 100px;",
+                tags$label(" "),   # empty label to align button with other inputs
+                tags$br(),
+                actionButton(
+                  "select_all_years_g",
+                  "All Years",
+                  icon = icon("calendar-check"),
+                  class = "btn-sm"
                 )
               ),
               div(
@@ -302,16 +310,24 @@ ui <- fluidPage(
               multiple = TRUE,
               options = list(plugins = list('remove_button'), placeholder = "Select a site")
             ),
-            sliderInput(
-              "year_range_dl_g",
-              "Water Year Range",
-              min = as.numeric(min(run_designation$year)),
-              max = as.numeric(max(run_designation$year)),
-              value = c(as.numeric(min(
-                run_designation$year
-              )), max(run_designation$year)),
-              step = 1,
-              sep = ""
+            # sliderInput(
+            #   "year_range_dl_g",
+            #   "Water Year Range",
+            #   min = as.numeric(min(run_designation$year)),
+            #   max = as.numeric(max(run_designation$year)),
+            #   value = c(as.numeric(min(
+            #     run_designation$year
+            #   )), max(run_designation$year)),
+            #   step = 1,
+            #   sep = ""
+            # ),
+            selectizeInput(
+              inputId  = "year_range_dl_g",
+              label    = "Year Range",
+              choices  = sort(unique(run_designation$year)),
+              selected = sort(unique(run_designation$year)),
+              multiple = TRUE,
+              options  = list(plugins = list('remove_button'), placeholder = "Select year(s)")
             ),
             selectizeInput(
               "run_download",

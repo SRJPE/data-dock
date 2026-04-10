@@ -118,6 +118,14 @@ server <- function(input, output, session) {
     draw_and_zoom_selection_g(input$location_filter_g)
   }, ignoreInit = TRUE)
 
+  observeEvent(input$select_all_years_g, {
+  updateSelectizeInput(
+    session,
+    inputId  = "year_range_g",
+    selected = sort(unique(run_designation$year))
+  )
+})
+
 
 
   ### Reactive Data --------------------------------------------------------
@@ -127,7 +135,8 @@ server <- function(input, output, session) {
     req(input$location_filter_g)
 
     data <- run_designation |>
-      filter(year >= input$year_range_g[1], year <= input$year_range_g[2])
+      # filter(year >= input$year_range_g[1], year <= input$year_range_g[2])
+      filter(year %in% input$year_range_g)
 
     if (!is.null(input$location_filter_g) &&
         !"All Locations" %in% input$location_filter_g) {
@@ -326,9 +335,13 @@ server <- function(input, output, session) {
 
   observeEvent(input$clear_all_g, {
     updateSelectizeInput(session, inputId = "location_filter_g", selected = character(0))
-    updateSliderInput(session, "year_range_g",
-                      value = c(as.numeric(min(run_designation$year)),
-                                max(run_designation$year)))
+    # updateSliderInput(session, "year_range_g",
+    #                   value = c(as.numeric(min(run_designation$year)),
+    #                             max(run_designation$year)))
+    updateSelectizeInput(                              # CHANGED from updateSliderInput
+      session,
+      inputId  = "year_range_g",
+      selected = sort(unique(run_designation$year)))   # resets to all years
     updateSelectInput(session, "plot_type_g", "Monitoring Year")
     updateSelectInput(session, "data_plot_g", "Run Type")
     draw_and_zoom_selection_g(character(0))  # was draw_and_zoom_selection — WRONG
@@ -342,7 +355,8 @@ server <- function(input, output, session) {
       updateSelectizeInput(session,
                         "location_filter_dl_g",
                         selected = input$location_filter_g)
-      updateSliderInput(session, "year_range_dl_g", value = input$year_range_g)
+      # updateSliderInput(session, "year_range_dl_g", value = input$year_range_g)
+      updateSelectizeInput(session,"year_range_dl_g", selected = input$year_range_g)
       updateSelectizeInput(session, "run_download", selected = sort(unique(run_designation$run_name)))
     }
   })
@@ -357,7 +371,7 @@ server <- function(input, output, session) {
     updateSelectizeInput(session, inputId = "run_download", selected = character(0))
 
     # Reset year range slider (download tab)
-    updateSliderInput(session,
+    updateSelectizeInput(session,
                       "year_range_dl_g",
                       value = c(as.numeric(min(
                         run_designation$year
