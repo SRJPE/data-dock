@@ -78,7 +78,8 @@ server <- function(input, output, session) {
   output$g_map <- renderLeaflet({
     leaflet() |>
       addMapPane("Lines-Habitat", zIndex = 430) |>
-      addTiles(urlTemplate = "https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}", attribution = 'Basemap © Esri, GEBCO, NOAA, CHS, etc.') |>
+      addTiles(urlTemplate = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}",
+               attribution = 'Basemap © Esri, HERE, Garmin, FAO, NOAA, USGS') |>
       addPolylines(
         data = salmonid_habitat_extents,
         label = ~ lapply(river, htmltools::HTML),
@@ -86,7 +87,7 @@ server <- function(input, output, session) {
         color = "#5299D9",
         opacity = 1,
         weight = 1.5
-      ) |>
+      )|>
       addCircleMarkers(
         data = rst_sites,
         layerId = ~ label,
@@ -585,7 +586,8 @@ server <- function(input, output, session) {
       addTiles() |>
       htmlwidgets::onRender("function(el, x) {this.zoomControl.setPosition('bottomleft');}") |>
       addMapPane("Lines-Habitat", zIndex = 430) |>
-      addTiles(urlTemplate = "https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}", attribution = 'Basemap © Esri, GEBCO, NOAA, CHS, etc.') |>
+      addTiles(urlTemplate = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}",
+               attribution = 'Basemap © Esri, HERE, Garmin, FAO, NOAA, USGS') |>
       addPolylines(
         data = salmonid_habitat_extents,
         label = ~ lapply(river, htmltools::HTML),
