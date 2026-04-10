@@ -225,7 +225,7 @@ ui <- fluidPage(
                 style = "min-width: 250px;",
                 sliderInput(
                   "year_range_g",
-                  tags$strong("Year Range"),
+                  tags$strong("Water Year Range"),
                   min = as.numeric(min(run_designation$year)),
                   max = as.numeric(max(run_designation$year)),
                   value = c(as.numeric(min(
@@ -304,7 +304,7 @@ ui <- fluidPage(
             ),
             sliderInput(
               "year_range_dl_g",
-              "Year Range",
+              "Water Year Range",
               min = as.numeric(min(run_designation$year)),
               max = as.numeric(max(run_designation$year)),
               value = c(as.numeric(min(
