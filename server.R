@@ -22,57 +22,32 @@ server <- function(input, output, session) {
 ## Visualize ---------------------------------------------------------------
 
   ### Map ---------------------------------------------------------
-  # zoom to selection
   draw_and_zoom_selection_g <- function(sel_names) {
     map <- leafletProxy("g_map") |>
       clearGroup("highlight") |>
       clearPopups()
 
-    # if nothing selected, zoom to full extent
-    if (is.null(sel_names) || length(sel_names) == 0) {
-      return(map |> fitBounds(
-        lng1 = min(rst_sites$longitude, na.rm = TRUE),
-        lat1 = min(rst_sites$latitude, na.rm = TRUE),
-        lng2 = max(rst_sites$longitude, na.rm = TRUE),
-        lat2 = max(rst_sites$latitude, na.rm = TRUE)
-      ))
-    }
+    if (is.null(sel_names) || length(sel_names) == 0)
+      return(invisible(map))
 
     selected_station_g <- subset(rst_sites, label %in% sel_names)
     if (nrow(selected_station_g) == 0)
       return(invisible(map))
 
-    # highlight markers
-    map <- map |>
+    map |>
       addCircleMarkers(
-        data = selected_station_g,
-        lat = ~ latitude,
-        lng = ~ longitude,
-        radius = 10,
-        fillColor = "#7E2954",
-        color = "white",
-        weight = 2,
+        data        = selected_station_g,
+        lat         = ~latitude,
+        lng         = ~longitude,
+        radius      = 10,
+        fillColor   = "#7E2954",  # single color, no status column available
+        color       = "white",
+        weight      = 2,
         fillOpacity = 0.9,
-        group = "highlight",
-        label = ~ paste("Selected:", label),
-        layerId = ~ paste0(label, "__hi")
+        group       = "highlight",
+        label       = ~paste("Selected:", label),
+        layerId     = ~paste0(label, "__hi")
       )
-
-    # Zoom logic
-    if (nrow(selected_station_g) == 1) {
-      map |>  setView(
-        lng = selected_station_g$longitude[1],
-        lat = selected_station_g$latitude[1],
-        zoom = 11
-      )
-    } else {
-      map |>  fitBounds(
-        lng1 = min(selected_station_g$longitude, na.rm = TRUE),
-        lat1 = min(selected_station_g$latitude, na.rm = TRUE),
-        lng2 = max(selected_station_g$longitude, na.rm = TRUE),
-        lat2 = max(selected_station_g$latitude, na.rm = TRUE)
-      )
-    }
   }
 
   output$g_map <- renderLeaflet({
@@ -107,12 +82,13 @@ server <- function(input, output, session) {
         lat1 = min(rst_sites$latitude, na.rm = TRUE),
         lng2 = max(rst_sites$longitude, na.rm = TRUE),
         lat2 = max(rst_sites$latitude, na.rm = TRUE)
-      ) |>
-      htmlwidgets::onRender("
-      function(el, x){
-        this.zoomControl.setPosition('bottomright');
-      }
-    ")
+      )
+    # |
+    #   htmlwidgets::onRender("
+    #   function(el, x){
+    #     this.zoomControl.setPosition('bottomright');
+    #   }
+    # ")
   })
 
   observeEvent(input$g_map_marker_click, ignoreInit = TRUE, {
@@ -349,21 +325,13 @@ server <- function(input, output, session) {
   ### Clear Button --------------------------------------------
 
   observeEvent(input$clear_all_g, {
-    # Reset station picker
     updateSelectizeInput(session, inputId = "location_filter_g", selected = character(0))
-
-    # Reset year sliders
-    updateSliderInput(session,
-                      "year_range_g",
-                      value = c(as.numeric(min(
-                        run_designation$year
-                      )), max(run_designation$year)))
-
-    updateSelectInput(session, "plot_type_g","Monitoring Year")
-    updateSelectInput(session, "data_plot_g","Run Type")
-
-    # Reset map (zoom + highlight)
-    draw_and_zoom_selection(character(0))
+    updateSliderInput(session, "year_range_g",
+                      value = c(as.numeric(min(run_designation$year)),
+                                max(run_designation$year)))
+    updateSelectInput(session, "plot_type_g", "Monitoring Year")
+    updateSelectInput(session, "data_plot_g", "Run Type")
+    draw_and_zoom_selection_g(character(0))  # was draw_and_zoom_selection — WRONG
   })
 
   ## Download Tab  --------------------------------------------------------------
@@ -534,57 +502,39 @@ server <- function(input, output, session) {
       clearGroup("highlight") |>
       clearPopups()
 
-    # if nothing selected, zoom to full extent
-    if (is.null(sel_names) || length(sel_names) == 0) {
-      return(map |> fitBounds(
-        lng1 = min(wq_metadata$longitude, na.rm = TRUE),
-        lat1 = min(wq_metadata$latitude, na.rm = TRUE),
-        lng2 = max(wq_metadata$longitude, na.rm = TRUE),
-        lat2 = max(wq_metadata$latitude, na.rm = TRUE)
-      ))
-    }
+    if (is.null(sel_names) || length(sel_names) == 0)
+      return(invisible(map))
 
     selected_station <- subset(wq_metadata, station_id_name %in% sel_names)
     if (nrow(selected_station) == 0)
       return(invisible(map))
+# TODO instead of different colors, keep the same color but addd a red (or other) color outline
+    # highlight_colors <- ifelse(
+    #   selected_station$status == "Active",
+    #   "#7E2954",  # active — maroon
+    #   "#F28C38"   # inactive — orange
+    # )
 
-    # highlight markers
-    map <- map |>
+    map |>
       addCircleMarkers(
-        data = selected_station,
-        lat = ~ latitude,
-        lng = ~ longitude,
-        radius = 10,
-        fillColor = "#7E2954",
-        color = "white",
-        weight = 2,
+        data        = selected_station,
+        lat         = ~latitude,
+        lng         = ~longitude,
+        radius      = 10,
+        fillColor   = ~ifelse(status == "Active", "black", "gray"),
+        color       = "#FF0000",
+        weight      = 2,
         fillOpacity = 0.9,
-        group = "highlight",
-        label = ~ paste("Selected:", station_id_name),
-        layerId = ~ paste0(station_id_name, "__hi")
+        group       = "highlight",
+        label       = ~paste("Selected:", station_id_name),
+        layerId     = ~paste0(station_id_name, "__hi")
       )
-
-    # Zoom logic
-    if (nrow(selected_station) == 1) {
-      map |>  setView(
-        lng = selected_station$longitude[1],
-        lat = selected_station$latitude[1],
-        zoom = 11
-      )
-    } else {
-      map |>  fitBounds(
-        lng1 = min(selected_station$longitude, na.rm = TRUE),
-        lat1 = min(selected_station$latitude, na.rm = TRUE),
-        lng2 = max(selected_station$longitude, na.rm = TRUE),
-        lat2 = max(selected_station$latitude, na.rm = TRUE)
-      )
-    }
   }
 
   output$wq_map <- renderLeaflet({
     leaflet() |>
-      addTiles() |>
-      htmlwidgets::onRender("function(el, x) {this.zoomControl.setPosition('bottomleft');}") |>
+      # addTiles() |>
+      # htmlwidgets::onRender("function(el, x) {this.zoomControl.setPosition('bottomleft');}") |>
       addMapPane("Lines-Habitat", zIndex = 430) |>
       addTiles(urlTemplate = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}",
                attribution = 'Basemap © Esri, HERE, Garmin, FAO, NOAA, USGS') |>
@@ -598,28 +548,16 @@ server <- function(input, output, session) {
       ) |>
       # Active sites (circles)
       addCircleMarkers(
-        data = subset(wq_metadata, status == "Active"),
-        layerId = ~ station_id_name,
-        label = ~ paste(station_id_name),
-        radius = 6,
-        stroke = TRUE,
-        weight = 1,
-        color = "black",
+        data        = wq_metadata,
+        layerId     = ~station_id_name,
+        label       = ~paste(station_id_name),
+        radius      = 6,
+        stroke      = TRUE,
+        weight      = 1,
+        color       = "black",
         fillOpacity = 0.7,
-        fillColor = ~ site_color,
-        popup = ~ paste0("<b>", station_id, "</b><br/>", station_description)
-      ) |>
-      addCircleMarkers(
-        data    = wq_metadata,
-        layerId = ~ station_id_name,
-        label   = ~ paste(station_id_name),
-        radius = 6,
-        stroke = TRUE,
-        weight = 1,
-        color = "black",
-        fillOpacity = 0.7,
-        fillColor = ~ ifelse(status == "Active", "black", "gray"),
-        popup = ~ paste0("<b>", station_id, "</b><br/>", station_description)
+        fillColor   = ~ifelse(status == "Active", "black", "gray"),
+        popup       = ~paste0("<b>", station_id, "</b><br/>", station_description)
       ) |>
       addLegend(
         position = "bottomright",

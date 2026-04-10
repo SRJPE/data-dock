@@ -28,16 +28,16 @@ ui <- fluidPage(
               style = "min-width: 200px;",
 
               {
+
                 stations <- sort(unique(wq_metadata$station_id_name))
 
-                # Pad single-digit station codes at the very start
                 stations_label <- stringr::str_replace(
                   stations,
-                  "^([A-Za-z]+)(\\d)([A-Za-z]?)(\\s*-\\s*)",
-                  "\\10\\2\\3\\4"
+                  "^([A-Za-z]+)0*(\\d+[A-Za-z]?)\\s*-\\s*(.+)$",
+                  "\\3 (\\1\\2)"
                 )
 
-                # Sort by the padded display label
+                # Sort alphabetically by station name
                 ord <- order(stations_label)
 
               selectizeInput(
