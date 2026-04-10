@@ -508,13 +508,6 @@ server <- function(input, output, session) {
     selected_station <- subset(wq_metadata, station_id_name %in% sel_names)
     if (nrow(selected_station) == 0)
       return(invisible(map))
-# TODO instead of different colors, keep the same color but addd a red (or other) color outline
-    # highlight_colors <- ifelse(
-    #   selected_station$status == "Active",
-    #   "#7E2954",  # active — maroon
-    #   "#F28C38"   # inactive — orange
-    # )
-
     map |>
       addCircleMarkers(
         data        = selected_station,
@@ -533,8 +526,6 @@ server <- function(input, output, session) {
 
   output$wq_map <- renderLeaflet({
     leaflet() |>
-      # addTiles() |>
-      # htmlwidgets::onRender("function(el, x) {this.zoomControl.setPosition('bottomleft');}") |>
       addMapPane("Lines-Habitat", zIndex = 430) |>
       addTiles(urlTemplate = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}",
                attribution = 'Basemap © Esri, HERE, Garmin, FAO, NOAA, USGS') |>
