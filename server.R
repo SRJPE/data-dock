@@ -285,16 +285,16 @@ server <- function(input, output, session) {
     if (input$plot_type_g == "Month") {
       # selected_years <- seq(input$year_range_g[1], input$year_range_g[2])
       selected_years <- input$year_range_g
-      if (length(selected_years) > 3) {
-        showNotification("Please select a range of 3 years or fewer.", type = "error")
-        return(
-          plotly_empty(type = "scatter", mode = "lines") |>
-            layout(
-              title = "Too many years selected. Please select 3 years max.<br>
-                   Recommend summarizing by monitoring year when looking at more than 3 years."
-            )
-        )
-      }
+      # if (length(selected_years) > 3) {
+      #   showNotification("Please select a range of 3 years or fewer.", type = "error")
+      #   return(
+      #     plotly_empty(type = "scatter", mode = "lines") |>
+      #       layout(
+      #         title = "Too many years selected. Please select 3 years max.<br>
+      #              Recommend summarizing by monitoring year when looking at more than 3 years."
+      #       )
+      #   )
+      # }
 
 
       y_var <- if (show_counts) "total_samples" else "run_percent"
