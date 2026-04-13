@@ -36,17 +36,17 @@ server <- function(input, output, session) {
 
     map |>
       addCircleMarkers(
-        data        = selected_station_g,
-        lat         = ~latitude,
-        lng         = ~longitude,
-        radius      = 10,
-        fillColor   = "#7E2954",  # single color, no status column available
-        color       = "white",
-        weight      = 2,
+        data = selected_station_g,
+        lat = ~latitude,
+        lng = ~longitude,
+        radius = 10,
+        fillColor = "#7E2954",
+        color = "white",
+        weight = 2,
         fillOpacity = 0.9,
-        group       = "highlight",
-        label       = ~paste("Selected:", label),
-        layerId     = ~paste0(label, "__hi")
+        group = "highlight",
+        label = ~paste("Selected:", label),
+        layerId = ~paste0(label, "__hi")
       )
   }
 
@@ -109,8 +109,6 @@ server <- function(input, output, session) {
       union(current, id)
 
     updateSelectizeInput(session, "location_filter_g", selected = new_sel)
-
-    # updateSelectInput(session, "location_filter_g", selected = new_sel)
   })
 
   # redraw highlight + zoom on dropdown change
@@ -191,7 +189,7 @@ server <- function(input, output, session) {
           month,
           fake_date,
           .data[[grouping_variable]],
-          fill = list(run_percent = 0, site_total = 0)
+          fill = list(run_percent = 0, site_total = 0,  total_samples = 0)
         )
     } # adding this so when years are not present at a given location, there is still a facet (empty) for that year
 
@@ -255,35 +253,38 @@ server <- function(input, output, session) {
       y_axis_text <- "Run Assignment Proportions"
     }
 
+    # toggle: proportions vs counts
+    show_counts <- input$count_type_g == "Counts"
+
     if (input$plot_type_g == "Monitoring Year") {
+      y_var <- if (show_counts) "count" else "run_percent"
+      y_label <- if (show_counts) "Count (n)" else y_axis_text
+      hover_label <- if (show_counts) "Count: " else title_text
+      hover_val <- if (show_counts) df$count else signif(df$run_percent, 2)
+
       plot <- ggplot(df,
                      aes(
                        x = year,
-                       y = run_percent,
+                       y = .data[[y_var]],
                        fill = .data[[grouping_variable]],
                        text = paste0(
-                         "Monitoring Year: ",
-                         year,
+                         "Monitoring Year: ", year, "<br>",
+                         hover_label, hover_val,    # now responds to toggle
                          "<br>",
-                         title_text,
-                         signif(run_percent, 2),
-                         "<br>",
-                         title_text2,
-                         .data[[grouping_variable]],
-                         "<br>",
-                         "Sample Size: ",
-                         total_sample
+                         title_text2, .data[[grouping_variable]], "<br>",
+                         "Sample Size: ", total_sample
                        )
                      )) +
         geom_bar(stat = "identity", position = "stack") +
         facet_wrap(~ map_label, ncol = 1) +
         scale_fill_manual(values = run_col) +
         theme_minimal() +
-        labs(x = "", y = y_axis_text, fill = "")
+        labs(x = "", y = y_label, fill = "")
     }
 
     if (input$plot_type_g == "Month") {
-      selected_years <- seq(input$year_range_g[1], input$year_range_g[2])
+      # selected_years <- seq(input$year_range_g[1], input$year_range_g[2])
+      selected_years <- input$year_range_g
       if (length(selected_years) > 3) {
         showNotification("Please select a range of 3 years or fewer.", type = "error")
         return(
@@ -294,21 +295,24 @@ server <- function(input, output, session) {
             )
         )
       }
+
+
+      y_var <- if (show_counts) "total_samples" else "run_percent"
+      y_label <- if (show_counts) "Count (n)" else y_axis_text
+      hover_label <- if (show_counts) "Count: " else title_text
+      hover_val <- if (show_counts) df$total_samples else signif(df$run_percent, 2)
+
       n_years <- length(unique(df$year))
       plot <- ggplot(df,
                      aes(
                        x = fake_date,
-                       y = run_percent,
+                       y = .data[[y_var]],
                        fill = .data[[grouping_variable]],
                        text = paste0(
-                         "Monitoring Year: ",
-                         year,
+                         "Monitoring Year: ", year, "<br>",
+                         hover_label, hover_val,    # now responds to toggle
                          "<br>",
-                         title_text,
-                         signif(run_percent, 2),
-                         "<br>",
-                         title_text2,
-                         .data[[grouping_variable]],
+                         title_text2, .data[[grouping_variable]],
                          "<br>",
                          "Sample Size: ",
                          site_total
@@ -317,7 +321,7 @@ server <- function(input, output, session) {
         geom_bar(stat = "identity", position = "stack") +
         facet_wrap(~ location_name + year, ncol = n_years) +
         scale_fill_manual(name = "Run type", values = run_col) +
-        labs(x = "", y = y_axis_text) +
+        labs(x = "", y = y_label) +
         theme_minimal() +
         theme(axis.text.x = element_text(
           angle = 90,
@@ -338,13 +342,14 @@ server <- function(input, output, session) {
     # updateSliderInput(session, "year_range_g",
     #                   value = c(as.numeric(min(run_designation$year)),
     #                             max(run_designation$year)))
-    updateSelectizeInput(                              # CHANGED from updateSliderInput
+    updateSelectizeInput(
       session,
       inputId  = "year_range_g",
       selected = sort(unique(run_designation$year)))   # resets to all years
     updateSelectInput(session, "plot_type_g", "Monitoring Year")
     updateSelectInput(session, "data_plot_g", "Run Type")
-    draw_and_zoom_selection_g(character(0))  # was draw_and_zoom_selection — WRONG
+    updateSelectInput(session, "count_type_g", "Proportions")
+    draw_and_zoom_selection_g(character(0))
   })
 
   ## Download Tab  --------------------------------------------------------------

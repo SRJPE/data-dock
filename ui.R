@@ -221,7 +221,6 @@ ui <- fluidPage(
                   options = list(plugins = list('remove_button'), placeholder = "Select a site")
                 )
               ),
-              # REPLACE WITH:
               div(
                 style = "min-width: 250px;",
                 selectizeInput(
@@ -257,6 +256,14 @@ ui <- fluidPage(
                 tags$strong("Data Type"),
                 choices = c("Run Type", "Greb 1L RoSA Genotype")
               )),
+              div(
+                style = "min-width: 200px;",
+                selectInput(
+                  "count_type_g",
+                  tags$strong("Display As"),
+                  choices = c("Proportions", "Counts")
+                )
+              ),
               actionButton("clear_all_g", "Clear All", icon = icon("eraser")),
             ),
 

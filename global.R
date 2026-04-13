@@ -104,12 +104,12 @@ run_designation <- genetics_data_raw |>
   filter(!is.na(month), !is.na(genotype))
 
 # stock assignment (fall, spring) and phenotype(early, late heterozygot )
-run_designation_percent <- run_designation |>
-  group_by(location_name, sample_event, year, run_name) |>
-  summarize(count = n()) |>
-  group_by(location_name, year, sample_event) |>
-  mutate(total_sample = sum(count),
-         run_percent = (count/total_sample) * 100)
+# run_designation_percent <- run_designation |>
+#   group_by(location_name, sample_event, year, run_name) |>
+#   summarize(count = n()) |>
+#   group_by(location_name, year, sample_event) |>
+#   mutate(total_sample = sum(count),
+#          run_percent = (count/total_sample) * 100)
 
 # water quality data ------------------------------------------------------
 
