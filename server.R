@@ -153,7 +153,7 @@ server <- function(input, output, session) {
     if (input$data_plot_g == "Run Type") {
       grouping_variable <- "run_name"
     }
-    if (input$plot_type_g == "Monitoring Year") {
+    if (input$plot_type_g == "Water Year") {
       df <- filtered_g_data() |>
         group_by(year, map_label, .data[[grouping_variable]]) |>
         summarize(count = n()) |>
@@ -254,9 +254,10 @@ server <- function(input, output, session) {
     }
 
     # toggle: proportions vs counts
-    show_counts <- input$count_type_g == "Counts"
+    # show_counts <- input$count_type_g == "Counts"
+    show_counts <- isTRUE(input$count_type_g)
 
-    if (input$plot_type_g == "Monitoring Year") {
+    if (input$plot_type_g == "Water Year") {
       y_var <- if (show_counts) "count" else "run_percent"
       y_label <- if (show_counts) "Count (n)" else y_axis_text
       hover_label <- if (show_counts) "Count: " else title_text
@@ -268,7 +269,7 @@ server <- function(input, output, session) {
                        y = .data[[y_var]],
                        fill = .data[[grouping_variable]],
                        text = paste0(
-                         "Monitoring Year: ", year, "<br>",
+                         "Water Year: ", year, "<br>",
                          hover_label, hover_val,    # now responds to toggle
                          "<br>",
                          title_text2, .data[[grouping_variable]], "<br>",
@@ -309,7 +310,7 @@ server <- function(input, output, session) {
                        y = .data[[y_var]],
                        fill = .data[[grouping_variable]],
                        text = paste0(
-                         "Monitoring Year: ", year, "<br>",
+                         "Water Year: ", year, "<br>",
                          hover_label, hover_val,    # now responds to toggle
                          "<br>",
                          title_text2, .data[[grouping_variable]],
@@ -346,9 +347,10 @@ server <- function(input, output, session) {
       session,
       inputId  = "year_range_g",
       selected = sort(unique(run_designation$year)))   # resets to all years
-    updateSelectInput(session, "plot_type_g", "Monitoring Year")
+    updateSelectInput(session, "plot_type_g", "Water Year")
     updateSelectInput(session, "data_plot_g", "Run Type")
-    updateSelectInput(session, "count_type_g", "Proportions")
+    # updateSelectInput(session, "count_type_g", "Proportions")
+    shinyWidgets::updateMaterialSwitch(session, "count_type_g", value = FALSE)
     draw_and_zoom_selection_g(character(0))
   })
 
@@ -504,12 +506,15 @@ server <- function(input, output, session) {
           unique() |>
           sort()
       }
+    # Keep previously selected analytes that are still valid for the new station set
+    previously_selected <- input$analyte
+    still_valid <- intersect(previously_selected, analyte_choices)
 
     updateSelectizeInput(
       session,
       inputId = "analyte",
       choices  = analyte_choices,
-      selected = NULL,
+      selected = still_valid,
       server   = TRUE
     )
   })

@@ -248,7 +248,7 @@ ui <- fluidPage(
                 selectInput(
                   "plot_type_g",
                   tags$strong("Data Summary Type"),
-                  choices = c("Monitoring Year", "Month")
+                  choices = c("Water Year", "Month")
                 )
               ),
               div(style = "min-width: 200px;", selectInput(
@@ -256,23 +256,43 @@ ui <- fluidPage(
                 tags$strong("Data Type"),
                 choices = c("Run Type", "Greb 1L RoSA Genotype")
               )),
-              div(
-                style = "min-width: 200px;",
-                selectInput(
-                  "count_type_g",
-                  tags$strong("Display As"),
-                  choices = c("Proportions", "Counts")
-                )
-              ),
+              # div(
+              #   style = "min-width: 200px;",
+              #   selectInput(
+              #     "count_type_g",
+              #     tags$strong("Display As"),
+              #     choices = c("Proportions", "Counts")
+              #   )
+              # ),
               actionButton("clear_all_g", "Clear All", icon = icon("eraser")),
             ),
 
             # === Map and Floating Plot Panel ===
             fluidRow(
               column(width = 4, leafletOutput("g_map", height = "600px")),
+              # column(
+              #   width = 8,
+              #   plotlyOutput("g_dynamic_plot", height = "600px"),
+              #   tags$p(
+              #     "Note: The year is representative of a monitoring year (Nov-May), see [data collection methods](insert link) for more detail.",
+              #     style = "font-size: 0.9em; font-style: italic; color: #555; margin-top:5px;"
+              #   )
+              # )
               column(
                 width = 8,
                 plotlyOutput("g_dynamic_plot", height = "600px"),
+                div(
+                  style = "display: flex; align-items: center; gap: 10px; margin-top: 8px;",
+                  tags$span("Proportions", style = "font-size: 0.9em; font-weight: bold; color: #2c3e50;"),
+                  shinyWidgets::materialSwitch(
+                    inputId = "count_type_g",
+                    label   = NULL,
+                    value   = FALSE,       # FALSE = Proportions, TRUE = Counts
+                    status  = "primary"
+                  ),
+                  tags$span("Counts", style = "font-size: 0.9em; font-weight: bold; color: #2c3e50;")
+                ),
+                # TODO work out the spacing between the toggle words
                 tags$p(
                   "Note: The year is representative of a monitoring year (Nov-May), see [data collection methods](insert link) for more detail.",
                   style = "font-size: 0.9em; font-style: italic; color: #555; margin-top:5px;"
