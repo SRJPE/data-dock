@@ -13,13 +13,12 @@ editor: visual
 
 The Downstream Dashboard is a collaboration between California Department of Water Resources (DWR) data collection programs to support [open data](https://water.ca.gov/ab1755) access and visualization in alignment with the [Open and Transparent Water Data Act (AB 1755, Dodd)](https://leginfo.legislature.ca.gov/faces/billNavClient.xhtml?bill_id=201520160AB1755).
 
+The [Environmental Data Initiative (EDI)](https://edirepository.org/) is used as a public repository where datasets can be downloaded. Although data are available in non-proprietary, machine-readable formats does not mean the data are accessible to all users. This dashboard makes data more accessible by providing data visualizations and exploration tools.
+
 **This dashboard supports:**
 
--   Publishing data publicly through the Environmental Data Initiative (EDI)
-
 -   Visualizing and exploring data using open-source tools
-
--   Providing a replicable workflow for data publication and access
+-   Demonstrating a reproducible workflow for data publication and access
 
 ![Figure 1. Diagram of the data lifecycle process. This effort is primarily focused on the data access portion of the data lifecycle through the publication of data on the Environmental Data Initiative (EDI) and the creation of this dashboard for data visualization and communication.](data_lifecycle.png){width="570"}
 
@@ -31,7 +30,7 @@ The Environmental Monitoring Program (EMP) monitors water conditions across the 
 
 -   **24 fixed stations** sampled monthly at high water slack tide
 
--   Samples collected for physical parameters (temperature, pH) and laboratory analysis (nitrogen, phosphorus)
+-   Samples collected for physical parameters (e.g., temperature, pH) and laboratory analysis (e.g., nitrogen, phosphorus)
 
 -   Accessed via the Research Vessel Sentinel or vehicle transport for shore-based stations
 
@@ -47,24 +46,13 @@ The Spring-Run Juvenile Production Estimate (SR JPE) project monitors the season
 
 ## Data management and publication
 
-All data is stored internally and published to the [Environmental Data Initiative (EDI)](https://edirepository.org/), NSF-funded public repository for open access.
+All data is stored internally and published to the [Environmental Data Initiative (EDI)](https://edirepository.org/).
 
 -   Dashboard pulls data directly from EDI for visualization
 
--   Built in **R Shiny** : all code available on [GitHub](https://github.com/SRJPE/data-dock)
-
--   EDI publication in progress; dashboard will be updated when available
+-   Dashboard developed using **R Shiny** and all code is available on [GitHub](https://github.com/SRJPE/data-dock)
 
 ![Figure 2. Overview of data management for Downstream Dashboard programs from data collection to data access.](downstream_dashboard.png){width="651"}
-
-## Dashboard
-
-The dashboard has two main tabs, each with a **Download** sub-tab for exporting data:
-
-| Tab               | What you can do                                                              |
-|-------------------|------------------------------------------------------------------------------|
-| **Water Quality** | Visualize temporal trends, explore analyte patterns, select sites on the map |
-| **Genetics**      | Explore run assignment distributions across locations and years              |
 
 ## Roles and responsibilities
 
