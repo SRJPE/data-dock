@@ -51,7 +51,7 @@ server <- function(input, output, session) {
   }
 
   output$g_map <- renderLeaflet({
-    leaflet() |>
+    leaflet(options = leafletOptions(zoomControl = FALSE)) |>
       addMapPane("Lines-Habitat", zIndex = 430) |>
       addTiles(urlTemplate = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}",
                attribution = 'Basemap © Esri, HERE, Garmin, FAO, NOAA, USGS') |>
@@ -82,7 +82,12 @@ server <- function(input, output, session) {
         lat1 = min(rst_sites$latitude, na.rm = TRUE),
         lng2 = max(rst_sites$longitude, na.rm = TRUE),
         lat2 = max(rst_sites$latitude, na.rm = TRUE)
-      )
+      ) |>
+      htmlwidgets::onRender("
+      function(el, x) {
+        L.control.zoom({ position: 'bottomleft' }).addTo(this);
+      }
+    ")
     # |
     #   htmlwidgets::onRender("
     #   function(el, x){
@@ -437,7 +442,7 @@ server <- function(input, output, session) {
         showNotification(
           "No weather data (Rain or Sky Conditions) available for the selected site(s) and year(s).",
           type = "message",
-          duration = 6
+          duration = 15
         )
       } else {
         weather <- weather |>
@@ -549,7 +554,7 @@ server <- function(input, output, session) {
   }
 
   output$wq_map <- renderLeaflet({
-    leaflet() |>
+    leaflet(options = leafletOptions(zoomControl = FALSE)) |>
       addMapPane("Lines-Habitat", zIndex = 430) |>
       addTiles(urlTemplate = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}",
                attribution = 'Basemap © Esri, HERE, Garmin, FAO, NOAA, USGS') |>
@@ -587,7 +592,12 @@ server <- function(input, output, session) {
         lat1 = min(wq_metadata$latitude, na.rm = TRUE),
         lng2 = max(wq_metadata$longitude, na.rm = TRUE),
         lat2 = max(wq_metadata$latitude, na.rm = TRUE)
-      )
+      ) |>
+      htmlwidgets::onRender("
+      function(el, x) {
+        L.control.zoom({ position: 'bottomleft' }).addTo(this);
+      }
+    ")
   })
   observeEvent(input$wq_map_marker_click, ignoreInit = TRUE, {
     click <- input$wq_map_marker_click
@@ -669,7 +679,7 @@ server <- function(input, output, session) {
           paste(new_missing, collapse = ", ")
         ),
         type = "warning",
-        duration = 6
+        duration = 12
       )
     }
 
