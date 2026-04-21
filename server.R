@@ -735,27 +735,20 @@ server <- function(input, output, session) {
       )
 
 
-    # df_plot <- df_plot |>
-    #   dplyr::arrange(analyte, station_id_name, date) |>
-    #   dplyr::group_by(analyte, station_id_name) |>
-    #   dplyr::mutate(
-    #     nd_flag = tolower(trimws(detection_status)) %in% c("not detected", "not detected."),
-    #     seg_id  = cumsum(dplyr::lag(nd_flag, default = FALSE))
-    #   ) |>
-    #   dplyr::ungroup()
-
     if (plot_type == "Time Series") {
       detected <- df_plot |>
         dplyr::filter(!is.na(value) & !nd_flag)
 
       nd <- df_plot |>
         dplyr::filter(nd_flag) |>
+        # dplyr::mutate(
+        #   nd_height = dplyr::case_when(
+        #     reports_to == "MDL" ~ as.numeric(mdl),
+        #     reports_to == "MRL" ~ as.numeric(mrl),
+        #     TRUE ~ NA_real_
+        #   ),
         dplyr::mutate(
-          nd_height = dplyr::case_when(
-            reports_to == "MDL" ~ as.numeric(mdl),
-            reports_to == "MRL" ~ as.numeric(mrl),
-            TRUE ~ NA_real_
-          ),
+          nd_height = mrl,
           x_minus = date - lubridate::days(10),
           x_plus  = date + lubridate::days(10)
         ) |>
@@ -871,15 +864,15 @@ server <- function(input, output, session) {
                 "Date: ",
                 date,
                 "<br>",
-                "MDL value: ",
-                mdl,
-                "<br>",
+                # "MDL value: ",
+                # mdl,
+                # "<br>",
                 "MRL value: ",
                 mrl,
                 "<br>",
-                "Reports to: ",
-                reports_to,
-                "<br>",
+                # "Reports to: ",
+                # reports_to,
+                # "<br>",
                 "Station: ",
                 station_id_name
               )
@@ -900,15 +893,15 @@ server <- function(input, output, session) {
                 "Date: ",
                 date,
                 "<br>",
-                "MDL value: ",
-                mdl,
-                "<br>",
+                # "MDL value: ",
+                # mdl,
+                # "<br>",
                 "MRL value: ",
                 mrl,
                 "<br>",
-                "Reports to: ",
-                reports_to,
-                "<br>",
+                # "Reports to: ",
+                # reports_to,
+                # "<br>",
                 "Station: ",
                 station_id_name
               )
@@ -943,11 +936,12 @@ server <- function(input, output, session) {
     } else if (plot_type == "Box Plot") {
       boxplot_data <- df |>
         left_join(prop_nd) |>
-        filter(prop_detected >= 0.5) |>
+        filter(prop_detected >= 0.5)
+
         # replace values for non detects with the detection limit
-        mutate(value = case_when(is.na(value) & detection_status == "Not detected" & reports_to == "MRL" ~ mrl,
-                                 is.na(value) & detection_status == "Not detected" & reports_to == "MDL" ~ mdl,
-                                 T ~ value))
+        # mutate(value = case_when(is.na(value) & detection_status == "Not detected" & reports_to == "MRL" ~ mrl,
+        #                          is.na(value) & detection_status == "Not detected" & reports_to == "MDL" ~ mdl,
+        #                          T ~ value))
       if (nrow(boxplot_data) == 0) {
         return(
           plotly_empty(type = "scatter", mode = "lines") |>

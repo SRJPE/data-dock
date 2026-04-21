@@ -164,45 +164,45 @@ wq_metadata$latitude <- coords[, 2]
 # ===============================
 # reading data directly from EDI
 # TODO - use code below to read from EDI
-# fetch_data_from_api <- function(url) {
-#   tryCatch({
-#     response <- httr::GET(url)
-#     data <- httr::content(response, as = "raw")
-#     return(data)
-#   }, error = function(e) {
-#     stop(paste("Error fetching data from API:", e$message))
-#   })
-# }
-#
-# identifier <- "458"
-# version <- "13"
-# edi_file_base_url <- paste0(
-#   "https://pasta.lternet.edu/package/data/eml/edi/", identifier, "/", version
-# )
-# file_ids_bytes <- fetch_data_from_api(edi_file_base_url)
-# #file_ids contains the list of files from the package in the form of ids
-# file_ids <- read_csv(file_ids_bytes,
-#                      col_names = c("table_id"),
-#                      show_col_types = FALSE)
-# # file_ids |> View()
-#
-# #paste the file id into this url
-# edi_file_url <- paste0(edi_file_base_url, "/72c6b8cfbeca84df5086e721fcff1757")
-# file_data <- fetch_data_from_api(edi_file_url)
-#
-# wq_data_raw <- read_csv(
-#   I(rawToChar(file_data)),
-#   show_col_types = FALSE) |>
-#   clean_names() |>
-#   rename(station_id = station,
-#          value = result_value,
-#          unit = result_unit)
+fetch_data_from_api <- function(url) {
+  tryCatch({
+    response <- httr::GET(url)
+    data <- httr::content(response, as = "raw")
+    return(data)
+  }, error = function(e) {
+    stop(paste("Error fetching data from API:", e$message))
+  })
+}
+
+identifier <- "458"
+version <- "13"
+edi_file_base_url <- paste0(
+  "https://pasta.lternet.edu/package/data/eml/edi/", identifier, "/", version
+)
+file_ids_bytes <- fetch_data_from_api(edi_file_base_url)
+#file_ids contains the list of files from the package in the form of ids
+file_ids <- read_csv(file_ids_bytes,
+                     col_names = c("table_id"),
+                     show_col_types = FALSE)
+# file_ids |> View()
+
+#paste the file id into this url
+edi_file_url <- paste0(edi_file_base_url, "/72c6b8cfbeca84df5086e721fcff1757")
+file_data <- fetch_data_from_api(edi_file_url)
+
+wq_data_raw <- read_csv(
+  I(rawToChar(file_data)),
+  show_col_types = FALSE) |>
+  clean_names() |>
+  rename(station_id = station,
+         value = result_value,
+         unit = result_unit)
 # =================================
 
 
 # TODO maybe combine this with metadata to keep just one data object
-wq_data_raw <- read_csv("data-raw/EMP_DWQ_Data_2020-2023_draft.csv") |>
-  clean_names()
+# wq_data_sample <- read_csv("data-raw/EMP_DWQ_Data_2020-2023_draft.csv") |>
+#   clean_names()
 
 wq_data_joined <- wq_data_raw |>
 left_join(wq_metadata |>  st_drop_geometry() |> select(station_id, station_description),
@@ -210,7 +210,7 @@ left_join(wq_metadata |>  st_drop_geometry() |> select(station_id, station_descr
   st_drop_geometry()
 
 wq_data <- wq_data_joined |>
-  mutate(date = mdy(date),
+  mutate(date = as.Date(date),
          value = as.numeric(value),
          year = year(date)) |>
   filter(!is.na(station_description),
