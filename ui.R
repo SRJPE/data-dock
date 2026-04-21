@@ -5,6 +5,22 @@ library(shinyWidgets)
 
 ui <- fluidPage(
   theme = bs_theme(bootswatch = "flatly"),
+  tags$style(HTML("
+  #count_type_g .btn-default {
+    background-color: #f0f0f0 !important;
+    color: #888 !important;
+    border-color: #ccc !important;
+    font-weight: normal !important;
+    box-shadow: none !important;
+  }
+  #count_type_g .btn-default.active {
+    background-color: #7E2954 !important;
+    color: white !important;
+    border-color: #7E2954 !important;
+    font-weight: bold !important;
+    box-shadow: none !important;
+  }
+")),
   navbarPage(
     "Downstream Dashboard",
     id = "navbar",
@@ -281,17 +297,30 @@ ui <- fluidPage(
               column(
                 width = 8,
                 plotlyOutput("g_dynamic_plot", height = "600px"),
+                # div(
+                #   style = "display: flex; align-items: center; gap: 10px; margin-top: 8px;",
+                #   tags$span("Proportions", style = "font-size: 0.9em; font-weight: bold; color: #2c3e50;"),
+                #   shinyWidgets::materialSwitch(
+                #     inputId = "count_type_g",
+                #     label   = NULL,
+                #     value   = FALSE,       # FALSE = Proportions, TRUE = Counts
+                #     status  = "primary"
+                #   ),
+                #   tags$span("Counts", style = "font-size: 0.9em; font-weight: bold; color: #2c3e50;")
+                # ),
                 div(
-                  style = "display: flex; align-items: center; gap: 10px; margin-top: 8px;",
-                  tags$span("Proportions", style = "font-size: 0.9em; font-weight: bold; color: #2c3e50;"),
-                  shinyWidgets::materialSwitch(
-                    inputId = "count_type_g",
-                    label   = NULL,
-                    value   = FALSE,       # FALSE = Proportions, TRUE = Counts
-                    status  = "primary"
-                  ),
-                  tags$span("Counts", style = "font-size: 0.9em; font-weight: bold; color: #2c3e50;")
+                  style = "margin-top: 8px;",
+                  shinyWidgets::radioGroupButtons(
+                    inputId  = "count_type_g",
+                    label    = NULL,
+                    choices  = c("% Proportions" = "FALSE", "# Counts" = "TRUE"),
+                    selected = "FALSE",
+                    size     = "sm",
+                    status   = "default"
+                  )
                 ),
+
+
                 # TODO work out the spacing between the toggle words
                 tags$p(
                   "Note: The year is representative of a monitoring year (Nov-May), see [data collection methods](insert link) for more detail.",

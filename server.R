@@ -72,7 +72,8 @@ server <- function(input, output, session) {
         weight = 1,
         color = "black",
         fillOpacity = 0.7,
-        fillColor = ifelse(rst_sites$stream == "clear creek", "#7E2954", "black"),
+        # fillColor = ifelse(rst_sites$stream == "clear creek", "#7E2954", "black"),
+        fillColor = "black",
         #default highlight to Clear
         popup = ~ label
       ) |>
@@ -260,7 +261,7 @@ server <- function(input, output, session) {
 
     # toggle: proportions vs counts
     # show_counts <- input$count_type_g == "Counts"
-    show_counts <- isTRUE(input$count_type_g)
+    show_counts <- input$count_type_g == "TRUE"
 
     if (input$plot_type_g == "Water Year") {
       y_var <- if (show_counts) "count" else "run_percent"
@@ -355,7 +356,8 @@ server <- function(input, output, session) {
     updateSelectInput(session, "plot_type_g", "Water Year")
     updateSelectInput(session, "data_plot_g", "Run Type")
     # updateSelectInput(session, "count_type_g", "Proportions")
-    shinyWidgets::updateMaterialSwitch(session, "count_type_g", value = FALSE)
+    # shinyWidgets::updateMaterialSwitch(session, "count_type_g", value = FALSE)
+    shinyWidgets::updateRadioGroupButtons(session, "count_type_g", selected = "FALSE")
     draw_and_zoom_selection_g(character(0))
   })
 
