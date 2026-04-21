@@ -359,6 +359,13 @@ server <- function(input, output, session) {
     # shinyWidgets::updateMaterialSwitch(session, "count_type_g", value = FALSE)
     shinyWidgets::updateRadioGroupButtons(session, "count_type_g", selected = "FALSE")
     draw_and_zoom_selection_g(character(0))
+    leafletProxy("g_map") |>
+      fitBounds(
+        lng1 = min(rst_sites$longitude, na.rm = TRUE),
+        lat1 = min(rst_sites$latitude, na.rm = TRUE),
+        lng2 = max(rst_sites$longitude, na.rm = TRUE),
+        lat2 = max(rst_sites$latitude, na.rm = TRUE)
+      )
   })
 
   ## Download Tab  --------------------------------------------------------------
@@ -643,6 +650,13 @@ server <- function(input, output, session) {
 
     # Reset map (zoom + highlight)
     draw_and_zoom_selection(character(0))
+    leafletProxy("wq_map") |>
+      fitBounds(
+        lng1 = min(wq_metadata$longitude, na.rm = TRUE),
+        lat1 = min(wq_metadata$latitude, na.rm = TRUE),
+        lng2 = max(wq_metadata$longitude, na.rm = TRUE),
+        lat2 = max(wq_metadata$latitude, na.rm = TRUE)
+      )
   })
 
 

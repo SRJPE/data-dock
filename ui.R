@@ -280,7 +280,7 @@ ui <- fluidPage(
               #     choices = c("Proportions", "Counts")
               #   )
               # ),
-              actionButton("clear_all_g", "Clear All", icon = icon("eraser")),
+              actionButton("clear_all_g", "Clear All Sites", icon = icon("eraser")),
             ),
 
             # === Map and Floating Plot Panel ===
