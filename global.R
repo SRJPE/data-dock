@@ -73,7 +73,7 @@ salmonid_habitat_extents <- readRDS("data-raw/salmonid_habitat_extents.Rds")
 # adding a new query to use as example data
 # randomly filling missing data
 # genetics_data_raw <- read_csv(here::here("data-raw","sample_query_drafted.csv")) |>
-genetics_data_raw <- read_csv(here::here("data-raw","genetics_query_for_dashboard_2022-2025_2026-02-03.csv")) |>
+genetics_data_raw <- read_csv(here::here("data-raw","genetics_query_for_dashboard_2022-2025_2026-04-14.csv")) |>
   rename(run_name = final_run_designation,
          field_run_type_id = field_run_type) |>  # renaming for now to keep consistency with previous sample query
   mutate(fork_length_mm = ifelse(is.na(fork_length_mm),
@@ -244,6 +244,6 @@ wq_data_missing_location <- wq_data |>
 
 # weather analytes
 wq_quality_weather <- wq_data_joined |>
-  filter(analyte %in% c("Rain", "Sky Conditions")) |>
-  mutate(station_id_name = paste(station_id, "-", station_description),
-         date = mdy(date))
+  filter(analyte %in% c("Rain", "Sky Conditions", "Weather Observations")) |>
+  mutate(station_id_name = paste(station_id, "-", station_description))
+         # date = mdy(date))

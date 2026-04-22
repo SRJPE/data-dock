@@ -65,17 +65,55 @@ ui <- fluidPage(
               )
               }
             ),
+            # div(
+            #   style = "min-width: 250px;",
+            #   sliderInput(
+            #     "year_range",
+            #     tags$strong("Date Range"),
+            #     min = as.Date(min(wq_data$date)),
+            #     max = as.Date(max(wq_data$date)),
+            #     value = c(as.Date(min(wq_data$date)), as.Date(max(wq_data$date))),
+            #     timeFormat = "%b %Y"
+            #   )
+            # ),
+
             div(
-              style = "min-width: 250px;",
-              sliderInput(
-                "year_range",
-                tags$strong("Date Range"),
-                min = as.Date(min(wq_data$date)),
-                max = as.Date(max(wq_data$date)),
-                value = c(as.Date(min(wq_data$date)), as.Date(max(wq_data$date))),
-                timeFormat = "%b %Y"
+              style = "min-width: 200px;",
+              shinyWidgets::airDatepickerInput(
+                inputId     = "start_date_wq",
+                label       = tags$strong("Start Date"),
+                value       = min(wq_data$date),
+                range       = FALSE,
+                dateFormat  = "MMM dd, yyyy",
+                clearButton = FALSE,
+                autoClose   = TRUE,
+                minDate     = min(wq_data$date),
+                maxDate     = max(wq_data$date)
+              ),
+              tags$p(
+                "If no data available on selected date, it defaults to the first",
+                style = "font-size: 0.75em; color: #888; font-style: italic; margin-top: -8px; margin-left: 8px;"
               )
             ),
+            div(
+              style = "min-width: 200px;",
+              shinyWidgets::airDatepickerInput(
+                inputId     = "end_date_wq",
+                label       = tags$strong("End Date"),
+                value       = max(wq_data$date),
+                range       = FALSE,
+                dateFormat  = "MMM dd, yyyy",
+                clearButton = FALSE,
+                autoClose   = TRUE,
+                minDate     = min(wq_data$date),
+                maxDate     = max(wq_data$date)
+              ),
+              tags$p(
+                "and last day of the selected month.",
+                style = "font-size: 0.75em; color: #888; font-style: italic; margin-top: -8px;"
+              )
+            ),
+
             div(
               style = "min-width: 200px;",
               selectizeInput(
@@ -149,14 +187,39 @@ ui <- fluidPage(
               multiple = TRUE,
               options = list(plugins = list('remove_button'), placeholder = "Select a station")
             ),
-            sliderInput(
-              "year_range_dl",
-              "Date Range",
-              min = as.Date(min(wq_data$date)),
-              max = as.Date(max(wq_data$date)),
-              value = c(as.Date(min(wq_data$date)), as.Date(max(wq_data$date))),
-              timeFormat = "%b %Y"
+            # sliderInput(
+            #   "year_range_dl",
+            #   "Date Range",
+            #   min = as.Date(min(wq_data$date)),
+            #   max = as.Date(max(wq_data$date)),
+            #   value = c(as.Date(min(wq_data$date)), as.Date(max(wq_data$date))),
+            #   timeFormat = "%b %Y"
+            # ),
+
+
+            shinyWidgets::airDatepickerInput(
+              inputId     = "start_date_dl",
+              label       = "Start Date",
+              value       = min(wq_data$date),
+              range       = FALSE,
+              dateFormat  = "MMM dd, yyyy",
+              clearButton = FALSE,
+              autoClose   = TRUE,
+              minDate     = min(wq_data$date),
+              maxDate     = max(wq_data$date)
             ),
+            shinyWidgets::airDatepickerInput(
+              inputId     = "end_date_dl",
+              label       = "End Date",
+              value       = max(wq_data$date),
+              range       = FALSE,
+              dateFormat  = "MMM dd, yyyy",
+              clearButton = FALSE,
+              autoClose   = TRUE,
+              minDate     = min(wq_data$date),
+              maxDate     = max(wq_data$date)
+            ),
+
             selectizeInput(
               "analyte_download",
               "Analyte",

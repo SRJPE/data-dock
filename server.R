@@ -223,7 +223,7 @@ server <- function(input, output, session) {
 
   ### Download ------------------------------------------------
 
-  output$download_g_csv <- make_download_handler(filtered_g_data())
+  output$download_g_csv <- make_download_handler(filtered_g_data)
 
   ### Plot ---------------------------------------------------------
 
@@ -404,7 +404,7 @@ server <- function(input, output, session) {
   dl_download_data_g <- reactive({filtered_g_data() |>
                                    filter(run_name %in% input$run_download)})
   # assign to outputs
-  output$download_g_csv_dl <- make_download_handler()
+  output$download_g_csv_dl <- make_download_handler(dl_download_data_g)
 
   output$dl_preview_table_g <- DT::renderDataTable({
     dl_download_data_g() |>
@@ -416,33 +416,91 @@ server <- function(input, output, session) {
   ## Reactive data -----------------------------------------------------------
 
   # shared filtering logic
+  # filter_wq_data <- function(locations,
+  #                            years,
+  #                            analytes,
+  #                            include_weather = FALSE) {
+  #   out <- wq_data |>
+  #     dplyr::filter(date >= years[1], date <= years[2])
+  #
+  #   if (!is.null(locations) && length(locations) > 0) {
+  #     out <- out |> dplyr::filter(station_id_name %in% locations)
+  #   }
+  #
+  #   # handle analytes
+  #   if (!is.null(analytes) && length(analytes) > 0) {
+  #     out <- out |> dplyr::filter(analyte %in% analytes)
+  #   }
+  #
+  #   # add weather analytes if requested
+  #   if (include_weather) {
+  #     weather <- wq_quality_weather |>
+  #       dplyr::filter(
+  #         analyte %in% c("Rain", "Sky Conditions"),
+  #         date >= years[1],
+  #         date <= years[2]
+  #
+  #       )
+  #
+  #     # same location filtering to weather data
+  #     if (!is.null(locations) && length(locations) > 0) {
+  #       weather <- weather |> dplyr::filter(station_id_name %in% locations)
+  #     }
+  #
+  #     if (nrow(weather) == 0) {
+  #       showNotification(
+  #         "No weather data (Rain or Sky Conditions) available for the selected site(s) and year(s).",
+  #         type = "message",
+  #         duration = 15
+  #       )
+  #     } else {
+  #       weather <- weather |>
+  #         dplyr::mutate(value_text = value, value = NA_real_) |>
+  #         select(-value) |>
+  #         mutate(value = as.character(value_text)) |>
+  #         select(-value_text)
+  #
+  #       out <- out |>
+  #         dplyr::mutate(value = as.character(value))
+  #
+  #       out <- dplyr::bind_rows(out, weather)
+  #     }
+  #   }
+  #
+  #   out
+  #
+  # }
+
   filter_wq_data <- function(locations,
-                             years,
+                             start_date,
+                             end_date,
                              analytes,
                              include_weather = FALSE) {
+
+    # Snap start date to first day of month, end date to last day of month
+    start_date <- floor_date(as.Date(start_date), "month")
+    end_date   <- ceiling_date(as.Date(end_date), "month") - days(1)
+
+
     out <- wq_data |>
-      dplyr::filter(date >= years[1], date <= years[2])
+      dplyr::filter(date >= start_date, date <= end_date)
 
     if (!is.null(locations) && length(locations) > 0) {
       out <- out |> dplyr::filter(station_id_name %in% locations)
     }
 
-    # handle analytes
     if (!is.null(analytes) && length(analytes) > 0) {
       out <- out |> dplyr::filter(analyte %in% analytes)
     }
 
-    # add weather analytes if requested
     if (include_weather) {
       weather <- wq_quality_weather |>
         dplyr::filter(
           analyte %in% c("Rain", "Sky Conditions"),
-          date >= years[1],
-          date <= years[2]
-
+          date >= start_date,
+          date <= end_date
         )
 
-      # same location filtering to weather data
       if (!is.null(locations) && length(locations) > 0) {
         weather <- weather |> dplyr::filter(station_id_name %in% locations)
       }
@@ -451,25 +509,26 @@ server <- function(input, output, session) {
         showNotification(
           "No weather data (Rain or Sky Conditions) available for the selected site(s) and year(s).",
           type = "message",
-          duration = 15
+          duration = 6
         )
       } else {
         weather <- weather |>
           dplyr::mutate(value_text = value, value = NA_real_) |>
           select(-value) |>
-          mutate(value = as.character(value_text)) |>
+          mutate(value = as.character(value_text)) |>  # weather value as character
           select(-value_text)
 
         out <- out |>
-          dplyr::mutate(value = as.character(value))
+          dplyr::mutate(value = as.character(value))   # main data also to character
 
         out <- dplyr::bind_rows(out, weather)
       }
     }
 
     out
-
   }
+
+
 
   ## Download handler --------------------------------------------------------
 
@@ -477,7 +536,8 @@ server <- function(input, output, session) {
   wq_download_data <- reactive({
     filter_wq_data(
       input$location_filter_wq,
-      input$year_range,
+      input$start_date_wq,
+      input$end_date_wq,
       input$analyte,
       include_weather = input$include_weather
     )
@@ -486,7 +546,8 @@ server <- function(input, output, session) {
   dl_download_data <- reactive({
     filter_wq_data(
       input$location_filter_dl,
-      input$year_range_dl,
+      input$start_date_dl,
+      input$end_date_dl,
       input$analyte_download,
       include_weather = input$include_weather
     )
@@ -591,7 +652,7 @@ server <- function(input, output, session) {
       addLegend(
         position = "bottomright",
         colors = c("black", "gray"),
-        labels = c("Active Station", "Inactive Station"),
+        labels = c("Active Station", "Historical Station"),
         title = "Station Status",
         opacity = 0.7
       ) |>
@@ -643,10 +704,15 @@ server <- function(input, output, session) {
     updateSelectizeInput(session, inputId = "analyte", selected = character(0))
 
     # Reset year sliders
-    updateSliderInput(session,
-                      "year_range",
-                      value = c(min(wq_data$date), max(wq_data$date)),
-                      timeFormat = "%b %Y")
+    # updateSliderInput(session,
+    #                   "year_range",
+    #                   value = c(min(wq_data$date), max(wq_data$date)),
+    #                   timeFormat = "%b %Y")
+
+
+    shinyWidgets::updateAirDateInput(session, "start_date_wq", value = min(wq_data$date))
+    shinyWidgets::updateAirDateInput(session, "end_date_wq",   value = max(wq_data$date))
+
 
     # Reset map (zoom + highlight)
     draw_and_zoom_selection(character(0))
@@ -677,7 +743,8 @@ server <- function(input, output, session) {
     req(input$analyte, length(input$analyte) > 0)
 
     df <- filter_wq_data(input$location_filter_wq,
-                         input$year_range,
+                         input$start_date_wq,
+                         input$end_date_wq,
                          input$analyte)
 
     selected_locs <- input$location_filter_wq %||% character(0)
@@ -1047,7 +1114,10 @@ server <- function(input, output, session) {
       updateSelectInput(session,
                         "location_filter_dl",
                         selected = input$location_filter_wq)
-      updateSliderInput(session, "year_range_dl", value = input$year_range)
+      # updateSliderInput(session, "year_range_dl", value = input$year_range)
+      shinyWidgets::updateAirDateInput(session, "start_date_dl", value = input$start_date_wq)
+      shinyWidgets::updateAirDateInput(session, "end_date_dl",   value = input$end_date_wq)
+
       updateSelectizeInput(session, "analyte_download", selected = input$analyte)
     }
   })
@@ -1062,10 +1132,14 @@ server <- function(input, output, session) {
     updateSelectizeInput(session, inputId = "analyte_download", selected = character(0))
 
     # Reset year range slider (download tab)
-    updateSliderInput(session,
-                      "year_range_dl",
-                      value = c(min(wq_data$date), max(wq_data$date)),
-                      timeFormat = "%b %Y")
+    # updateSliderInput(session,
+    #                   "year_range_dl",
+    #                   value = c(min(wq_data$date), max(wq_data$date)),
+    #                   timeFormat = "%b %Y")
+
+    shinyWidgets::updateAirDateInput(session, "start_date_dl", value = min(wq_data$date))
+    shinyWidgets::updateAirDateInput(session, "end_date_dl",   value = max(wq_data$date))
+
 
     # Reset include_weather checkbox (download tab)
     updateCheckboxInput(session, inputId = "include_weather", value = FALSE)
@@ -1079,7 +1153,8 @@ server <- function(input, output, session) {
   output$dl_preview_table <- DT::renderDataTable({
     req(
       input$location_filter_dl,
-      input$year_range_dl,
+      input$start_date_dl,
+      input$end_date_dl,
       input$analyte_download,
       length(input$location_filter_dl) > 0,
       length(input$analyte_download) > 0
