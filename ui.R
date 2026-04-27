@@ -58,7 +58,15 @@ ui <- fluidPage(
 
               selectizeInput(
                 inputId = "location_filter_wq",
-                label = tags$strong("Station"),
+                label = tagList(
+                  tags$strong("Station"),
+                  tags$div(
+                    "Historical sites are no longer being monitored.",
+                    style = "font-size: 0.8em; color: #666;"
+                  )
+                ),
+
+                # label = tags$strong("Station"),
                 choices = stats::setNames(stations[ord], stations_label[ord]),
                 multiple = TRUE,
                 options = list(plugins = list('remove_button'), placeholder = 'Select a station')

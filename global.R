@@ -123,8 +123,11 @@ wq_metadata_raw <- readxl::read_xlsx("data-raw/metadata_files/station_metadata.x
 
 wq_metadata <- wq_metadata_raw |>
   group_by(station_description) |>
+  # mutate(station_description = case_when(
+  #   n() > 1 & status == "Inactive" ~ paste0(station_description, " - Historical"),
+  #   TRUE ~ station_description)) |>
   mutate(station_description = case_when(
-    n() > 1 & status == "Inactive" ~ paste0(station_description, " - Historical"),
+    status == "Inactive" ~ paste0(station_description, " - Historical"),
     TRUE ~ station_description)) |>
   ungroup() |>
   mutate(station_id_name = paste(station_id, "-", station_description),
