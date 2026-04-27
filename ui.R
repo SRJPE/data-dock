@@ -81,7 +81,13 @@ ui <- fluidPage(
               style = "min-width: 200px;",
               shinyWidgets::airDatepickerInput(
                 inputId     = "start_date_wq",
-                label       = tags$strong("Start Date"),
+                label = tagList(
+                  tags$strong("Start Date"),
+                  tags$div(
+                    "If unavailable, the earliest date in the month is used.",
+                    style = "font-size: 0.8em; color: #666;"
+                  )
+                ),
                 value       = min(wq_data$date),
                 range       = FALSE,
                 dateFormat  = "MMM dd, yyyy",
@@ -89,17 +95,23 @@ ui <- fluidPage(
                 autoClose   = TRUE,
                 minDate     = min(wq_data$date),
                 maxDate     = max(wq_data$date)
-              ),
-              tags$p(
-                "If no data available on selected date, it defaults to the first",
-                style = "font-size: 0.75em; color: #888; font-style: italic; margin-top: -8px; margin-left: 8px;"
               )
+              # tags$p(
+              #   "If no data available on selected date, it defaults to the first",
+              #   style = "font-size: 0.75em; color: #888; font-style: italic; margin-top: -8px; margin-left: 8px;"
+              # )
             ),
             div(
               style = "min-width: 200px;",
               shinyWidgets::airDatepickerInput(
                 inputId     = "end_date_wq",
-                label       = tags$strong("End Date"),
+                label = tagList(
+                  tags$strong("Start Date"),
+                  tags$div(
+                    "If unavailable, the earliest date in the month is used.",
+                    style = "font-size: 0.8em; color: #666;"
+                  )
+                ),
                 value       = max(wq_data$date),
                 range       = FALSE,
                 dateFormat  = "MMM dd, yyyy",
@@ -107,11 +119,11 @@ ui <- fluidPage(
                 autoClose   = TRUE,
                 minDate     = min(wq_data$date),
                 maxDate     = max(wq_data$date)
-              ),
-              tags$p(
-                "and last day of the selected month.",
-                style = "font-size: 0.75em; color: #888; font-style: italic; margin-top: -8px;"
               )
+              # tags$p(
+              #   "and last day of the selected month.",
+              #   style = "font-size: 0.75em; color: #888; font-style: italic; margin-top: -8px;"
+              # )
             ),
 
             div(
@@ -155,6 +167,18 @@ ui <- fluidPage(
           fluidRow(column(
             width = 12,
             div(
+              tags$p(
+                tags$span(
+                  "For more information about the data and metadata, please visit the ",
+                  tags$a(
+                    "EDI package here",
+                    href = "https://portal.edirepository.org/nis/metadataviewer?packageid=edi.458.13",
+                    target = "_blank"
+                  ),
+                  "."
+                ),
+                style = "margin-bottom: 5px; text-align: left; font-style: italic; color: #555;"
+              ),
               style = "margin-top: 20px; text-align: right;",
               downloadBttn(
                 "download_wq_csv",
@@ -252,7 +276,7 @@ ui <- fluidPage(
                   "Download the data you’ve selected using the filters on this tab.<br>
         The table provides a preview only — the exported <code>.csv</code> file will include the complete raw dataset.<br>
         For more information about the data and metadata, please visit the
-        <a href='link-to-metadata-file' target='_blank'>EDI package here</a>."
+        <a href='https://portal.edirepository.org/nis/metadataviewer?packageid=edi.458.13' target='_blank'>EDI package here</a>."
                 ),
                 #TODO add link to EDI
                 style = "font-style: italic; color: #555; text-align: center; margin-top: 10px;"
