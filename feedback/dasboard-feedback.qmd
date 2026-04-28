@@ -1,6 +1,6 @@
 ---
 title: "Downstream Dashboard Dashboard — User Research Feedback Report"
-subtitle: "Compiled from [Google Forms Survey Responses](https://docs.google.com/forms/d/e/1FAIpQLSe3M5DvdxeucI8y7Zg3buI1ZdN5KMstl5CULJObjRpkzUfg8Q/viewform?usp=header). \n\n **DRAFT - in development**"
+subtitle: "Compiled from survey responses. \n\n **DRAFT - in development**"
 date: today
 date-format: "MMMM YYYY"
 
@@ -204,16 +204,18 @@ cat(glue(
 
 ### Prioritized Recommendations
 
+Note that additional recommendations implemented are listed in Appendix A checklist. For more details, view the GitHub issues in the dashboard repository. 
+
 ```{r recommendations}
 recs <- tribble(
   ~Priority, ~Recommendation,
-  "High",   "Recommendation #1 here",
-  "High",   "Recommendation #2 here",
-  "Medium", "Recommendation #3 here",
-  "Medium", "Recommendation #4 here",
-  "Low",    "Recommendation #5 here",
-  "Low",    "Recommendation #6 here",
-  "Low",    "Recommendation #7 here"
+  "High",   "Replace the year slider with checkboxes or a date range picker",
+  "High",   "Add city/river labels to the water quality map",
+  "Medium", "Display raw fish counts alongside proportions in the genetics module",
+  "Medium", "Add links or connections to EDI pages for metadata, citations, and downloads",
+  "Low",    "Clarify what “inactive” means in the site selector (currently inactive vs. inactive across full time range)",
+  "Low",    "Restructure the Overview page: replace long paragraphs with concise topic sentences and bullet points",
+  "Low",    "Sort station names alphabetically with station ID in parenthesese"
 )
 
 recs |>
@@ -226,6 +228,9 @@ recs |>
   kable_styling(bootstrap_options = c("hover", "condensed"), full_width = TRUE) |>
   column_spec(1, width = "7em", extra_css = "text-align:center") |>
   column_spec(2, width = "60em")
+
+# cat("Additional recommendations implemented are listed in Appendix A checklist", sep = "")
+
 ```
 
 ---
@@ -564,65 +569,48 @@ organized by theme. Items can be used to prioritize development tasks.
 #### Navigation / Interface
 
 - [ ] Relocate the Water Quality and Genetics tabs from the top of the page to a more
-      conventional location (e.g. sidebar or persistent top nav) - *LOW*
-- [ ] Restructure the Overview page — replace long paragraphs with concise topic 
+      conventional location (e.g. sidebar or persistent top nav) - *Decided to keep tab design as it currently is. This item was low priority and might be addressed in the future* 
+- [X] Restructure the Overview page — replace long paragraphs with concise topic 
       sentences and bullet points - *LOW*
-- [ ] Add a clear section heading that states the dashboard purpose upfront - *LOW*
-- [ ] Sort station names alphabetically with station ID in parentheses - *LOW*
-- [ ] Remove auto-zoom to selected sites  - *LOW*
-- [ ] Add color differentiation for selected sites that are active vs inactive  - *LOW*
+- [X] Add a clear section heading that states the dashboard purpose upfront - *LOW*
+- [X] Sort station names alphabetically with station ID in parentheses - *LOW*
+- [X] Remove auto-zoom to selected sites  - *LOW*
+- [X] Add color differentiation for selected sites that are active vs inactive  - *LOW*
 
 
 #### Controls / Filters
 
-- [ ] Replace the year slider with checkboxes or a date range picker - *HIGH*
-- [ ] Remove tick marks between years on the year toggle to prevent user confusion - *MEDIUM*
-- [ ] Relabel the year toggle to say "Water Year" instead of "Year" - *LOW*
-- [ ] Fix the site/analyte dropdowns so options do not disappear unexpectedly
+- [X] Replace the year slider with checkboxes or a date range picker - *HIGH*
+- [X] Remove tick marks between years on the year toggle to prevent user confusion - *MEDIUM*
+- [X] Relabel the year toggle to say "Water Year" instead of "Year" - *LOW*
+- [X] Fix the site/analyte dropdowns so options do not disappear unexpectedly
       when switching between sites - *LOW*
-- [ ] Allow users to select within-year date ranges for more granular filtering - *LOW*
+- [X] Allow users to select within-year date ranges for more granular filtering - *LOW*
 
 #### Visualization / Data
 
-- [ ] Add river labels to the water quality map - *MEDIUM*
-- [ ] Add city labels to the water quality map - *MEDIUM*
-- [ ] Add water quality monitoring stations upstream of Sacramento at Hood - *?*
-- [ ] Display raw fish counts alongside proportions in the genetics module - *LOW (ADD EXPLANATION OF TOOLTIP)*
+- [X] Add river labels to the water quality map - *MEDIUM*
+- [X] Add city labels to the water quality map - *MEDIUM*
+- [ ] Add water quality monitoring stations upstream of Sacramento at Hood - *The Environmental Monitoring Program (EMP) monitors water conditions across the San Francisco Estuary* 
+- [X] Display raw fish counts alongside proportions in the genetics module - *LOW (ADD EXPLANATION OF TOOLTIP)*
 - [ ] Add daily or event-level catch data rather than annual totals only - *?*
-- [ ] Add water year type and flow/export data overlays to the genetics dashboard - *MEDUIM*
-- [ ] Build a comparison view for field length-at-date assignments vs. genetic
+- [ ] Add water year type and flow/export data overlays to the genetics dashboard - *Since this is not priority, team decided to omit this since these data is available elsewhere*
+- [X] Build a comparison view for field length-at-date assignments vs. genetic
       run assignments - *MEDIUM*
 - [ ] Replace the single large box plot with time-series summary plots
-      (monthly or annual) - *?*
+      (monthly or annual) - *Decided to keep box plots and time series* 
 - [ ] Add an option to toggle between average, maximum, minimum, and
-      7-day average values - *NA (EXPLAIN WATER DATA COLLECTED ONCE A MONTH)*
-- [ ] Add links or connections to EDI pages for metadata, citations, and downloads - *LOW*
-- [ ] Clarify the difference between surface and bottom sensor measurements
+      7-day average values - *NA Discrete water quality sampling occurs mostly once a month at each monitoring station*
+- [X] Add links or connections to EDI pages for metadata, citations, and downloads - *LOW*
+- [X] Clarify the difference between surface and bottom sensor measurements
       (e.g. "Dissolved Oxygen" vs. "(bottom) Dissolved Oxygen") - *MEDIUM*
-- [ ] Indicate whether more historical data or future data will be available - *LOW*
+- [ ] Indicate whether more historical data or future data will be available - *Data collection methods langugage explains the site shifts from historical sites, if any*
 
 #### Language / Messages
 
-- [ ] Clarify what "inactive" means in the site selector (currently inactive vs.
+- [X] Clarify what "inactive" means in the site selector (currently inactive vs.
       inactive across full time range) - *LOW*
 - [ ] Add a chart subtitle or title note specifying what data is shown
-      (e.g. "Average daily concentrations") - *MEDUIM*
+      (e.g. "Average daily concentrations") - *Determined that axis titles were sufficient to communicate data shown*
 - [ ] Add a label reminding users that water quality data shown is
       discrete monthly samples - *LOW - ADD EXPLANATION*
-
-### User Survey
-
-[Link to survey]
-
-```{r raw-data}
-# df |>
-#   select(-matches("email|timestamp", ignore.case = TRUE)) |>
-#   head(10) |>
-#   kbl() |>
-#   kable_styling(
-#     bootstrap_options = c("striped", "hover", "condensed", "responsive"),
-#     full_width = TRUE, font_size = 11
-#   ) |>
-#   scroll_box(width = "100%", height = "360px")
-```
-
