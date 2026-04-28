@@ -34,7 +34,6 @@ ui <- fluidPage(
         id = "wq_tabs",
 
         ### Visualize ---------------------------------------------------------------
-
         tabPanel(
           "Visualize Data",
           fluidRow(column(width = 12, )),
@@ -44,101 +43,87 @@ ui <- fluidPage(
               style = "min-width: 200px;",
 
               {
-
                 stations <- sort(unique(wq_metadata$station_id_name))
-
                 stations_label <- stringr::str_replace(
                   stations,
                   "^([A-Za-z]+)0*(\\d+[A-Za-z]?)\\s*-\\s*(.+)$",
                   "\\3 (\\1\\2)"
                 )
-
                 # Sort alphabetically by station name
                 ord <- order(stations_label)
 
-              selectizeInput(
-                inputId = "location_filter_wq",
-                label = tagList(
-                  tags$strong("Station"),
-                  tags$div(
-                    "Historical sites are no longer being monitored.",
-                    style = "font-size: 0.8em; color: #666;"
-                  )
-                ),
-
-                # label = tags$strong("Station"),
-                choices = stats::setNames(stations[ord], stations_label[ord]),
-                multiple = TRUE,
-                options = list(plugins = list('remove_button'), placeholder = 'Select a station')
-              )
+                selectizeInput(
+                  inputId = "location_filter_wq",
+                  label = tagList(
+                    tags$strong("Station"),
+                    tags$div(
+                      "Historical sites are no longer being monitored.",
+                      style = "font-size: 0.8em; color: #666;"
+                      )
+                    ),
+                  choices = stats::setNames(stations[ord], stations_label[ord]),
+                  multiple = TRUE,
+                  options = list(plugins = list('remove_button'), placeholder = 'Select a station')
+                )
               }
-            ),
-            # div(
-            #   style = "min-width: 250px;",
-            #   sliderInput(
-            #     "year_range",
-            #     tags$strong("Date Range"),
-            #     min = as.Date(min(wq_data$date)),
-            #     max = as.Date(max(wq_data$date)),
-            #     value = c(as.Date(min(wq_data$date)), as.Date(max(wq_data$date))),
-            #     timeFormat = "%b %Y"
-            #   )
-            # ),
+
+              ),
 
             div(
               style = "min-width: 200px;",
               shinyWidgets::airDatepickerInput(
-                inputId     = "start_date_wq",
+                inputId = "start_date_wq",
                 label = tagList(
                   tags$strong("Start Date"),
                   tags$div(
-                    "If unavailable, the earliest date in the month is used.",
+                    "If unavailable, the closest date with data is used.",
                     style = "font-size: 0.8em; color: #666;"
-                  )
-                ),
-                value       = min(wq_data$date),
-                range       = FALSE,
-                dateFormat  = "MMM dd, yyyy",
+                    )
+                  ),
+                value = min(wq_data$date),
+                range = FALSE,
+                dateFormat = "MMM dd, yyyy",
                 clearButton = FALSE,
-                autoClose   = TRUE,
-                minDate     = min(wq_data$date),
-                maxDate     = max(wq_data$date)
-              )
-              # tags$p(
-              #   "If no data available on selected date, it defaults to the first",
-              #   style = "font-size: 0.75em; color: #888; font-style: italic; margin-top: -8px; margin-left: 8px;"
-              # )
-            ),
+                autoClose = TRUE,
+                minDate = min(wq_data$date),
+                maxDate = max(wq_data$date)
+                )
+              ),
             div(
               style = "min-width: 200px;",
               shinyWidgets::airDatepickerInput(
-                inputId     = "end_date_wq",
+                inputId = "end_date_wq",
                 label = tagList(
-                  tags$strong("Start Date"),
+                  tags$strong("End Date"),
                   tags$div(
-                    "If unavailable, the earliest date in the month is used.",
+                    "If unavailable, the closest date with data is used.",
                     style = "font-size: 0.8em; color: #666;"
-                  )
-                ),
-                value       = max(wq_data$date),
-                range       = FALSE,
-                dateFormat  = "MMM dd, yyyy",
+                    )
+                  ),
+                value = max(wq_data$date),
+                range = FALSE,
+                dateFormat = "MMM dd, yyyy",
                 clearButton = FALSE,
-                autoClose   = TRUE,
-                minDate     = min(wq_data$date),
-                maxDate     = max(wq_data$date)
-              )
-              # tags$p(
-              #   "and last day of the selected month.",
-              #   style = "font-size: 0.75em; color: #888; font-style: italic; margin-top: -8px;"
-              # )
-            ),
+                autoClose = TRUE,
+                minDate = min(wq_data$date),
+                maxDate = max(wq_data$date)
+                )
+              ),
 
             div(
               style = "min-width: 200px;",
               selectizeInput(
                 inputId = "analyte",
-                label = tags$strong("Analyte"),
+                label = tagList(
+                  tags$strong("Analyte"),
+                  tags$div(
+                    "Surface measurements are collected one meter below the surface of
+                    the water and bottom measurements are collected approximately one meter
+                    above the bottom of the channel floor.",
+                    style = "font-size: 0.8em; color: #666;"
+                  )
+                ),
+
                 choices = NULL,
                 selected = NULL,
                 multiple = TRUE,
@@ -168,10 +153,11 @@ ui <- fluidPage(
                              tags$p(
                                "Note: Boxplots for some stations may not be displayed if more than 50% of the data at that location are non-detects.",
                                style = "font-size: 0.9em; font-style: italic; color: #555; margin-top:5px;"
+                               )
                              )
             )
-            )
-          ),
+            ),
+
           fluidRow(column(
             width = 12,
             div(
@@ -181,12 +167,10 @@ ui <- fluidPage(
                   tags$a(
                     "EDI package here",
                     href = "https://portal.edirepository.org/nis/metadataviewer?packageid=edi.458.13",
-                    target = "_blank"
-                  ),
-                  "."
-                ),
+                    target = "_blank"),
+                  "."),
                 style = "margin-bottom: 5px; text-align: left; font-style: italic; color: #555;"
-              ),
+                ),
               style = "margin-top: 20px; text-align: right;",
               downloadBttn(
                 "download_wq_csv",
@@ -194,19 +178,19 @@ ui <- fluidPage(
                 style = "unite",
                 color = "primary",
                 size = "sm"
-              ),
+                ),
               tags$p(
                 tags$span("Download the data currently selected in the map and filters."),
                 tags$br(),
                 tags$span("For custom queries, visit the Download tab."),
                 style = "margin-bottom: 5px; font-style: italic; color: #555;"
+                )
               )
             )
-          ))
-        ),
+            )
+          ),
 
         ### Download ----------------------------------------------------------------
-
         tabPanel("Download Data", sidebarLayout(
           sidebarPanel(
             width = 4,
@@ -218,39 +202,29 @@ ui <- fluidPage(
               choices = sort(unique(wq_metadata$station_id_name)),
               multiple = TRUE,
               options = list(plugins = list('remove_button'), placeholder = "Select a station")
-            ),
-            # sliderInput(
-            #   "year_range_dl",
-            #   "Date Range",
-            #   min = as.Date(min(wq_data$date)),
-            #   max = as.Date(max(wq_data$date)),
-            #   value = c(as.Date(min(wq_data$date)), as.Date(max(wq_data$date))),
-            #   timeFormat = "%b %Y"
-            # ),
-
-
+              ),
             shinyWidgets::airDatepickerInput(
-              inputId     = "start_date_dl",
-              label       = "Start Date",
-              value       = min(wq_data$date),
-              range       = FALSE,
-              dateFormat  = "MMM dd, yyyy",
+              inputId = "start_date_dl",
+              label = "Start Date",
+              value = min(wq_data$date),
+              range = FALSE,
+              dateFormat = "MMM dd, yyyy",
               clearButton = FALSE,
-              autoClose   = TRUE,
-              minDate     = min(wq_data$date),
-              maxDate     = max(wq_data$date)
-            ),
+              autoClose = TRUE,
+              minDate = min(wq_data$date),
+              maxDate = max(wq_data$date)
+              ),
             shinyWidgets::airDatepickerInput(
-              inputId     = "end_date_dl",
-              label       = "End Date",
-              value       = max(wq_data$date),
-              range       = FALSE,
-              dateFormat  = "MMM dd, yyyy",
+              inputId = "end_date_dl",
+              label = "End Date",
+              value = max(wq_data$date),
+              range = FALSE,
+              dateFormat = "MMM dd, yyyy",
               clearButton = FALSE,
-              autoClose   = TRUE,
-              minDate     = min(wq_data$date),
-              maxDate     = max(wq_data$date)
-            ),
+              autoClose = TRUE,
+              minDate = min(wq_data$date),
+              maxDate = max(wq_data$date)
+              ),
 
             selectizeInput(
               "analyte_download",
@@ -367,16 +341,8 @@ ui <- fluidPage(
                 tags$strong("Data Type"),
                 choices = c("Run Type", "Greb 1L RoSA Genotype")
               )),
-              # div(
-              #   style = "min-width: 200px;",
-              #   selectInput(
-              #     "count_type_g",
-              #     tags$strong("Display As"),
-              #     choices = c("Proportions", "Counts")
-              #   )
-              # ),
               actionButton("clear_all_g", "Clear All Sites", icon = icon("eraser")),
-            ),
+              ),
 
             # === Map and Floating Plot Panel ===
             fluidRow(
@@ -392,37 +358,23 @@ ui <- fluidPage(
               column(
                 width = 8,
                 plotlyOutput("g_dynamic_plot", height = "600px"),
-                # div(
-                #   style = "display: flex; align-items: center; gap: 10px; margin-top: 8px;",
-                #   tags$span("Proportions", style = "font-size: 0.9em; font-weight: bold; color: #2c3e50;"),
-                #   shinyWidgets::materialSwitch(
-                #     inputId = "count_type_g",
-                #     label   = NULL,
-                #     value   = FALSE,       # FALSE = Proportions, TRUE = Counts
-                #     status  = "primary"
-                #   ),
-                #   tags$span("Counts", style = "font-size: 0.9em; font-weight: bold; color: #2c3e50;")
-                # ),
                 div(
                   style = "margin-top: 8px;",
                   shinyWidgets::radioGroupButtons(
-                    inputId  = "count_type_g",
-                    label    = NULL,
+                    inputId = "count_type_g",
+                    label = NULL,
                     choices  = c("% Proportions" = "FALSE", "# Counts" = "TRUE"),
                     selected = "FALSE",
-                    size     = "sm",
-                    status   = "default"
-                  )
-                ),
-
-
-                # TODO work out the spacing between the toggle words
+                    size = "sm",
+                    status = "default"
+                    )
+                  ),
                 tags$p(
                   "Note: The year is representative of a monitoring year (Nov-May), see [data collection methods](insert link) for more detail.",
                   style = "font-size: 0.9em; font-style: italic; color: #555; margin-top:5px;"
+                  )
                 )
-              )
-            ),
+              ),
             fluidRow(column(
               width = 12,
               div(
@@ -439,15 +391,14 @@ ui <- fluidPage(
                   tags$br(),
                   tags$span("For custom queries, visit the Download tab."),
                   style = "margin-bottom: 5px; font-style: italic; color: #555;"
+                  )
                 )
-              )
-            ))
-          )
-        )),
+              ))
+            )
+          )),
 
         ### Download ----------------------------------------------------------------
 
-        # TODO currently not very functional
         tabPanel("Download Data", sidebarLayout(
           sidebarPanel(
             width = 4,
@@ -461,25 +412,14 @@ ui <- fluidPage(
               multiple = TRUE,
               options = list(plugins = list('remove_button'), placeholder = "Select a site")
             ),
-            # sliderInput(
-            #   "year_range_dl_g",
-            #   "Water Year Range",
-            #   min = as.numeric(min(run_designation$year)),
-            #   max = as.numeric(max(run_designation$year)),
-            #   value = c(as.numeric(min(
-            #     run_designation$year
-            #   )), max(run_designation$year)),
-            #   step = 1,
-            #   sep = ""
-            # ),
             selectizeInput(
-              inputId  = "year_range_dl_g",
-              label    = "Year Range",
-              choices  = sort(unique(run_designation$year)),
+              inputId = "year_range_dl_g",
+              label = "Year Range",
+              choices = sort(unique(run_designation$year)),
               selected = sort(unique(run_designation$year)),
               multiple = TRUE,
-              options  = list(plugins = list('remove_button'), placeholder = "Select year(s)")
-            ),
+              options = list(plugins = list('remove_button'), placeholder = "Select year(s)")
+              ),
             selectizeInput(
               "run_download",
               "Run Name",
