@@ -8,32 +8,16 @@ library(plotly)
 library(shinycssloaders)
 library(sf)
 library(janitor)
+library(EDIutils)
+library(readr)
 
 # Colors ------------------------------------------------------------------
-colors_full <-  c("#9A8822", "#F5CDB4", "#F8AFA8", "#FDDDA0", "#74A089", #Royal 2
-                  "#899DA4", "#C93312", "#DC863B", # royal 1 (- 3)
-                  "#F1BB7B", "#FD6467", "#5B1A18", # Grand Budapest 1 (-4)
-                  "#D8B70A", "#02401B", "#A2A475", # Cavalcanti 1
-                  "#E6A0C4", "#C6CDF7", "#D8A499", "#7294D4", #Grand Budapest 2
-                  "#9986A5", "#EAD3BF", "#AA9486", "#B6854D", "#798E87" # Isle of dogs 2 altered slightly
-)
-
 
 tol_muted <- c("#2E2585", "#337538", "#5DA899", "#94CBEC","#DCCD7D", "#C26A77", "#9F4A96","#7E2954")
 
-four_colors <- c("#2E2585","#337538","#C26A77","#7E2954")
+# ------------------ GENETICS DATA ------------------------------------------------------
 
-grand_budapest <- c("#E6A0C4", "#C6CDF7", "#D8A499", "#7294D4")
-
-moonrise_2 <- c("#798E87FF", "#C27D38FF", "#CCC591FF", "#29211FFF")
-
-a_palette <- c("#2A363BFF", "#019875FF", "#99B898FF", "#FECEA8FF", "#FF847CFF", "#E84A5FFF", "#C0392BFF", "#96281BFF")
-pony_o <- c("#4C413FFF", "#5A6F80FF", "#278B9AFF", "#E75B64FF", "#DE7862FF", "#D8AF39FF", "#E8C4A2FF")
-
-# Genetics Map ------------------------------------------------------------
-
-# TODO insert more info on how these were prepared and where they come from
-# data from jpe
+# ================== DATA PULL FROM JPE ============
 rst_raw <- readRDS("data-raw/rst_sites.Rds")
 
 rst <- rst_raw |>
@@ -66,12 +50,9 @@ rst_sites$latitude <- coords[, 2]
 # habitat extents
 salmonid_habitat_extents <- readRDS("data-raw/salmonid_habitat_extents.Rds")
 
+# ===================== DATA PULL ============
 # Draft genetics data from staging database. These will be pulled from EDI when published
-# genetics_data_raw <- read_csv(here::here("data-raw","grun_id_query_10-10-2025.csv"))
-# adding a new query to use as example data
-# randomly filling missing data
-# genetics_data_raw <- read_csv(here::here("data-raw","sample_query_drafted.csv")) |>
-genetics_data_raw <- read_csv(here::here("data-raw","genetics_query_for_dashboard_2022-2025_2026-02-03.csv")) |>
+genetics_data_raw <- read_csv(here::here("data-raw","genetics_query_for_dashboard_2022-2025_2026-04-14.csv")) |>
   rename(run_name = final_run_designation,
          field_run_type_id = field_run_type) |>  # renaming for now to keep consistency with previous sample query
   mutate(fork_length_mm = ifelse(is.na(fork_length_mm),
@@ -104,18 +85,57 @@ run_designation <- genetics_data_raw |>
   filter(!is.na(month), !is.na(genotype))
 
 # stock assignment (fall, spring) and phenotype(early, late heterozygot )
-run_designation_percent <- run_designation |>
-  group_by(location_name, sample_event, year, run_name) |>
-  summarize(count = n()) |>
-  group_by(location_name, year, sample_event) |>
-  mutate(total_sample = sum(count),
-         run_percent = (count/total_sample) * 100)
+# run_designation_percent <- run_designation |>
+#   group_by(location_name, sample_event, year, run_name) |>
+#   summarize(count = n()) |>
+#   group_by(location_name, year, sample_event) |>
+#   mutate(total_sample = sum(count),
+#          run_percent = (count/total_sample) * 100)
 
-# water quality data ------------------------------------------------------
+# ------------------ WATER QUALITY DATA ------------------------------------------------------
 
-# water quality location metadata
+# =================================
+# function for reading data directly from EDI
+fetch_data_from_api <- function(url) {
+  tryCatch({
+    response <- httr::GET(url)
+    data <- httr::content(response, as = "raw")
+    return(data)
+  }, error = function(e) {
+    stop(paste("Error fetching data from API:", e$message))
+  })
+}
 
-wq_metadata_raw <- readxl::read_xlsx("data-raw/metadata_files/station_metadata.xlsx") |>
+identifier <- "458"
+version <- "13"
+edi_file_base_url <- paste0(
+  "https://pasta.lternet.edu/package/data/eml/edi/", identifier, "/", version
+)
+file_ids_bytes <- fetch_data_from_api(edi_file_base_url)
+#file_ids contains the list of files from the package in the form of ids
+file_ids <- read_csv(file_ids_bytes,
+                     col_names = c("table_id"),
+                     show_col_types = FALSE)
+# file_ids |> View()
+# ====================READING WQ DATA FROM EDI USING FUNCTION===============
+edi_file_url <- paste0(edi_file_base_url, "/72c6b8cfbeca84df5086e721fcff1757")
+file_data <- fetch_data_from_api(edi_file_url)
+
+wq_data_raw <- read_csv(
+  I(rawToChar(file_data)),
+  show_col_types = FALSE) |>
+  clean_names() |>
+  rename(station_id = station,
+         value = result_value,
+         unit = result_unit)
+
+# ====================READING WQ LOCATION METADATA FROM EDI USING FUNCTION=====
+edi_file_url_metadata <- paste0(edi_file_base_url, "/ac44e8bf5f7a8afce67ba0d6cbfbc228")
+file_metadata <- fetch_data_from_api(edi_file_url_metadata)
+
+wq_metadata_raw <- read_csv(
+  I(rawToChar(file_metadata)),
+  show_col_types = FALSE) |>
   clean_names() |>
   filter(latitude != "variable") |> # these data entries do not have lat/long, so I am leaving them out for now
   st_as_sf(coords = c("longitude", "latitude"), crs = 4326)
@@ -123,53 +143,24 @@ wq_metadata_raw <- readxl::read_xlsx("data-raw/metadata_files/station_metadata.x
 wq_metadata <- wq_metadata_raw |>
   group_by(station_description) |>
   mutate(station_description = case_when(
-    n() > 1 & status == "Inactive" ~ paste0(station_description, " - Historical"),
+    status == "Inactive" ~ paste0(station_description, " - Historical"),
     TRUE ~ station_description)) |>
   ungroup() |>
-  mutate(station_id_name = paste(station_id, "-", station_description),
-         region = case_when(station_id %in% c("NZ002", "NZ004") ~ "Carquinez",
-                            station_id %in% c("D16", "D19", "D26", "D28A") ~ "Central Delta",
-                            station_id %in% c("D4", "D10", "D12", "D22", "D9", "D11", "D14A") ~ "Confluence",
-                            station_id %in% c("C3A", "NZ068", "C3", "D24") ~ "North Delta",
-                            station_id %in% c("D41", "D41A", "NZ325", "D42") ~ "San Pablo Bay",
-                            station_id %in% c("C9", "C10A", "MD10A", "P8", "C7", "C10", "MD10",
-                                              "P10A", "P12", "P12A") ~ "South Delta",
-                            station_id %in% c("D6", "D7", "D8", "D2") ~ "Suisun and Grizzly Bays",
-                            station_id %in% c("NZ032", "NZS42", "S42") ~ "Suisun Marsh",
-                            T ~ NA)) |>
-  glimpse()
-
-# tol_muted <- qualitative_hcl(
-#   n = length(unique(wq_metadata$region)),
-#   palette = "Tol Muted"
-# )
-
-#TODO figure out if region should be assigned to those that are not currently grouped on EMP site
-site_pal <- setNames(tol_muted, sort(unique(wq_metadata$region)))
-
-wq_metadata <- wq_metadata |>
-  mutate(site_color = unname(site_pal[region]),
-         site_icon = ifelse(
-           status == "Active", "circle", "square"))
-
-
+  mutate(station_id_name = paste(station_id, "-", station_description))
 # adding lat/long fields for zooming functionality
 coords <- sf::st_coordinates(wq_metadata)
 wq_metadata$longitude <- coords[, 1]
 wq_metadata$latitude <- coords[, 2]
 
-# water quality data draft ----
+# =====================combine metadata with data=================
 # TODO maybe combine this with metadata to keep just one data object
-wq_data_raw <- read_csv("data-raw/EMP_DWQ_Data_2020-2023_draft.csv") |>
-  clean_names()
-
 wq_data_joined <- wq_data_raw |>
 left_join(wq_metadata |>  st_drop_geometry() |> select(station_id, station_description),
           by = "station_id") |>
   st_drop_geometry()
 
 wq_data <- wq_data_joined |>
-  mutate(date = mdy(date),
+  mutate(date = as.Date(date),
          value = as.numeric(value),
          year = year(date)) |>
   filter(!is.na(station_description),
@@ -180,29 +171,13 @@ wq_data <- wq_data_joined |>
   mutate(station_id_name = paste(station_id, "-", station_description)) |>
   glimpse()
 
-#adding region for color pallet purposes -
-#TODO delete this if final desicion is not to use regions
-wq_data_clean <- wq_data |>
-  mutate(region =
-           case_when(station_id %in% c("NZ002", "NZ004") ~ "Carquinez",
-                     station_id %in% c("D16", "D19", "D26", "D28A") ~ "Central Delta",
-                     station_id %in% c("D4", "D10", "D12", "D22") ~ "Confluence",
-                     station_id %in% c("C3A", "NZ068") ~ "North Delta",
-                     station_id %in% c("D41", "D41A", "NZ325") ~ "San Pablo Bay",
-                     station_id %in% c("C9", "C10A", "MD10A", "P8") ~ "South Delta",
-                     station_id %in% c("D6", "D7", "D8") ~ "Suisun and Grizzly Bays",
-                     station_id %in% c("NZ032", "NZS42") ~ "Suisun Marsh",
-                     T ~ NA))
-
-# station_id == LSZ6, LSZ2, LSZ2-SJR, LSZ6-SJR are not in the metadata
 # was planning on using analyte lat/long to assign location. however, it is inconsistent across same station_id
-#
 wq_data_missing_location <- wq_data |>
   filter(station_id %in% c("LSZ6", "LSZ2", "LSZ2-SJR", "LSZ6-SJR"),
          analyte %in% c("Latitude", "Longitude"))
 
-# weather analytes
+# ==================== WEATHER ANALYTES ==========================
 wq_quality_weather <- wq_data_joined |>
-  filter(analyte %in% c("Rain", "Sky Conditions")) |>
-  mutate(station_id_name = paste(station_id, "-", station_description),
-         date = mdy(date))
+  filter(analyte %in% c("Rain", "Sky Conditions", "Weather Observations")) |>
+  mutate(station_id_name = paste(station_id, "-", station_description))
+

@@ -1,0 +1,615 @@
+---
+title: "Downstream Dashboard Dashboard — User Research Feedback Report"
+subtitle: "Compiled from survey responses. \n\n **DRAFT - in development**"
+date: today
+date-format: "MMMM YYYY"
+
+format:
+  html:
+    theme: cosmo
+    checkbox: true
+    toc: true
+    toc-depth: 3
+    toc-title: "Contents"
+    toc-location: left
+    number-sections: true
+    fig-width: 8
+    fig-height: 5
+    fig-dpi: 150
+    embed-resources: true        # single self-contained HTML file
+    code-fold: true              # hide code by default, togglable
+    code-summary: "Show code"
+
+  pdf:
+    toc: true
+    number-sections: true
+    colorlinks: true
+    fig-pos: "H"
+
+execute:
+  echo: false
+  warning: false
+  message: false
+  cache: false   # set true to avoid re-fetching sheet on every render
+---
+
+```{r setup}
+#| label: setup
+#| include: false
+
+# ── Install / load packages ──────────────────────────────────────────────────
+library("googlesheets4")
+library("tidyverse")
+library("scales")
+library("knitr")
+library("kableExtra")
+library("fmsb")
+library("glue")
+library("janitor")
+library("lubridate")
+library(readxl)
+library(here)
+# ── Design tokens ────────────────────────────────────────────────────────────
+OCEAN <- "#2563EB"; TEAL <- "#0EA5E9"; JADE <- "#10B981"
+AMBER <- "#F59E0B"; ROSE <- "#F43F5E"; SLATE <- "#64748B"; INK <- "#1A1F2E"
+
+# ── ggplot theme ─────────────────────────────────────────────────────────────
+theme_survey <- function(base_size = 12) {
+  theme_minimal(base_size = base_size) %+replace% theme(
+    plot.title       = element_text(face = "bold", size = base_size + 2,
+                                    color = INK, hjust = 0),
+    plot.subtitle    = element_text(size = base_size - 1, color = SLATE,
+                                    hjust = 0, margin = margin(b = 8)),
+    axis.text        = element_text(color = SLATE, size = base_size - 2),
+    axis.title       = element_text(color = SLATE, size = base_size - 1),
+    panel.grid.major = element_line(color = "#E2E8F0"),
+    panel.grid.minor = element_blank(),
+    panel.background = element_rect(fill = "white", color = NA),
+    plot.background  = element_rect(fill = "white", color = NA),
+    legend.position  = "bottom",
+    legend.title     = element_text(face = "bold", size = base_size - 1),
+    strip.text       = element_text(face = "bold", color = INK)
+  )
+}
+theme_set(theme_survey())
+```
+
+```{r load-data}
+#| label: load-data
+#| include: false
+
+
+SHEET_URL            <- "https://docs.google.com/spreadsheets/d/1wKb_0v9vsbBZdtfBAZeUZTlZqvGR9YnBmRjPCE5Knq8/edit?gid=1013775912#gid=1013775912"
+AUTH_MODE            <- "public"      # "public" | "interactive" | "service"
+SERVICE_ACCOUNT_JSON <- NULL          
+SHEET_TAB            <- 1           
+
+# ── Authenticate ─────────────────────────────────────────────────────────────
+if (AUTH_MODE == "public") {
+  gs4_deauth()
+} else if (AUTH_MODE == "interactive") {
+  gs4_auth()
+} else if (AUTH_MODE == "service") {
+  gs4_auth(path = SERVICE_ACCOUNT_JSON)
+}
+
+# ── Read sheet ────────────────────────────────────────────────────────────────
+raw <- read_sheet(SHEET_URL, sheet = SHEET_TAB)
+
+# ── Clean column names ────────────────────────────────────────────────────────
+df <- raw |>
+  clean_names() |>
+  mutate(across(where(is.character), str_squish))
+
+# ── Fuzzy-match key columns → standard names ──────────────────────────────────
+# Adjust the regex patterns here if your form question wording differs.
+safe_rename <- function(df, new_name, pattern) {
+  matched <- names(df)[str_detect(names(df), regex(pattern, ignore_case = TRUE))]
+  if (length(matched) > 0 && !new_name %in% names(df))
+    df <- df |> rename(!!new_name := all_of(matched[[1]]))
+  df
+}
+
+df <- df |>
+  safe_rename("role",           "role|position|title") |>
+  safe_rename("wq_familiar",    "water.quality.*familiar|familiar.*water") |>
+  safe_rename("gen_familiar",   "genetic.*familiar|familiar.*genetic") |>
+  safe_rename("used_dashboard", "used.*dashboard|dashboard.*before") |>
+  safe_rename("nav_ease",       "easy.*navig|navig.*easy|first.use") |>
+  safe_rename("intuit_buttons", "buttons.*controls|controls.*buttons") |>
+  safe_rename("intuit_viz",     "visualization") |>
+  safe_rename("intuit_layout",  "layout") |>
+  safe_rename("confusing",      "confus|difficult.*use") |>
+  safe_rename("improvements",   "improve|features") |>
+  safe_rename("add_comments",   "additional.*comment|^comment") |>
+  safe_rename("task_chla",      "chlorophyll|chla") |>
+  safe_rename("task_do_temp",   "dissolved.*oxygen|do.*temp") |>
+  safe_rename("task_spring",    "spring.*run|chinook") |>
+  safe_rename("task_creek",     "battle.*creek|creek.*battle|genotype")
+
+# ── Coerce ratings to numeric ─────────────────────────────────────────────────
+rating_cols <- c("wq_familiar", "gen_familiar", "nav_ease",
+                 "intuit_buttons", "intuit_viz", "intuit_layout")
+
+df <- df |>
+  mutate(across(any_of(rating_cols), as.numeric))
+
+n_resp <- nrow(df)
+```
+
+```{r helpers}
+#| include: false
+
+# Classify task response text as Easy / Difficult / Very Difficult
+parse_task <- function(x) {
+  x_low <- str_to_lower(x)
+  case_when(
+    str_detect(x_low, "very.difficult|very hard|couldn|not able") ~ "Very Difficult",
+    str_detect(x_low, "difficult|hard")                           ~ "Difficult",
+    str_detect(x_low, "easy|straightforward|simple|no problem")   ~ "Easy",
+    is.na(x) | str_length(x) < 2                                  ~ NA_character_,
+    .default = "Not answered"
+  )
+}
+```
+
+---
+
+## Executive Summary
+
+```{r exec-summary}
+#| results: asis
+
+avg_b <- if ("intuit_buttons" %in% names(df)) round(mean(df$intuit_buttons, na.rm = TRUE), 1) else "N/A"
+avg_v <- if ("intuit_viz"     %in% names(df)) round(mean(df$intuit_viz,     na.rm = TRUE), 1) else "N/A"
+avg_l <- if ("intuit_layout"  %in% names(df)) round(mean(df$intuit_layout,  na.rm = TRUE), 1) else "N/A"
+n_resp <- nrow(df)
+
+# Precompute nav ease summary
+nav_summary <- if ("nav_ease" %in% names(df)) {
+  n_easy <- sum(df$nav_ease <= 2, na.rm = TRUE)
+  glue("{n_easy} of {n_resp} participants rated it easy or very easy")
+} else "straightforward"
+
+# Precompute task completion summary
+task_cols_avail <- intersect(c("task_chla", "task_do_temp", "task_spring", "task_creek"), names(df))
+
+n_easy_tasks <- if (length(task_cols_avail) > 0) {
+  df |>
+    select(all_of(task_cols_avail)) |>
+    pivot_longer(everything(), values_to = "response") |>
+    filter(!is.na(response), str_length(response) > 1) |>
+    mutate(easy = str_detect(str_to_lower(response), "easy|straightforward|simple")) |>
+    summarise(pct = round(mean(easy) * 100)) |>
+    pull(pct)
+} else NA
+
+cat(glue(
+  "**{n_resp} test users** participated in a usability evaluation of the JPE Dashboard, ",
+  "an interactive tool for exploring discrete water quality and fish genetics datasets. ",
+  "Participants represented a range of professional roles, including staff from government ",
+  "and academic agencies.\n\n",
+  "The dashboard received positive usability ratings across key interface components:\n\n",
+  "- Buttons and controls average score: **{avg_b}/5**\n",
+  "- Visualizations average score: **{avg_v}/5**\n",
+  "- Layout and organization average score: **{avg_l}/5**\n\n",
+  "Initial navigation was rated positively, with {nav_summary}. ",
+  "{if (!is.na(n_easy_tasks)) glue('Across four guided analytical tasks, {n_easy_tasks}% of responses indicated the task was completed easily.') else ''}\n\n",
+  "Qualitative feedback highlighted four recurring themes: navigation and interface structure, ",
+  "controls and filter interactions, data visualization and coverage, and system language and ",
+  "messaging. Recommended improvements primarily relate to refining interactive controls, ",
+  "clarifying how data is presented, and expanding functionality in the genetics module."
+))
+```
+
+### Prioritized Recommendations
+
+Note that additional recommendations implemented are listed in Appendix A checklist. For more details, view the GitHub issues in the dashboard repository (link to be added). 
+
+```{r recommendations}
+recs <- tribble(
+  ~Priority, ~Recommendation,
+  "High",   "Replace the year slider with checkboxes or a date range picker",
+  "High",   "Add city/river labels to the water quality map",
+  "Medium", "Display raw fish counts alongside proportions in the genetics module",
+  "Medium", "Add links or connections to EDI pages for metadata, citations, and downloads",
+  "Low",    "Clarify what “inactive” means in the site selector (currently inactive vs. inactive across full time range)",
+  "Low",    "Restructure the Overview page: replace long paragraphs with concise topic sentences and bullet points",
+  "Low",    "Sort station names alphabetically with station ID in parenthesese"
+)
+
+recs |>
+  mutate(Priority = cell_spec(Priority, color = "white",
+    background = case_when(
+      Priority == "High"   ~ ROSE,
+      Priority == "Medium" ~ AMBER,
+      Priority == "Low"    ~ JADE), bold = TRUE)) |>
+  kbl(escape = FALSE, col.names = c("Priority", "Recommendation"), align = "ll") |>
+  kable_styling(bootstrap_options = c("hover", "condensed"), full_width = TRUE) |>
+  column_spec(1, width = "7em", extra_css = "text-align:center") |>
+  column_spec(2, width = "60em")
+
+# cat("Additional recommendations implemented are listed in Appendix A checklist", sep = "")
+
+```
+
+---
+
+## Respondent Overview
+
+### Roles
+
+
+```{r role-chart}
+#| results: asis
+
+# define the lookup table
+role_categories <- tribble(
+  ~role_pattern,  ~role_category,
+  "genetic specialist|genetic", "Environmental Scientist",
+  "environmental scientist|scientist", "Environmental Scientist",
+  "data manager|jpe data", "Data Manager",
+  "consultant|design", "Dashboard / Data Analyst",
+  "faculty|professor|academic|ucd", "Researcher / Academic"
+)
+
+# add role_category column to df
+df <- df |>
+  mutate(
+    role_lower    = str_to_lower(role),
+    role_category = map_chr(role_lower, function(x) {
+      idx <- detect_index(role_categories$role_pattern,
+                          ~ str_detect(x, regex(.x, ignore_case = TRUE)))
+      if (idx > 0) role_categories$role_category[idx] else "Other"
+    })
+  )
+
+# summarise and print
+role_summary <- df |>
+  count(role_category) |>
+  arrange(desc(n))
+
+cat("A total of **", nrow(df), "** individuals participated in this study. ",
+    "Respondents represented a range of professional backgrounds:\n\n", sep = "")
+
+
+# cat(glue("\n\nFive of {nrow(df)} respondents ",
+#          "({round(mean(df$used_dashboard == 'Yes') * 100)}%) ",
+#          "reported prior experience using other data dashboards.\n"))
+```
+
+
+### Dataset Familiarity
+
+```{r familiarity-chart}
+#| fig-cap: "Average self-reported familiarity (1 = not familiar, 3 = very familiar)"
+
+fam_avail <- intersect(c("wq_familiar", "gen_familiar"), names(df))
+
+if (length(fam_avail) > 0) {
+  df |>
+    select(any_of(c("wq_familiar", "gen_familiar"))) |>
+    summarise(across(everything(), ~ mean(.x, na.rm = TRUE))) |>
+    pivot_longer(everything(), names_to = "dataset", values_to = "avg") |>
+    mutate(dataset = recode(dataset,
+                            wq_familiar  = "Water Quality",
+                            gen_familiar = "Fish Genetics")) |>
+    ggplot(aes(avg, dataset, fill = dataset)) +
+    geom_col(width = 0.4, show.legend = FALSE) +
+    geom_text(aes(label = round(avg, 1)), hjust = -0.3,
+              size = 4.5, fontface = "bold", color = INK) +
+    scale_fill_manual(values = c("Water Quality" = OCEAN, "Fish Genetics" = JADE)) +
+    scale_x_continuous(
+      limits = c(0, 3.5),
+      breaks = 1:3,
+      labels = c("1\nNot familiar", "2\nSomewhat", "3\nVery familiar")
+    ) +
+    labs(title = "Average Dataset Familiarity", x = NULL, y = NULL)
+}
+```
+
+### Prior Dashboard Experience
+
+```{r dashboard-exp}
+if ("used_dashboard" %in% names(df)) {
+  df |>
+    count(used_dashboard) |>
+    mutate(`Percent of total participants` =
+             scales::percent(n / sum(n), accuracy = 1)) |>
+    select(used_dashboard, `Percent of total participants`) |>
+    kbl(
+      col.names = c("Used dashboards before?", "Percent of total participants"),
+      align = "lr"
+    ) |>
+    kable_styling(
+      bootstrap_options = c("striped", "hover", "condensed"),
+      full_width = FALSE
+    )
+}
+```
+
+---
+
+## Usability Ratings
+
+### Intuitiveness
+
+```{r intuit-bar}
+#| fig-cap: "Average intuitiveness scores (1–5 scale)"
+intuit_avail <- intersect(c("intuit_buttons", "intuit_viz", "intuit_layout"), names(df))
+
+if (length(intuit_avail) > 0) {
+  df |>
+    summarise(across(any_of(intuit_avail), ~ mean(.x, na.rm = TRUE))) |>
+    pivot_longer(everything(), names_to = "dim", values_to = "avg") |>
+    mutate(
+      dim   = recode(dim,
+                intuit_buttons = "Buttons & Controls",
+                intuit_viz     = "Visualizations",
+                intuit_layout  = "Layout"),
+      color = case_when(avg >= 4 ~ JADE, avg >= 3 ~ AMBER, .default = ROSE)
+    ) |>
+    ggplot(aes(fct_reorder(dim, avg), avg, fill = color)) +
+    geom_col(width = 0.5, show.legend = FALSE) +
+    geom_text(aes(label = round(avg, 1)), hjust = -0.3,
+              size = 5, fontface = "bold", color = INK) +
+    scale_fill_identity() +
+    scale_y_continuous(limits = c(0, 5.8), breaks = 0:5) +
+    coord_flip() +
+    labs(title = "Average Intuitiveness Ratings",
+         subtitle = "Green ≥ 4  |  Amber ≥ 3  |  Red < 3",
+         x = NULL, y = "Average Score (1–5)")
+}
+```
+
+
+---
+
+## Task Completion
+
+Participants completed four guided analytical tasks designed to assess the dashboard's 
+ability to support typical data exploration workflows. These tasks required users to 
+navigate the interface, filter and compare datasets, and interpret both water quality 
+and fish genetics information across multiple sites and time periods. The table below 
+describes each task, and the figure summarizes how participants rated the ease of 
+completing them.
+
+- **Task 1 (Water Quality):** Identify whether peaks in chlorophyll-a concentrations 
+  occurred at San Pablo Bay sites (D41, D41A, NZ325) during 2022–2023.
+- **Task 2 (Water Quality):** Determine whether changes in dissolved oxygen levels 
+  correlate with shifts in water temperature across San Joaquin sites 
+  (C10, D12, D16, D26, P8).
+- **Task 3 (Fish Genetics):** Estimate the proportion of Chinook salmon samples on 
+  Deer Creek classified as spring run in 2025.
+- **Task 4 (Fish Genetics):** Identify which creek — Battle or Clear Creek — had a 
+  greater number of early Greb 1L RoSA genotypes between 2023 and 2025.
+
+
+```{r task-chart}
+#| fig-cap: "Self-reported ease of completing four guided analytical tasks"
+task_avail <- intersect(
+  c("task_chla", "task_do_temp", "task_spring", "task_creek"), names(df))
+task_labels <- c(
+  task_chla    = "Task #1",
+  task_do_temp = "Task #2",
+  task_spring  = "Task #3",
+  task_creek   = "Task #4"
+)
+if (length(task_avail) > 0) {
+  df |>
+    select(any_of(task_avail)) |>
+    pivot_longer(everything(), names_to = "task", values_to = "response") |>
+    filter(!is.na(response), str_length(response) > 1) |>
+    mutate(
+      difficulty = parse_task(response),
+      task_label = recode(task, !!!task_labels[task_avail]),
+      difficulty = factor(difficulty,
+        levels = c("Easy", "Difficult", "Very Difficult", "Not answered"))
+    ) |>
+    filter(!is.na(difficulty)) |>
+    count(task_label, difficulty) |>
+    ggplot(aes(task_label, n, fill = difficulty)) +
+    geom_col(width = 0.55) +
+    scale_fill_manual(
+      values = c(Easy = JADE, Difficult = AMBER,
+                 `Very Difficult` = ROSE, `Not answered` = "#CBD5E1"),
+      name = "Difficulty"
+    ) +
+    scale_y_continuous(breaks = scales::breaks_width(1),
+                       expand = expansion(mult = c(0, 0.12))) +
+    labs(title = "Task Completion Difficulty",
+         subtitle = "Based on respondents' self-reported ease for use-case testing",
+         x = NULL, y = "Respondents")
+}
+```
+
+---
+
+## Qualitative Feedback
+
+Participants were asked to provide open-ended feedback following completion of the usability tasks. Responses addressed overall ease of use, navigation, clarity of visualizations, and potential areas for improvement. Individual comments were reviewed and organized into recurring themes, which are summarized below.
+
+```{r qualitative-feedback, results='asis'}
+# QUALITATIVE THEMES — reads classifications directly from Excel sheet
+
+themes <- readxl::read_xlsx(here("feedback", "quantitative_themes.xlsx")) # I have added a v2 since I wanted to double-check that 
+
+# Read the response + category block (rows 7–12, columns A–D)
+
+coded_raw <- themes |> 
+  slice(1:6) |>
+  clean_names() |>
+  rename(
+    confusing    = 1,
+    improvements = 2,
+    add_comments = 3,
+    categories   = 4
+  ) |>
+  mutate(respondent = row_number())   # anonymous ID — no role column
+
+# Read curated quotes table (rows 16–20, columns A–B)
+quotes_raw <- themes |> 
+  row_to_names(row_number = 10) |>
+  clean_names() |> 
+  select(category, quote) |> 
+  rename(theme = category, quotes_block = quote) 
+
+
+# Reshape responses, one row per response × theme ───────────────
+
+qual_cols <- c("confusing", "improvements", "add_comments")
+
+col_labels <- c(
+  confusing    = "Confusing / Difficult Elements",
+  improvements = "Feature Requests & Improvements",
+  add_comments = "Additional Comments"
+)
+
+# Long format: one row per respondent × question
+qual_long <- coded_raw |>
+  pivot_longer(
+    cols      = all_of(qual_cols),
+    names_to  = "question",
+    values_to = "response"
+  ) |>
+  filter(!is.na(response), str_length(str_squish(response)) > 5) |>
+  mutate(question_label = recode(question, !!!col_labels))
+
+# Explode the comma-separated categories column into one row per theme
+qual_exploded <- qual_long |>
+  filter(!is.na(categories)) |>
+  mutate(theme = str_split(categories, ",\\s*")) |>
+  unnest(theme) |>
+  mutate(theme = str_trim(theme))
+
+# Consistent factor order matching your sheet
+theme_levels <- c(
+  "Navigation/Interface",
+  "Controls/Filters",
+  "Visualization/Data",
+  "Language/Messages")
+
+theme_colors <- c(
+  "Navigation/Interface" = "#2563EB",
+  "Controls/Filters"     = "#F43F5E",
+  "Visualization/Data"   = "#10B981",
+  "Language/Messages"    = "#F59E0B")
+
+qual_exploded <- qual_exploded |>
+  mutate(theme = factor(theme, levels = theme_levels))
+
+
+# Parse curated quotes into one row per quote ───────────────
+
+quotes_long <- quotes_raw |>
+  mutate(
+    quote = str_split(quotes_block, "\n\n")
+  ) |>
+  unnest(quote) |>
+  mutate(
+    quote = str_trim(quote),
+    # Remove outer wrapping quotes (curly and straight)
+    quote = str_remove_all(quote, '^[\u201c\u201d"]+|[\u201c\u201d"]+$'),
+    # Remove any parenthetical notes like "(Partly layout / partly feedback)"
+    quote = str_remove(quote, "^\\(.*?\\)\\s*"),
+    # Clean up any leftover leading/trailing punctuation
+    quote = str_trim(quote),
+    theme = factor(theme, levels = theme_levels)
+  ) |>
+  filter(str_length(quote) > 5)
+
+
+# One styled callout card per theme ───────
+
+for (grp in theme_levels) {
+
+  quotes_for_theme <- quotes_long |>
+    dplyr::filter(theme == grp) |>
+    dplyr::pull(quote) |>
+    stringr::str_split("\\r\\n\\r\\n|\\n\\n") |>
+    unlist() |>
+    stringr::str_squish() |>
+    stringr::str_remove_all('^“|”$|^"|"$')
+
+  quotes_for_theme <- quotes_for_theme[stringr::str_length(quotes_for_theme) > 0]
+
+  if (length(quotes_for_theme) == 0) next
+
+  color <- theme_colors[[grp]]
+
+  bullet_quotes <- paste0(
+    "<li>&ldquo;", quotes_for_theme, "&rdquo;</li>",
+    collapse = "\n"
+  )
+
+  cat(glue::glue('
+<div style="border-left: 4px solid {color}; padding: 10px 16px; margin-bottom: 20px; background: #FAFAFA;">
+  <strong>{grp}</strong>
+  <ul style="margin-top: 8px; margin-bottom: 0;">
+    {bullet_quotes}
+  </ul>
+</div>
+
+'))
+}
+```
+
+
+
+---
+
+
+## Appendix
+
+### Appendix A: Action Item Checklist 
+
+This checklist summarizes recommended improvements identified from participant feedback, 
+organized by theme. Items can be used to prioritize development tasks.
+
+#### Navigation / Interface
+
+- [ ] Relocate the Water Quality and Genetics tabs from the top of the page to a more
+      conventional location (e.g. sidebar or persistent top nav) - *Decided to keep tab design as it currently is. This item was low priority and might be addressed in the future* 
+- [X] Restructure the Overview page — replace long paragraphs with concise topic 
+      sentences and bullet points - *LOW*
+- [X] Add a clear section heading that states the dashboard purpose upfront - *LOW*
+- [X] Sort station names alphabetically with station ID in parentheses - *LOW*
+- [X] Remove auto-zoom to selected sites  - *LOW*
+- [X] Add color differentiation for selected sites that are active vs inactive  - *LOW*
+
+
+#### Controls / Filters
+
+- [X] Replace the year slider with checkboxes or a date range picker - *HIGH*
+- [X] Remove tick marks between years on the year toggle to prevent user confusion - *MEDIUM*
+- [X] Relabel the year toggle to say "Water Year" instead of "Year" - *LOW*
+- [X] Fix the site/analyte dropdowns so options do not disappear unexpectedly
+      when switching between sites - *LOW*
+- [X] Allow users to select within-year date ranges for more granular filtering - *LOW*
+
+#### Visualization / Data
+
+- [X] Add river labels to the water quality map - *MEDIUM*
+- [X] Add city labels to the water quality map - *MEDIUM*
+- [ ] Add water quality monitoring stations upstream of Sacramento at Hood - *The Environmental Monitoring Program (EMP) monitors water conditions across the San Francisco Estuary* 
+- [X] Display raw fish counts alongside proportions in the genetics module - *LOW (ADD EXPLANATION OF TOOLTIP)*
+- [ ] Add daily or event-level catch data rather than annual totals only - *?*
+- [ ] Add water year type and flow/export data overlays to the genetics dashboard - *Since this is not priority, team decided to omit this since these data is available elsewhere*
+- [X] Build a comparison view for field length-at-date assignments vs. genetic
+      run assignments - *MEDIUM*
+- [ ] Replace the single large box plot with time-series summary plots
+      (monthly or annual) - *Decided to keep box plots and time series* 
+- [ ] Add an option to toggle between average, maximum, minimum, and
+      7-day average values - *NA Discrete water quality sampling occurs mostly once a month at each monitoring station*
+- [X] Add links or connections to EDI pages for metadata, citations, and downloads - *LOW*
+- [X] Clarify the difference between surface and bottom sensor measurements
+      (e.g. "Dissolved Oxygen" vs. "(bottom) Dissolved Oxygen") - *MEDIUM*
+- [ ] Indicate whether more historical data or future data will be available - *Data collection methods langugage explains the site shifts from historical sites, if any*
+
+#### Language / Messages
+
+- [X] Clarify what "inactive" means in the site selector (currently inactive vs.
+      inactive across full time range) - *LOW*
+- [ ] Add a chart subtitle or title note specifying what data is shown
+      (e.g. "Average daily concentrations") - *Determined that axis titles were sufficient to communicate data shown*
+- [X] Add a label reminding users that water quality data shown is discrete monthly samples - *LOW - ADD EXPLANATION*

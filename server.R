@@ -22,63 +22,39 @@ server <- function(input, output, session) {
 ## Visualize ---------------------------------------------------------------
 
   ### Map ---------------------------------------------------------
-  # zoom to selection
   draw_and_zoom_selection_g <- function(sel_names) {
     map <- leafletProxy("g_map") |>
       clearGroup("highlight") |>
       clearPopups()
 
-    # if nothing selected, zoom to full extent
-    if (is.null(sel_names) || length(sel_names) == 0) {
-      return(map |> fitBounds(
-        lng1 = min(rst_sites$longitude, na.rm = TRUE),
-        lat1 = min(rst_sites$latitude, na.rm = TRUE),
-        lng2 = max(rst_sites$longitude, na.rm = TRUE),
-        lat2 = max(rst_sites$latitude, na.rm = TRUE)
-      ))
-    }
+    if (is.null(sel_names) || length(sel_names) == 0)
+      return(invisible(map))
 
     selected_station_g <- subset(rst_sites, label %in% sel_names)
     if (nrow(selected_station_g) == 0)
       return(invisible(map))
 
-    # highlight markers
-    map <- map |>
+    map |>
       addCircleMarkers(
         data = selected_station_g,
-        lat = ~ latitude,
-        lng = ~ longitude,
+        lat = ~latitude,
+        lng = ~longitude,
         radius = 10,
         fillColor = "#7E2954",
         color = "white",
         weight = 2,
         fillOpacity = 0.9,
         group = "highlight",
-        label = ~ paste("Selected:", label),
-        layerId = ~ paste0(label, "__hi")
+        label = ~paste("Selected:", label),
+        layerId = ~paste0(label, "__hi")
       )
-
-    # Zoom logic
-    if (nrow(selected_station_g) == 1) {
-      map |>  setView(
-        lng = selected_station_g$longitude[1],
-        lat = selected_station_g$latitude[1],
-        zoom = 11
-      )
-    } else {
-      map |>  fitBounds(
-        lng1 = min(selected_station_g$longitude, na.rm = TRUE),
-        lat1 = min(selected_station_g$latitude, na.rm = TRUE),
-        lng2 = max(selected_station_g$longitude, na.rm = TRUE),
-        lat2 = max(selected_station_g$latitude, na.rm = TRUE)
-      )
-    }
   }
 
   output$g_map <- renderLeaflet({
-    leaflet() |>
+    leaflet(options = leafletOptions(zoomControl = FALSE)) |>
       addMapPane("Lines-Habitat", zIndex = 430) |>
-      addTiles(urlTemplate = "https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}", attribution = 'Basemap © Esri, GEBCO, NOAA, CHS, etc.') |>
+      addTiles(urlTemplate = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}",
+               attribution = 'Basemap © Esri, HERE, Garmin, FAO, NOAA, USGS') |>
       addPolylines(
         data = salmonid_habitat_extents,
         label = ~ lapply(river, htmltools::HTML),
@@ -86,7 +62,7 @@ server <- function(input, output, session) {
         color = "#5299D9",
         opacity = 1,
         weight = 1.5
-      ) |>
+      )|>
       addCircleMarkers(
         data = rst_sites,
         layerId = ~ label,
@@ -96,7 +72,8 @@ server <- function(input, output, session) {
         weight = 1,
         color = "black",
         fillOpacity = 0.7,
-        fillColor = ifelse(rst_sites$stream == "clear creek", "#7E2954", "black"),
+        # fillColor = ifelse(rst_sites$stream == "clear creek", "#7E2954", "black"),
+        fillColor = "black",
         #default highlight to Clear
         popup = ~ label
       ) |>
@@ -108,10 +85,16 @@ server <- function(input, output, session) {
         lat2 = max(rst_sites$latitude, na.rm = TRUE)
       ) |>
       htmlwidgets::onRender("
-      function(el, x){
-        this.zoomControl.setPosition('bottomright');
+      function(el, x) {
+        L.control.zoom({ position: 'bottomleft' }).addTo(this);
       }
     ")
+    # |
+    #   htmlwidgets::onRender("
+    #   function(el, x){
+    #     this.zoomControl.setPosition('bottomright');
+    #   }
+    # ")
   })
 
   observeEvent(input$g_map_marker_click, ignoreInit = TRUE, {
@@ -132,14 +115,20 @@ server <- function(input, output, session) {
       union(current, id)
 
     updateSelectizeInput(session, "location_filter_g", selected = new_sel)
-
-    # updateSelectInput(session, "location_filter_g", selected = new_sel)
   })
 
   # redraw highlight + zoom on dropdown change
   observeEvent(input$location_filter_g, {
     draw_and_zoom_selection_g(input$location_filter_g)
   }, ignoreInit = TRUE)
+
+  observeEvent(input$select_all_years_g, {
+  updateSelectizeInput(
+    session,
+    inputId  = "year_range_g",
+    selected = sort(unique(run_designation$year))
+  )
+})
 
 
 
@@ -150,7 +139,8 @@ server <- function(input, output, session) {
     req(input$location_filter_g)
 
     data <- run_designation |>
-      filter(year >= input$year_range_g[1], year <= input$year_range_g[2])
+      # filter(year >= input$year_range_g[1], year <= input$year_range_g[2])
+      filter(year %in% input$year_range_g)
 
     if (!is.null(input$location_filter_g) &&
         !"All Locations" %in% input$location_filter_g) {
@@ -169,7 +159,7 @@ server <- function(input, output, session) {
     if (input$data_plot_g == "Run Type") {
       grouping_variable <- "run_name"
     }
-    if (input$plot_type_g == "Monitoring Year") {
+    if (input$plot_type_g == "Water Year") {
       df <- filtered_g_data() |>
         group_by(year, map_label, .data[[grouping_variable]]) |>
         summarize(count = n()) |>
@@ -205,7 +195,7 @@ server <- function(input, output, session) {
           month,
           fake_date,
           .data[[grouping_variable]],
-          fill = list(run_percent = 0, site_total = 0)
+          fill = list(run_percent = 0, site_total = 0,  total_samples = 0)
         )
     } # adding this so when years are not present at a given location, there is still a facet (empty) for that year
 
@@ -233,7 +223,7 @@ server <- function(input, output, session) {
 
   ### Download ------------------------------------------------
 
-  output$download_g_csv <- make_download_handler(filtered_g_data())
+  output$download_g_csv <- make_download_handler(filtered_g_data)
 
   ### Plot ---------------------------------------------------------
 
@@ -269,60 +259,67 @@ server <- function(input, output, session) {
       y_axis_text <- "Run Assignment Proportions"
     }
 
-    if (input$plot_type_g == "Monitoring Year") {
+    # toggle: proportions vs counts
+    # show_counts <- input$count_type_g == "Counts"
+    show_counts <- input$count_type_g == "TRUE"
+
+    if (input$plot_type_g == "Water Year") {
+      y_var <- if (show_counts) "count" else "run_percent"
+      y_label <- if (show_counts) "Count (n)" else y_axis_text
+      hover_label <- if (show_counts) "Count: " else title_text
+      hover_val <- if (show_counts) df$count else signif(df$run_percent, 2)
+
       plot <- ggplot(df,
                      aes(
                        x = year,
-                       y = run_percent,
+                       y = .data[[y_var]],
                        fill = .data[[grouping_variable]],
                        text = paste0(
-                         "Monitoring Year: ",
-                         year,
+                         "Water Year: ", year, "<br>",
+                         hover_label, hover_val,    # now responds to toggle
                          "<br>",
-                         title_text,
-                         signif(run_percent, 2),
-                         "<br>",
-                         title_text2,
-                         .data[[grouping_variable]],
-                         "<br>",
-                         "Sample Size: ",
-                         total_sample
+                         title_text2, .data[[grouping_variable]], "<br>",
+                         "Sample Size: ", total_sample
                        )
                      )) +
         geom_bar(stat = "identity", position = "stack") +
         facet_wrap(~ map_label, ncol = 1) +
         scale_fill_manual(values = run_col) +
         theme_minimal() +
-        labs(x = "", y = y_axis_text, fill = "")
+        labs(x = "", y = y_label, fill = "")
     }
 
     if (input$plot_type_g == "Month") {
-      selected_years <- seq(input$year_range_g[1], input$year_range_g[2])
-      if (length(selected_years) > 3) {
-        showNotification("Please select a range of 3 years or fewer.", type = "error")
-        return(
-          plotly_empty(type = "scatter", mode = "lines") |>
-            layout(
-              title = "Too many years selected. Please select 3 years max.<br>
-                   Recommend summarizing by monitoring year when looking at more than 3 years."
-            )
-        )
-      }
+      # selected_years <- seq(input$year_range_g[1], input$year_range_g[2])
+      selected_years <- input$year_range_g
+      # if (length(selected_years) > 3) {
+      #   showNotification("Please select a range of 3 years or fewer.", type = "error")
+      #   return(
+      #     plotly_empty(type = "scatter", mode = "lines") |>
+      #       layout(
+      #         title = "Too many years selected. Please select 3 years max.<br>
+      #              Recommend summarizing by monitoring year when looking at more than 3 years."
+      #       )
+      #   )
+      # }
+
+
+      y_var <- if (show_counts) "total_samples" else "run_percent"
+      y_label <- if (show_counts) "Count (n)" else y_axis_text
+      hover_label <- if (show_counts) "Count: " else title_text
+      hover_val <- if (show_counts) df$total_samples else signif(df$run_percent, 2)
+
       n_years <- length(unique(df$year))
       plot <- ggplot(df,
                      aes(
                        x = fake_date,
-                       y = run_percent,
+                       y = .data[[y_var]],
                        fill = .data[[grouping_variable]],
                        text = paste0(
-                         "Monitoring Year: ",
-                         year,
+                         "Water Year: ", year, "<br>",
+                         hover_label, hover_val,    # now responds to toggle
                          "<br>",
-                         title_text,
-                         signif(run_percent, 2),
-                         "<br>",
-                         title_text2,
-                         .data[[grouping_variable]],
+                         title_text2, .data[[grouping_variable]],
                          "<br>",
                          "Sample Size: ",
                          site_total
@@ -331,7 +328,7 @@ server <- function(input, output, session) {
         geom_bar(stat = "identity", position = "stack") +
         facet_wrap(~ location_name + year, ncol = n_years) +
         scale_fill_manual(name = "Run type", values = run_col) +
-        labs(x = "", y = y_axis_text) +
+        labs(x = "", y = y_label) +
         theme_minimal() +
         theme(axis.text.x = element_text(
           angle = 90,
@@ -348,21 +345,27 @@ server <- function(input, output, session) {
   ### Clear Button --------------------------------------------
 
   observeEvent(input$clear_all_g, {
-    # Reset station picker
     updateSelectizeInput(session, inputId = "location_filter_g", selected = character(0))
-
-    # Reset year sliders
-    updateSliderInput(session,
-                      "year_range_g",
-                      value = c(as.numeric(min(
-                        run_designation$year
-                      )), max(run_designation$year)))
-
-    updateSelectInput(session, "plot_type_g","Monitoring Year")
-    updateSelectInput(session, "data_plot_g","Run Type")
-
-    # Reset map (zoom + highlight)
-    draw_and_zoom_selection(character(0))
+    # updateSliderInput(session, "year_range_g",
+    #                   value = c(as.numeric(min(run_designation$year)),
+    #                             max(run_designation$year)))
+    updateSelectizeInput(
+      session,
+      inputId  = "year_range_g",
+      selected = sort(unique(run_designation$year)))   # resets to all years
+    updateSelectInput(session, "plot_type_g", "Water Year")
+    updateSelectInput(session, "data_plot_g", "Run Type")
+    # updateSelectInput(session, "count_type_g", "Proportions")
+    # shinyWidgets::updateMaterialSwitch(session, "count_type_g", value = FALSE)
+    shinyWidgets::updateRadioGroupButtons(session, "count_type_g", selected = "FALSE")
+    draw_and_zoom_selection_g(character(0))
+    leafletProxy("g_map") |>
+      fitBounds(
+        lng1 = min(rst_sites$longitude, na.rm = TRUE),
+        lat1 = min(rst_sites$latitude, na.rm = TRUE),
+        lng2 = max(rst_sites$longitude, na.rm = TRUE),
+        lat2 = max(rst_sites$latitude, na.rm = TRUE)
+      )
   })
 
   ## Download Tab  --------------------------------------------------------------
@@ -373,7 +376,8 @@ server <- function(input, output, session) {
       updateSelectizeInput(session,
                         "location_filter_dl_g",
                         selected = input$location_filter_g)
-      updateSliderInput(session, "year_range_dl_g", value = input$year_range_g)
+      # updateSliderInput(session, "year_range_dl_g", value = input$year_range_g)
+      updateSelectizeInput(session,"year_range_dl_g", selected = input$year_range_g)
       updateSelectizeInput(session, "run_download", selected = sort(unique(run_designation$run_name)))
     }
   })
@@ -388,7 +392,7 @@ server <- function(input, output, session) {
     updateSelectizeInput(session, inputId = "run_download", selected = character(0))
 
     # Reset year range slider (download tab)
-    updateSliderInput(session,
+    updateSelectizeInput(session,
                       "year_range_dl_g",
                       value = c(as.numeric(min(
                         run_designation$year
@@ -400,7 +404,7 @@ server <- function(input, output, session) {
   dl_download_data_g <- reactive({filtered_g_data() |>
                                    filter(run_name %in% input$run_download)})
   # assign to outputs
-  output$download_g_csv_dl <- make_download_handler()
+  output$download_g_csv_dl <- make_download_handler(dl_download_data_g)
 
   output$dl_preview_table_g <- DT::renderDataTable({
     dl_download_data_g() |>
@@ -412,33 +416,91 @@ server <- function(input, output, session) {
   ## Reactive data -----------------------------------------------------------
 
   # shared filtering logic
+  # filter_wq_data <- function(locations,
+  #                            years,
+  #                            analytes,
+  #                            include_weather = FALSE) {
+  #   out <- wq_data |>
+  #     dplyr::filter(date >= years[1], date <= years[2])
+  #
+  #   if (!is.null(locations) && length(locations) > 0) {
+  #     out <- out |> dplyr::filter(station_id_name %in% locations)
+  #   }
+  #
+  #   # handle analytes
+  #   if (!is.null(analytes) && length(analytes) > 0) {
+  #     out <- out |> dplyr::filter(analyte %in% analytes)
+  #   }
+  #
+  #   # add weather analytes if requested
+  #   if (include_weather) {
+  #     weather <- wq_quality_weather |>
+  #       dplyr::filter(
+  #         analyte %in% c("Rain", "Sky Conditions"),
+  #         date >= years[1],
+  #         date <= years[2]
+  #
+  #       )
+  #
+  #     # same location filtering to weather data
+  #     if (!is.null(locations) && length(locations) > 0) {
+  #       weather <- weather |> dplyr::filter(station_id_name %in% locations)
+  #     }
+  #
+  #     if (nrow(weather) == 0) {
+  #       showNotification(
+  #         "No weather data (Rain or Sky Conditions) available for the selected site(s) and year(s).",
+  #         type = "message",
+  #         duration = 15
+  #       )
+  #     } else {
+  #       weather <- weather |>
+  #         dplyr::mutate(value_text = value, value = NA_real_) |>
+  #         select(-value) |>
+  #         mutate(value = as.character(value_text)) |>
+  #         select(-value_text)
+  #
+  #       out <- out |>
+  #         dplyr::mutate(value = as.character(value))
+  #
+  #       out <- dplyr::bind_rows(out, weather)
+  #     }
+  #   }
+  #
+  #   out
+  #
+  # }
+
   filter_wq_data <- function(locations,
-                             years,
+                             start_date,
+                             end_date,
                              analytes,
                              include_weather = FALSE) {
+
+    # Snap start date to first day of month, end date to last day of month
+    start_date <- floor_date(as.Date(start_date), "month")
+    end_date   <- ceiling_date(as.Date(end_date), "month") - days(1)
+
+
     out <- wq_data |>
-      dplyr::filter(date >= years[1], date <= years[2])
+      dplyr::filter(date >= start_date, date <= end_date)
 
     if (!is.null(locations) && length(locations) > 0) {
       out <- out |> dplyr::filter(station_id_name %in% locations)
     }
 
-    # handle analytes
     if (!is.null(analytes) && length(analytes) > 0) {
       out <- out |> dplyr::filter(analyte %in% analytes)
     }
 
-    # add weather analytes if requested
     if (include_weather) {
       weather <- wq_quality_weather |>
         dplyr::filter(
           analyte %in% c("Rain", "Sky Conditions"),
-          date >= years[1],
-          date <= years[2]
-
+          date >= start_date,
+          date <= end_date
         )
 
-      # same location filtering to weather data
       if (!is.null(locations) && length(locations) > 0) {
         weather <- weather |> dplyr::filter(station_id_name %in% locations)
       }
@@ -453,19 +515,20 @@ server <- function(input, output, session) {
         weather <- weather |>
           dplyr::mutate(value_text = value, value = NA_real_) |>
           select(-value) |>
-          mutate(value = as.character(value_text)) |>
+          mutate(value = as.character(value_text)) |>  # weather value as character
           select(-value_text)
 
         out <- out |>
-          dplyr::mutate(value = as.character(value))
+          dplyr::mutate(value = as.character(value))   # main data also to character
 
         out <- dplyr::bind_rows(out, weather)
       }
     }
 
     out
-
   }
+
+
 
   ## Download handler --------------------------------------------------------
 
@@ -473,7 +536,8 @@ server <- function(input, output, session) {
   wq_download_data <- reactive({
     filter_wq_data(
       input$location_filter_wq,
-      input$year_range,
+      input$start_date_wq,
+      input$end_date_wq,
       input$analyte,
       include_weather = input$include_weather
     )
@@ -482,7 +546,8 @@ server <- function(input, output, session) {
   dl_download_data <- reactive({
     filter_wq_data(
       input$location_filter_dl,
-      input$year_range_dl,
+      input$start_date_dl,
+      input$end_date_dl,
       input$analyte_download,
       include_weather = input$include_weather
     )
@@ -516,12 +581,15 @@ server <- function(input, output, session) {
           unique() |>
           sort()
       }
+    # Keep previously selected analytes that are still valid for the new station set
+    previously_selected <- input$analyte
+    still_valid <- intersect(previously_selected, analyte_choices)
 
     updateSelectizeInput(
       session,
       inputId = "analyte",
       choices  = analyte_choices,
-      selected = NULL,
+      selected = still_valid,
       server   = TRUE
     )
   })
@@ -533,59 +601,33 @@ server <- function(input, output, session) {
       clearGroup("highlight") |>
       clearPopups()
 
-    # if nothing selected, zoom to full extent
-    if (is.null(sel_names) || length(sel_names) == 0) {
-      return(map |> fitBounds(
-        lng1 = min(wq_metadata$longitude, na.rm = TRUE),
-        lat1 = min(wq_metadata$latitude, na.rm = TRUE),
-        lng2 = max(wq_metadata$longitude, na.rm = TRUE),
-        lat2 = max(wq_metadata$latitude, na.rm = TRUE)
-      ))
-    }
+    if (is.null(sel_names) || length(sel_names) == 0)
+      return(invisible(map))
 
     selected_station <- subset(wq_metadata, station_id_name %in% sel_names)
     if (nrow(selected_station) == 0)
       return(invisible(map))
-
-    # highlight markers
-    map <- map |>
+    map |>
       addCircleMarkers(
-        data = selected_station,
-        lat = ~ latitude,
-        lng = ~ longitude,
-        radius = 10,
-        fillColor = "#7E2954",
-        color = "white",
-        weight = 2,
+        data        = selected_station,
+        lat         = ~latitude,
+        lng         = ~longitude,
+        radius      = 10,
+        fillColor   = ~ifelse(status == "Active", "black", "gray"),
+        color       = "#FF0000",
+        weight      = 2,
         fillOpacity = 0.9,
-        group = "highlight",
-        label = ~ paste("Selected:", station_id_name),
-        layerId = ~ paste0(station_id_name, "__hi")
+        group       = "highlight",
+        label       = ~paste("Selected:", station_id_name),
+        layerId     = ~paste0(station_id_name, "__hi")
       )
-
-    # Zoom logic
-    if (nrow(selected_station) == 1) {
-      map |>  setView(
-        lng = selected_station$longitude[1],
-        lat = selected_station$latitude[1],
-        zoom = 11
-      )
-    } else {
-      map |>  fitBounds(
-        lng1 = min(selected_station$longitude, na.rm = TRUE),
-        lat1 = min(selected_station$latitude, na.rm = TRUE),
-        lng2 = max(selected_station$longitude, na.rm = TRUE),
-        lat2 = max(selected_station$latitude, na.rm = TRUE)
-      )
-    }
   }
 
   output$wq_map <- renderLeaflet({
-    leaflet() |>
-      addTiles() |>
-      htmlwidgets::onRender("function(el, x) {this.zoomControl.setPosition('bottomleft');}") |>
+    leaflet(options = leafletOptions(zoomControl = FALSE)) |>
       addMapPane("Lines-Habitat", zIndex = 430) |>
-      addTiles(urlTemplate = "https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}", attribution = 'Basemap © Esri, GEBCO, NOAA, CHS, etc.') |>
+      addTiles(urlTemplate = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}",
+               attribution = 'Basemap © Esri, HERE, Garmin, FAO, NOAA, USGS') |>
       addPolylines(
         data = salmonid_habitat_extents,
         label = ~ lapply(river, htmltools::HTML),
@@ -596,33 +638,21 @@ server <- function(input, output, session) {
       ) |>
       # Active sites (circles)
       addCircleMarkers(
-        data = subset(wq_metadata, status == "Active"),
-        layerId = ~ station_id_name,
-        label = ~ paste(station_id_name),
-        radius = 6,
-        stroke = TRUE,
-        weight = 1,
-        color = "black",
+        data        = wq_metadata,
+        layerId     = ~station_id_name,
+        label       = ~paste(station_id_name),
+        radius      = 6,
+        stroke      = TRUE,
+        weight      = 1,
+        color       = "black",
         fillOpacity = 0.7,
-        fillColor = ~ site_color,
-        popup = ~ paste0("<b>", station_id, "</b><br/>", station_description)
-      ) |>
-      addCircleMarkers(
-        data    = wq_metadata,
-        layerId = ~ station_id_name,
-        label   = ~ paste(station_id_name),
-        radius = 6,
-        stroke = TRUE,
-        weight = 1,
-        color = "black",
-        fillOpacity = 0.7,
-        fillColor = ~ ifelse(status == "Active", "black", "gray"),
-        popup = ~ paste0("<b>", station_id, "</b><br/>", station_description)
+        fillColor   = ~ifelse(status == "Active", "black", "gray"),
+        popup       = ~paste0("<b>", station_id, "</b><br/>", station_description)
       ) |>
       addLegend(
         position = "bottomright",
         colors = c("black", "gray"),
-        labels = c("Active Station", "Inactive Station"),
+        labels = c("Active Station", "Historical Station"),
         title = "Station Status",
         opacity = 0.7
       ) |>
@@ -632,7 +662,12 @@ server <- function(input, output, session) {
         lat1 = min(wq_metadata$latitude, na.rm = TRUE),
         lng2 = max(wq_metadata$longitude, na.rm = TRUE),
         lat2 = max(wq_metadata$latitude, na.rm = TRUE)
-      )
+      ) |>
+      htmlwidgets::onRender("
+      function(el, x) {
+        L.control.zoom({ position: 'bottomleft' }).addTo(this);
+      }
+    ")
   })
   observeEvent(input$wq_map_marker_click, ignoreInit = TRUE, {
     click <- input$wq_map_marker_click
@@ -669,13 +704,25 @@ server <- function(input, output, session) {
     updateSelectizeInput(session, inputId = "analyte", selected = character(0))
 
     # Reset year sliders
-    updateSliderInput(session,
-                      "year_range",
-                      value = c(min(wq_data$date), max(wq_data$date)),
-                      timeFormat = "%b %Y")
+    # updateSliderInput(session,
+    #                   "year_range",
+    #                   value = c(min(wq_data$date), max(wq_data$date)),
+    #                   timeFormat = "%b %Y")
+
+
+    shinyWidgets::updateAirDateInput(session, "start_date_wq", value = min(wq_data$date))
+    shinyWidgets::updateAirDateInput(session, "end_date_wq",   value = max(wq_data$date))
+
 
     # Reset map (zoom + highlight)
     draw_and_zoom_selection(character(0))
+    leafletProxy("wq_map") |>
+      fitBounds(
+        lng1 = min(wq_metadata$longitude, na.rm = TRUE),
+        lat1 = min(wq_metadata$latitude, na.rm = TRUE),
+        lng2 = max(wq_metadata$longitude, na.rm = TRUE),
+        lat2 = max(wq_metadata$latitude, na.rm = TRUE)
+      )
   })
 
 
@@ -696,7 +743,8 @@ server <- function(input, output, session) {
     req(input$analyte, length(input$analyte) > 0)
 
     df <- filter_wq_data(input$location_filter_wq,
-                         input$year_range,
+                         input$start_date_wq,
+                         input$end_date_wq,
                          input$analyte)
 
     selected_locs <- input$location_filter_wq %||% character(0)
@@ -714,7 +762,7 @@ server <- function(input, output, session) {
           paste(new_missing, collapse = ", ")
         ),
         type = "warning",
-        duration = 6
+        duration = 12
       )
     }
 
@@ -780,27 +828,20 @@ server <- function(input, output, session) {
       )
 
 
-    # df_plot <- df_plot |>
-    #   dplyr::arrange(analyte, station_id_name, date) |>
-    #   dplyr::group_by(analyte, station_id_name) |>
-    #   dplyr::mutate(
-    #     nd_flag = tolower(trimws(detection_status)) %in% c("not detected", "not detected."),
-    #     seg_id  = cumsum(dplyr::lag(nd_flag, default = FALSE))
-    #   ) |>
-    #   dplyr::ungroup()
-
     if (plot_type == "Time Series") {
       detected <- df_plot |>
         dplyr::filter(!is.na(value) & !nd_flag)
 
       nd <- df_plot |>
         dplyr::filter(nd_flag) |>
+        # dplyr::mutate(
+        #   nd_height = dplyr::case_when(
+        #     reports_to == "MDL" ~ as.numeric(mdl),
+        #     reports_to == "MRL" ~ as.numeric(mrl),
+        #     TRUE ~ NA_real_
+        #   ),
         dplyr::mutate(
-          nd_height = dplyr::case_when(
-            reports_to == "MDL" ~ as.numeric(mdl),
-            reports_to == "MRL" ~ as.numeric(mrl),
-            TRUE ~ NA_real_
-          ),
+          nd_height = mrl,
           x_minus = date - lubridate::days(10),
           x_plus  = date + lubridate::days(10)
         ) |>
@@ -916,15 +957,15 @@ server <- function(input, output, session) {
                 "Date: ",
                 date,
                 "<br>",
-                "MDL value: ",
-                mdl,
-                "<br>",
+                # "MDL value: ",
+                # mdl,
+                # "<br>",
                 "MRL value: ",
                 mrl,
                 "<br>",
-                "Reports to: ",
-                reports_to,
-                "<br>",
+                # "Reports to: ",
+                # reports_to,
+                # "<br>",
                 "Station: ",
                 station_id_name
               )
@@ -945,15 +986,15 @@ server <- function(input, output, session) {
                 "Date: ",
                 date,
                 "<br>",
-                "MDL value: ",
-                mdl,
-                "<br>",
+                # "MDL value: ",
+                # mdl,
+                # "<br>",
                 "MRL value: ",
                 mrl,
                 "<br>",
-                "Reports to: ",
-                reports_to,
-                "<br>",
+                # "Reports to: ",
+                # reports_to,
+                # "<br>",
                 "Station: ",
                 station_id_name
               )
@@ -988,11 +1029,12 @@ server <- function(input, output, session) {
     } else if (plot_type == "Box Plot") {
       boxplot_data <- df |>
         left_join(prop_nd) |>
-        filter(prop_detected >= 0.5) |>
+        filter(prop_detected >= 0.5)
+
         # replace values for non detects with the detection limit
-        mutate(value = case_when(is.na(value) & detection_status == "Not detected" & reports_to == "MRL" ~ mrl,
-                                 is.na(value) & detection_status == "Not detected" & reports_to == "MDL" ~ mdl,
-                                 T ~ value))
+        # mutate(value = case_when(is.na(value) & detection_status == "Not detected" & reports_to == "MRL" ~ mrl,
+        #                          is.na(value) & detection_status == "Not detected" & reports_to == "MDL" ~ mdl,
+        #                          T ~ value))
       if (nrow(boxplot_data) == 0) {
         return(
           plotly_empty(type = "scatter", mode = "lines") |>
@@ -1072,7 +1114,10 @@ server <- function(input, output, session) {
       updateSelectInput(session,
                         "location_filter_dl",
                         selected = input$location_filter_wq)
-      updateSliderInput(session, "year_range_dl", value = input$year_range)
+      # updateSliderInput(session, "year_range_dl", value = input$year_range)
+      shinyWidgets::updateAirDateInput(session, "start_date_dl", value = input$start_date_wq)
+      shinyWidgets::updateAirDateInput(session, "end_date_dl",   value = input$end_date_wq)
+
       updateSelectizeInput(session, "analyte_download", selected = input$analyte)
     }
   })
@@ -1087,10 +1132,14 @@ server <- function(input, output, session) {
     updateSelectizeInput(session, inputId = "analyte_download", selected = character(0))
 
     # Reset year range slider (download tab)
-    updateSliderInput(session,
-                      "year_range_dl",
-                      value = c(min(wq_data$date), max(wq_data$date)),
-                      timeFormat = "%b %Y")
+    # updateSliderInput(session,
+    #                   "year_range_dl",
+    #                   value = c(min(wq_data$date), max(wq_data$date)),
+    #                   timeFormat = "%b %Y")
+
+    shinyWidgets::updateAirDateInput(session, "start_date_dl", value = min(wq_data$date))
+    shinyWidgets::updateAirDateInput(session, "end_date_dl",   value = max(wq_data$date))
+
 
     # Reset include_weather checkbox (download tab)
     updateCheckboxInput(session, inputId = "include_weather", value = FALSE)
@@ -1104,7 +1153,8 @@ server <- function(input, output, session) {
   output$dl_preview_table <- DT::renderDataTable({
     req(
       input$location_filter_dl,
-      input$year_range_dl,
+      input$start_date_dl,
+      input$end_date_dl,
       input$analyte_download,
       length(input$location_filter_dl) > 0,
       length(input$analyte_download) > 0
