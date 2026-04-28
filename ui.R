@@ -123,7 +123,6 @@ ui <- fluidPage(
                     style = "font-size: 0.8em; color: #666;"
                   )
                 ),
-
                 choices = NULL,
                 selected = NULL,
                 multiple = TRUE,
@@ -163,7 +162,7 @@ ui <- fluidPage(
             div(
               tags$p(
                 tags$span(
-                  "For more information about the data and metadata, please visit the ",
+                  "Water quality data shown is from discrete monthly samples. For more information about the data and metadata, please visit the ",
                   tags$a(
                     "EDI package here",
                     href = "https://portal.edirepository.org/nis/metadataviewer?packageid=edi.458.13",
