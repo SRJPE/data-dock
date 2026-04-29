@@ -56,9 +56,14 @@ ui <- fluidPage(
                   inputId = "location_filter_wq",
                   label = tagList(
                     tags$strong("Station"),
-                    tags$div(
-                      "Historical sites are no longer being monitored.",
-                      style = "font-size: 0.8em; color: #666;"
+                    # tags$div(
+                    #   "Historical sites are no longer being monitored.",
+                    #   style = "font-size: 0.8em; color: #666;"
+                    #   )
+                    tags$span(
+                      icon("circle-info"),
+                      title = "Historical sites are no longer being monitored.",
+                      style = "color: #aaa; margin-left: 5px; cursor: help; font-size: 0.85em;"
                       )
                     ),
                   choices = stats::setNames(stations[ord], stations_label[ord]),
@@ -74,15 +79,22 @@ ui <- fluidPage(
               shinyWidgets::airDatepickerInput(
                 inputId = "start_date_wq",
                 label = tagList(
-                  tags$strong("Start Date"),
-                  tags$div(
-                    "If unavailable, the closest date with data is used.",
-                    style = "font-size: 0.8em; color: #666;"
+                  tags$strong("Start Month and Year"),
+                  # tags$div(
+                  #   "If unavailable, the closest date with data is used.",
+                  #   style = "font-size: 0.8em; color: #666;"
+                  #   )
+                  tags$span(
+                    icon("circle-info"),
+                    title = "If month and year selected are unavailable, the closest date with data is used.",
+                    style = "color: #aaa; margin-left: 5px; cursor: help; font-size: 0.85em;"
                     )
                   ),
                 value = min(wq_data$date),
                 range = FALSE,
-                dateFormat = "MMM dd, yyyy",
+                dateFormat  = "MMM yyyy",      # CHANGED — shows "Jan 2020"
+                view        = "months",        # ADDED — opens on month view
+                minView     = "months",
                 clearButton = FALSE,
                 autoClose = TRUE,
                 minDate = min(wq_data$date),
@@ -94,15 +106,22 @@ ui <- fluidPage(
               shinyWidgets::airDatepickerInput(
                 inputId = "end_date_wq",
                 label = tagList(
-                  tags$strong("End Date"),
-                  tags$div(
-                    "If unavailable, the closest date with data is used.",
-                    style = "font-size: 0.8em; color: #666;"
+                  tags$strong("End Month and Year"),
+                  # tags$div(
+                  #   "If unavailable, the closest date with data is used.",
+                  #   style = "font-size: 0.8em; color: #666;"
+                  #   )
+                  tags$span(
+                    icon("circle-info"),
+                    title = "If month and year selected are unavailable, the closest date with data is used.",
+                    style = "color: #aaa; margin-left: 5px; cursor: help; font-size: 0.85em;"
                     )
                   ),
                 value = max(wq_data$date),
                 range = FALSE,
-                dateFormat = "MMM dd, yyyy",
+                dateFormat  = "MMM yyyy",      # CHANGED
+                view        = "months",        # ADDED
+                minView     = "months",
                 clearButton = FALSE,
                 autoClose = TRUE,
                 minDate = min(wq_data$date),
@@ -116,11 +135,12 @@ ui <- fluidPage(
                 inputId = "analyte",
                 label = tagList(
                   tags$strong("Analyte"),
-                  tags$div(
-                    "Surface measurements are collected one meter below the surface of
-                    the water and bottom measurements are collected approximately one meter
-                    above the bottom of the channel floor.",
-                    style = "font-size: 0.8em; color: #666;"
+                  tags$span(
+                    icon("circle-info"),
+                    title = "Surface measurements are collected one meter below the surface of
+             the water and bottom measurements are collected approximately one meter
+             above the bottom of the channel floor.",
+                    style = "color: #aaa; margin-left: 5px; cursor: help; font-size: 0.85em;"
                   )
                 ),
                 choices = NULL,
@@ -204,10 +224,12 @@ ui <- fluidPage(
               ),
             shinyWidgets::airDatepickerInput(
               inputId = "start_date_dl",
-              label = "Start Date",
+              label = "Start Month and Year",
               value = min(wq_data$date),
               range = FALSE,
-              dateFormat = "MMM dd, yyyy",
+              dateFormat  = "MMM yyyy",      # CHANGED
+              view        = "months",        # ADDED
+              minView     = "months",
               clearButton = FALSE,
               autoClose = TRUE,
               minDate = min(wq_data$date),
@@ -215,10 +237,12 @@ ui <- fluidPage(
               ),
             shinyWidgets::airDatepickerInput(
               inputId = "end_date_dl",
-              label = "End Date",
+              label = "End Month and Year",
               value = max(wq_data$date),
               range = FALSE,
-              dateFormat = "MMM dd, yyyy",
+              dateFormat  = "MMM yyyy",      # CHANGED
+              view        = "months",        # ADDED
+              minView     = "months",
               clearButton = FALSE,
               autoClose = TRUE,
               minDate = min(wq_data$date),
@@ -234,7 +258,7 @@ ui <- fluidPage(
             ),
             checkboxInput(
               inputId = "include_weather",
-              label = "Include associated weather observations (Rain, Sky Conditions)",
+              label = "Include associated weather observations (Rain, Sky Conditions, Weather Observations and Wave Scale)",
               value = FALSE
             ),
             actionButton(
