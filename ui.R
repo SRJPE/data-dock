@@ -278,16 +278,14 @@ ui <- fluidPage(
               ),
               tags$p(
                 HTML(
-                  "Download the data you’ve selected using the filters on this tab.<br>
-        The table provides a preview only — the exported <code>.csv</code> file will include the complete raw dataset.<br>
-        For more information about the data and metadata, please visit the
-        <a href='https://portal.edirepository.org/nis/metadataviewer?packageid=edi.458.13' target='_blank'>EDI package here</a>."
+                "Filtered data preview — the exported <code>.csv</code> includes the complete raw dataset.<br>
+                For data and metadata, see the <a href='https://portal.edirepository.org/nis/metadataviewer?packageid=edi.458.13' target='_blank'>EDI package</a>
+                (EDI account required for full access)."
                 ),
-                #TODO add link to EDI
                 style = "font-style: italic; color: #555; text-align: center; margin-top: 10px;"
+                )
               )
-            )
-          ),
+            ),
 
           # Data preview table
           mainPanel(
@@ -467,16 +465,14 @@ ui <- fluidPage(
               ),
               tags$p(
                 HTML(
-                  "Download the data you’ve selected using the filters on this tab.<br>
-        The table provides a preview only — the exported <code>.csv</code> file will include the complete raw dataset.<br>
-        For more information about the data and metadata, please visit the
-        <a href='link-to-metadata-file' target='_blank'>EDI package here</a>."
+                "Filtered data preview — the exported <code>.csv</code> includes the complete raw dataset.<br>
+                For data and metadata, see the <a href='https://portal.edirepository.org/nis/metadataviewer?packageid=edi.2335.1' target='_blank'>EDI package</a>
+                (EDI account required for full access)."
                 ),
-                #TODO add link to EDI
                 style = "font-style: italic; color: #555; text-align: center; margin-top: 10px;"
+                )
               )
-            )
-          ),
+            ),
 
           # Data preview table
           mainPanel(
