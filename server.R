@@ -409,6 +409,7 @@ server <- function(input, output, session) {
   output$dl_preview_table_g <- DT::renderDataTable({
     dl_download_data_g() |>
       #dplyr::select(date, station_id_name, analyte, value, unit) |>
+      dplyr::select(sample_id, code, sample_event, year, month, datetime_collected, location_name, map_label, everything()) |>
       DT::datatable(options = list(pageLength = 10, scrollX = TRUE))
   })
   # WATER QUALITY -----------------------------------------------------------
@@ -1161,7 +1162,8 @@ server <- function(input, output, session) {
     )
 
     dl_download_data() |>
-      dplyr::select(date, station_id_name, analyte, value, unit) |>
+      # dplyr::select(date, station_id_name, analyte, value, unit) |>
+      dplyr::select(station_id, station_description, date, time, year, analyte, value, unit, everything(), -station_id_name) |>
       DT::datatable(options = list(pageLength = 10, scrollX = TRUE))
   })
 }
