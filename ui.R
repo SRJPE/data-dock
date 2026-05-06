@@ -5,6 +5,19 @@ library(shinyWidgets)
 
 ui <- fluidPage(
   theme = bs_theme(bootswatch = "flatly"),
+  tags$head(
+    tags$link(
+      rel  = "stylesheet",
+      href = "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    ),
+    tags$script(HTML("
+  $(document).ready(function() {
+    $('[title]').tooltip({ trigger: 'hover' });
+    $('span[data-toggle=\"popover\"]').popover();  // only targets spans, not selectize
+  });
+"))
+  ),
+
   tags$style(HTML("
   #count_type_g .btn-default {
     background-color: #f0f0f0 !important;
@@ -64,7 +77,7 @@ ui <- fluidPage(
                       icon("circle-info"),
                       title = "Historical sites are no longer being monitored.",
                       style = "color: #aaa; margin-left: 5px; cursor: help; font-size: 0.85em;"
-                      )
+                    )
                     ),
                   choices = stats::setNames(stations[ord], stations_label[ord]),
                   multiple = TRUE,
@@ -137,9 +150,8 @@ ui <- fluidPage(
                   tags$strong("Analyte"),
                   tags$span(
                     icon("circle-info"),
-                    title = "Surface measurements are collected one meter below the surface of
-             the water and bottom measurements are collected approximately one meter
-             above the bottom of the channel floor.",
+                    title = "Surface samples: collected ~1 m below water surface. Bottom: collected ~1 m above channel floor.
+                    The analyte dropdown only includes analytes available at the selected station.",
                     style = "color: #aaa; margin-left: 5px; cursor: help; font-size: 0.85em;"
                   )
                 ),
