@@ -26,7 +26,7 @@ The [Environmental Data Initiative (EDI)](https://edirepository.org/) is used as
 
 ### EMP Discrete Water Quality
 
-The Environmental Monitoring Program (EMP) monitors water conditions across the San Francisco Estuary to understand long-term ecosystem health.
+The [Environmental Monitoring Program (EMP)](https://iep.ca.gov/Science-Synthesis-Service/Monitoring-Programs/EMP) monitors water conditions across the San Francisco Estuary to understand long-term ecosystem health.
 
 -   **24 fixed stations** sampled monthly at high water slack tide
 
@@ -36,7 +36,7 @@ The Environmental Monitoring Program (EMP) monitors water conditions across the 
 
 ### SR JPE Genetics
 
-The Spring-Run Juvenile Production Estimate (SR JPE) project monitors the seasonal outmigration of threatened juvenile spring-run Chinook salmon.
+The Spring-Run Juvenile Production Estimate (SR JPE) genetics program monitors the seasonal outmigration of threatened juvenile spring-run Chinook salmon.
 
 -   **11 monitoring sites** across the Sacramento River Basin, sampled November–May
 
