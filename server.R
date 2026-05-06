@@ -1,11 +1,11 @@
 server <- function(input, output, session) {
   # Welcome -----------------------------------------------------------------
   # DELETE WHEN FINALIZED
-  showModal(
-    modalDialog(title = "Welcome to the Downstream Dashboard!", tagList(
-      tags$h5("NOTE: This tool is in development!")
-    ), easyClose = TRUE)
-  )
+  # showModal(
+  #   modalDialog(title = "Welcome to the Downstream Dashboard!", tagList(
+  #     tags$h5("NOTE: This tool is in development!")
+  #   ), easyClose = TRUE)
+  # )
 
   # GENETICS ----------------------------------------------------------------
   # shared download handler function

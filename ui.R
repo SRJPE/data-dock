@@ -403,9 +403,15 @@ ui <- fluidPage(
                     )
                   ),
                 tags$p(
-                  "Note: The year is representative of a monitoring year (Nov-May), see [data collection methods](insert link) for more detail.",
-                  style = "font-size: 0.9em; font-style: italic; color: #555; margin-top:5px;"
-                  )
+                  tags$span(
+                    "Note: The year is representative of a monitoring year (Nov-May), see ",
+                    tags$a(
+                      "data collection methods on EDI package here",
+                      href = "https://portal.edirepository.org/nis/metadataviewer?packageid=edi.2335.1",
+                      target = "_blank"),
+                    " for more detail."),
+                  style = "margin-bottom: 5px; text-align: left; font-style: italic; color: #555;"
+                ),
                 )
               ),
             fluidRow(column(
