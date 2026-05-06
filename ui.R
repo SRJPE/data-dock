@@ -69,10 +69,6 @@ ui <- fluidPage(
                   inputId = "location_filter_wq",
                   label = tagList(
                     tags$strong("Station"),
-                    # tags$div(
-                    #   "Historical sites are no longer being monitored.",
-                    #   style = "font-size: 0.8em; color: #666;"
-                    #   )
                     tags$span(
                       icon("circle-info"),
                       title = "Historical sites are no longer being monitored.",
@@ -93,10 +89,6 @@ ui <- fluidPage(
                 inputId = "start_date_wq",
                 label = tagList(
                   tags$strong("Start Month and Year"),
-                  # tags$div(
-                  #   "If unavailable, the closest date with data is used.",
-                  #   style = "font-size: 0.8em; color: #666;"
-                  #   )
                   tags$span(
                     icon("circle-info"),
                     title = "If month and year selected are unavailable, the closest date with data is used.",
@@ -105,9 +97,9 @@ ui <- fluidPage(
                   ),
                 value = min(wq_data$date),
                 range = FALSE,
-                dateFormat  = "MMM yyyy",      # CHANGED — shows "Jan 2020"
-                view        = "months",        # ADDED — opens on month view
-                minView     = "months",
+                dateFormat = "MMM yyyy",
+                view = "months",
+                minView = "months",
                 clearButton = FALSE,
                 autoClose = TRUE,
                 minDate = min(wq_data$date),
@@ -120,10 +112,6 @@ ui <- fluidPage(
                 inputId = "end_date_wq",
                 label = tagList(
                   tags$strong("End Month and Year"),
-                  # tags$div(
-                  #   "If unavailable, the closest date with data is used.",
-                  #   style = "font-size: 0.8em; color: #666;"
-                  #   )
                   tags$span(
                     icon("circle-info"),
                     title = "If month and year selected are unavailable, the closest date with data is used.",
@@ -132,16 +120,15 @@ ui <- fluidPage(
                   ),
                 value = max(wq_data$date),
                 range = FALSE,
-                dateFormat  = "MMM yyyy",      # CHANGED
-                view        = "months",        # ADDED
-                minView     = "months",
+                dateFormat  = "MMM yyyy",
+                view = "months",
+                minView = "months",
                 clearButton = FALSE,
                 autoClose = TRUE,
                 minDate = min(wq_data$date),
                 maxDate = max(wq_data$date)
                 )
               ),
-
             div(
               style = "min-width: 200px;",
               selectizeInput(
@@ -167,7 +154,7 @@ ui <- fluidPage(
             actionButton("clear_all", "Clear All", icon = icon("eraser")),
           ),
 
-          # === Map and Floating Plot Panel ===
+          # === Map ===
           fluidRow(
             column(width = 4, leafletOutput("wq_map", height = "600px")),
             column(
@@ -177,16 +164,14 @@ ui <- fluidPage(
               tags$p(
                 "Note: Vertical dashed lines with a short horizontal cap indicate non-detect values.
                              Their height corresponds to the reporting limit (MDL/MRL).",
-                style = "font-size: 0.9em; font-style: italic; color: #555; margin-top:5px;"
-              )
-            ),
-            conditionalPanel(condition = "input.plot_type == 'Box Plot'",
-                             tags$p(
-                               "Note: Boxplots for some stations may not be displayed if more than 50% of the data at that location are non-detects.",
-                               style = "font-size: 0.9em; font-style: italic; color: #555; margin-top:5px;"
+                style = "font-size: 0.9em; font-style: italic; color: #555; margin-top:5px;")
+              ),
+              conditionalPanel(condition = "input.plot_type == 'Box Plot'",
+                               tags$p(
+                                 "Note: Boxplots for some stations may not be displayed if more than 50% of the data at that location are non-detects.",
+                                 style = "font-size: 0.9em; font-style: italic; color: #555; margin-top:5px;")
                                )
-                             )
-            )
+              )
             ),
 
           fluidRow(column(
@@ -214,8 +199,7 @@ ui <- fluidPage(
                 tags$span("Download the data currently selected in the map and filters."),
                 tags$br(),
                 tags$span("For custom queries, visit the Download tab."),
-                style = "margin-bottom: 5px; font-style: italic; color: #555;"
-                )
+                style = "margin-bottom: 5px; font-style: italic; color: #555;")
               )
             )
             )
@@ -239,9 +223,9 @@ ui <- fluidPage(
               label = "Start Month and Year",
               value = min(wq_data$date),
               range = FALSE,
-              dateFormat  = "MMM yyyy",      # CHANGED
-              view        = "months",        # ADDED
-              minView     = "months",
+              dateFormat = "MMM yyyy",
+              view = "months",
+              minView = "months",
               clearButton = FALSE,
               autoClose = TRUE,
               minDate = min(wq_data$date),
@@ -252,15 +236,14 @@ ui <- fluidPage(
               label = "End Month and Year",
               value = max(wq_data$date),
               range = FALSE,
-              dateFormat  = "MMM yyyy",      # CHANGED
-              view        = "months",        # ADDED
-              minView     = "months",
+              dateFormat  = "MMM yyyy",
+              view = "months",
+              minView = "months",
               clearButton = FALSE,
               autoClose = TRUE,
               minDate = min(wq_data$date),
               maxDate = max(wq_data$date)
               ),
-
             selectizeInput(
               "analyte_download",
               "Analyte",
@@ -377,17 +360,9 @@ ui <- fluidPage(
               actionButton("clear_all_g", "Clear All Sites", icon = icon("eraser")),
               ),
 
-            # === Map and Floating Plot Panel ===
+            # === Map  ===
             fluidRow(
               column(width = 4, leafletOutput("g_map", height = "600px")),
-              # column(
-              #   width = 8,
-              #   plotlyOutput("g_dynamic_plot", height = "600px"),
-              #   tags$p(
-              #     "Note: The year is representative of a monitoring year (Nov-May), see [data collection methods](insert link) for more detail.",
-              #     style = "font-size: 0.9em; font-style: italic; color: #555; margin-top:5px;"
-              #   )
-              # )
               column(
                 width = 8,
                 plotlyOutput("g_dynamic_plot", height = "600px"),

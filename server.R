@@ -1,12 +1,4 @@
 server <- function(input, output, session) {
-  # Welcome -----------------------------------------------------------------
-  # DELETE WHEN FINALIZED
-  # showModal(
-  #   modalDialog(title = "Welcome to the Downstream Dashboard!", tagList(
-  #     tags$h5("NOTE: This tool is in development!")
-  #   ), easyClose = TRUE)
-  # )
-
   # GENETICS ----------------------------------------------------------------
   # shared download handler function
   make_download_handler <- function(data_fun) {
@@ -72,9 +64,7 @@ server <- function(input, output, session) {
         weight = 1,
         color = "black",
         fillOpacity = 0.7,
-        # fillColor = ifelse(rst_sites$stream == "clear creek", "#7E2954", "black"),
         fillColor = "black",
-        #default highlight to Clear
         popup = ~ label
       ) |>
       # Initial full-extent view
@@ -89,12 +79,6 @@ server <- function(input, output, session) {
         L.control.zoom({ position: 'bottomleft' }).addTo(this);
       }
     ")
-    # |
-    #   htmlwidgets::onRender("
-    #   function(el, x){
-    #     this.zoomControl.setPosition('bottomright');
-    #   }
-    # ")
   })
 
   observeEvent(input$g_map_marker_click, ignoreInit = TRUE, {
@@ -130,8 +114,6 @@ server <- function(input, output, session) {
   )
 })
 
-
-
   ### Reactive Data --------------------------------------------------------
 
   filtered_g_data <- reactive({
@@ -139,7 +121,6 @@ server <- function(input, output, session) {
     req(input$location_filter_g)
 
     data <- run_designation |>
-      # filter(year >= input$year_range_g[1], year <= input$year_range_g[2])
       filter(year %in% input$year_range_g)
 
     if (!is.null(input$location_filter_g) &&
@@ -188,7 +169,6 @@ server <- function(input, output, session) {
         ) |>
         select(-fake_year) |>
         mutate(month = factor(month, levels = 1:12, labels = month.abb)) |>
-        # filter(run_name != "Unknown") |>  # removing unknowns for now - plot will no longer be at a 100%
         complete(
           location_name,
           year,
@@ -260,7 +240,6 @@ server <- function(input, output, session) {
     }
 
     # toggle: proportions vs counts
-    # show_counts <- input$count_type_g == "Counts"
     show_counts <- input$count_type_g == "TRUE"
 
     if (input$plot_type_g == "Water Year") {
@@ -290,25 +269,12 @@ server <- function(input, output, session) {
     }
 
     if (input$plot_type_g == "Month") {
-      # selected_years <- seq(input$year_range_g[1], input$year_range_g[2])
+
       selected_years <- input$year_range_g
-      # if (length(selected_years) > 3) {
-      #   showNotification("Please select a range of 3 years or fewer.", type = "error")
-      #   return(
-      #     plotly_empty(type = "scatter", mode = "lines") |>
-      #       layout(
-      #         title = "Too many years selected. Please select 3 years max.<br>
-      #              Recommend summarizing by monitoring year when looking at more than 3 years."
-      #       )
-      #   )
-      # }
-
-
       y_var <- if (show_counts) "total_samples" else "run_percent"
       y_label <- if (show_counts) "Count (n)" else y_axis_text
       hover_label <- if (show_counts) "Count: " else title_text
       hover_val <- if (show_counts) df$total_samples else signif(df$run_percent, 2)
-
       n_years <- length(unique(df$year))
       plot <- ggplot(df,
                      aes(
@@ -322,9 +288,8 @@ server <- function(input, output, session) {
                          title_text2, .data[[grouping_variable]],
                          "<br>",
                          "Sample Size: ",
-                         site_total
-                       )
-                     )) +
+                         site_total)
+                       )) +
         geom_bar(stat = "identity", position = "stack") +
         facet_wrap(~ location_name + year, ncol = n_years) +
         scale_fill_manual(name = "Run type", values = run_col) +
@@ -334,29 +299,22 @@ server <- function(input, output, session) {
           angle = 90,
           vjust = 0.5,
           hjust = 1
-        )) +
-        # add labels
-        scale_x_date(breaks = "1 month", date_labels = "%b")
-    }
+          )) +
+        scale_x_date(breaks = "1 month", date_labels = "%b") # add labels
+      }
     ggplotly(plot, tooltip = "text")
-
   })
 
   ### Clear Button --------------------------------------------
 
   observeEvent(input$clear_all_g, {
     updateSelectizeInput(session, inputId = "location_filter_g", selected = character(0))
-    # updateSliderInput(session, "year_range_g",
-    #                   value = c(as.numeric(min(run_designation$year)),
-    #                             max(run_designation$year)))
     updateSelectizeInput(
       session,
-      inputId  = "year_range_g",
+      inputId = "year_range_g",
       selected = sort(unique(run_designation$year)))   # resets to all years
     updateSelectInput(session, "plot_type_g", "Water Year")
     updateSelectInput(session, "data_plot_g", "Run Type")
-    # updateSelectInput(session, "count_type_g", "Proportions")
-    # shinyWidgets::updateMaterialSwitch(session, "count_type_g", value = FALSE)
     shinyWidgets::updateRadioGroupButtons(session, "count_type_g", selected = "FALSE")
     draw_and_zoom_selection_g(character(0))
     leafletProxy("g_map") |>
@@ -376,7 +334,6 @@ server <- function(input, output, session) {
       updateSelectizeInput(session,
                         "location_filter_dl_g",
                         selected = input$location_filter_g)
-      # updateSliderInput(session, "year_range_dl_g", value = input$year_range_g)
       updateSelectizeInput(session,"year_range_dl_g", selected = input$year_range_g)
       updateSelectizeInput(session, "run_download", selected = sort(unique(run_designation$run_name)))
     }
@@ -408,7 +365,6 @@ server <- function(input, output, session) {
 
   output$dl_preview_table_g <- DT::renderDataTable({
     dl_download_data_g() |>
-      #dplyr::select(date, station_id_name, analyte, value, unit) |>
       dplyr::select(sample_id, code, sample_event, year, month, datetime_collected, location_name, map_label, everything()) |>
       DT::datatable(options = list(pageLength = 10, scrollX = TRUE))
   })
@@ -417,61 +373,6 @@ server <- function(input, output, session) {
   ## Reactive data -----------------------------------------------------------
 
   # shared filtering logic
-  # filter_wq_data <- function(locations,
-  #                            years,
-  #                            analytes,
-  #                            include_weather = FALSE) {
-  #   out <- wq_data |>
-  #     dplyr::filter(date >= years[1], date <= years[2])
-  #
-  #   if (!is.null(locations) && length(locations) > 0) {
-  #     out <- out |> dplyr::filter(station_id_name %in% locations)
-  #   }
-  #
-  #   # handle analytes
-  #   if (!is.null(analytes) && length(analytes) > 0) {
-  #     out <- out |> dplyr::filter(analyte %in% analytes)
-  #   }
-  #
-  #   # add weather analytes if requested
-  #   if (include_weather) {
-  #     weather <- wq_quality_weather |>
-  #       dplyr::filter(
-  #         analyte %in% c("Rain", "Sky Conditions"),
-  #         date >= years[1],
-  #         date <= years[2]
-  #
-  #       )
-  #
-  #     # same location filtering to weather data
-  #     if (!is.null(locations) && length(locations) > 0) {
-  #       weather <- weather |> dplyr::filter(station_id_name %in% locations)
-  #     }
-  #
-  #     if (nrow(weather) == 0) {
-  #       showNotification(
-  #         "No weather data (Rain or Sky Conditions) available for the selected site(s) and year(s).",
-  #         type = "message",
-  #         duration = 15
-  #       )
-  #     } else {
-  #       weather <- weather |>
-  #         dplyr::mutate(value_text = value, value = NA_real_) |>
-  #         select(-value) |>
-  #         mutate(value = as.character(value_text)) |>
-  #         select(-value_text)
-  #
-  #       out <- out |>
-  #         dplyr::mutate(value = as.character(value))
-  #
-  #       out <- dplyr::bind_rows(out, weather)
-  #     }
-  #   }
-  #
-  #   out
-  #
-  # }
-
   filter_wq_data <- function(locations,
                              start_date,
                              end_date,
@@ -528,8 +429,6 @@ server <- function(input, output, session) {
 
     out
   }
-
-
 
   ## Download handler --------------------------------------------------------
 
@@ -610,17 +509,17 @@ server <- function(input, output, session) {
       return(invisible(map))
     map |>
       addCircleMarkers(
-        data        = selected_station,
-        lat         = ~latitude,
-        lng         = ~longitude,
-        radius      = 10,
-        fillColor   = ~ifelse(status == "Active", "black", "gray"),
-        color       = "#FF0000",
-        weight      = 2,
+        data = selected_station,
+        lat = ~latitude,
+        lng = ~longitude,
+        radius = 10,
+        fillColor = ~ifelse(status == "Active", "black", "gray"),
+        color = "#FF0000",
+        weight = 2,
         fillOpacity = 0.9,
-        group       = "highlight",
-        label       = ~paste("Selected:", station_id_name),
-        layerId     = ~paste0(station_id_name, "__hi")
+        group = "highlight",
+        label = ~paste("Selected:", station_id_name),
+        layerId = ~paste0(station_id_name, "__hi")
       )
   }
 
@@ -639,16 +538,16 @@ server <- function(input, output, session) {
       ) |>
       # Active sites (circles)
       addCircleMarkers(
-        data        = wq_metadata,
-        layerId     = ~station_id_name,
-        label       = ~paste(station_id_name),
-        radius      = 6,
-        stroke      = TRUE,
-        weight      = 1,
-        color       = "black",
+        data = wq_metadata,
+        layerId = ~station_id_name,
+        label = ~paste(station_id_name),
+        radius = 6,
+        stroke = TRUE,
+        weight = 1,
+        color = "black",
         fillOpacity = 0.7,
-        fillColor   = ~ifelse(status == "Active", "black", "gray"),
-        popup       = ~paste0("<b>", station_id, "</b><br/>", station_description)
+        fillColor = ~ifelse(status == "Active", "black", "gray"),
+        popup = ~paste0("<b>", station_id, "</b><br/>", station_description)
       ) |>
       addLegend(
         position = "bottomright",
@@ -703,13 +602,6 @@ server <- function(input, output, session) {
 
     # Reset analyte picker
     updateSelectizeInput(session, inputId = "analyte", selected = character(0))
-
-    # Reset year sliders
-    # updateSliderInput(session,
-    #                   "year_range",
-    #                   value = c(min(wq_data$date), max(wq_data$date)),
-    #                   timeFormat = "%b %Y")
-
 
     shinyWidgets::updateAirDateInput(session, "start_date_wq", value = min(wq_data$date))
     shinyWidgets::updateAirDateInput(session, "end_date_wq",   value = max(wq_data$date))
@@ -789,7 +681,6 @@ server <- function(input, output, session) {
     else
       "Value"
 
-
     # flags + segment ids
     df <- df |>
       dplyr::arrange(analyte, station_id_name, date) |>
@@ -835,12 +726,6 @@ server <- function(input, output, session) {
 
       nd <- df_plot |>
         dplyr::filter(nd_flag) |>
-        # dplyr::mutate(
-        #   nd_height = dplyr::case_when(
-        #     reports_to == "MDL" ~ as.numeric(mdl),
-        #     reports_to == "MRL" ~ as.numeric(mrl),
-        #     TRUE ~ NA_real_
-        #   ),
         dplyr::mutate(
           nd_height = mrl,
           x_minus = date - lubridate::days(10),
@@ -869,8 +754,7 @@ server <- function(input, output, session) {
         "#DDCC77",
         "#CC6677",
         "#AA4499",
-        "#882255"
-      )
+        "#882255")
 
       # lines/points for detected ONLY, with group resetting after non-detects
       if (nrow(detected) > 0) {
@@ -889,12 +773,10 @@ server <- function(input, output, session) {
                 value,
                 "<br>",
                 "Station: ",
-                station_id_name
-              )
-            ),
+                station_id_name)
+              ),
             linewidth = 0.6,
-            show.legend = FALSE
-          ) +
+            show.legend = FALSE) +
           geom_point(
             data = detected,
             aes(
@@ -909,15 +791,13 @@ server <- function(input, output, session) {
                 value,
                 "<br>",
                 "Station: ",
-                station_id_name
-              )
-            ),
+                station_id_name)
+              ),
             size = 1.8,
             alpha = 0.8,
             show.legend = TRUE
           )
       }
-
 
       # Non-detect markers (vertical + short horizontal at MDL/MRL)
       if (nrow(nd) > 0) {
@@ -958,23 +838,15 @@ server <- function(input, output, session) {
                 "Date: ",
                 date,
                 "<br>",
-                # "MDL value: ",
-                # mdl,
-                # "<br>",
                 "MRL value: ",
                 mrl,
                 "<br>",
-                # "Reports to: ",
-                # reports_to,
-                # "<br>",
                 "Station: ",
-                station_id_name
-              )
-            ),
+                station_id_name)
+              ),
             linewidth = 0.6,
             linetype = 5,
-            inherit.aes = FALSE
-          ) +
+            inherit.aes = FALSE) +
           geom_segment(
             data = nd,
             aes(
@@ -987,19 +859,12 @@ server <- function(input, output, session) {
                 "Date: ",
                 date,
                 "<br>",
-                # "MDL value: ",
-                # mdl,
-                # "<br>",
                 "MRL value: ",
                 mrl,
                 "<br>",
-                # "Reports to: ",
-                # reports_to,
-                # "<br>",
                 "Station: ",
-                station_id_name
-              )
-            ),
+                station_id_name)
+              ),
             linewidth = 0.6,
             lineend = "square",
             inherit.aes = FALSE
@@ -1025,55 +890,49 @@ server <- function(input, output, session) {
           strip.text = element_text(face = "bold")
         )
 
-
       # TODO add units to the box plots (just like line plot)
     } else if (plot_type == "Box Plot") {
       boxplot_data <- df |>
         left_join(prop_nd) |>
         filter(prop_detected >= 0.5)
 
-        # replace values for non detects with the detection limit
-        # mutate(value = case_when(is.na(value) & detection_status == "Not detected" & reports_to == "MRL" ~ mrl,
-        #                          is.na(value) & detection_status == "Not detected" & reports_to == "MDL" ~ mdl,
-        #                          T ~ value))
       if (nrow(boxplot_data) == 0) {
         return(
           plotly_empty(type = "scatter", mode = "lines") |>
-            layout(title = "No data available for current selection.
+          layout(title = "No data available for current selection.
                    When more than 50% of the data are non-detects, boxplots are not generated.
                    Please refer to the Time Series plots.")
-        )
-      } else {
-
-      p <- ggplot(
-        boxplot_data |> dplyr::filter(!is.na(value)),
-        aes(
-          x = station_id,
-          y = value,
-          fill = station_id,
-          text = paste0(
-            "Date: ",
-            date,
-            "<br>",
-            "Value: ",
-            value,
-            "<br>",
-            "Station: ",
-            station_id_name
           )
-        )
-      ) +
-        geom_boxplot(outlier.shape = NA) +
-        facet_wrap(~ analyte, scales = "free_y", ncol = 2) +
-        labs(x = "", y = "value", fill = "Station") +
-        scale_fill_manual(values = tol_muted) +
-        theme_bw() +
-        theme(legend.position = "none")
 
-    }
+        } else {
+
+          p <- ggplot(
+            boxplot_data |> dplyr::filter(!is.na(value)),
+            aes(
+              x = station_id,
+              y = value,
+              fill = station_id,
+              text = paste0(
+                "Date: ",
+                date,
+                "<br>",
+                "Value: ",
+                value,
+                "<br>",
+                "Station: ",
+                station_id_name)
+              )
+            ) +
+            geom_boxplot(outlier.shape = NA) +
+            facet_wrap(~ analyte, scales = "free_y", ncol = 2) +
+            labs(x = "", y = "value", fill = "Station") +
+            scale_fill_manual(values = tol_muted) +
+            theme_bw() +
+            theme(legend.position = "none")
+          }
       } else {
-      return(NULL)
-    }
+        return(NULL)
+      }
 
     gp <- ggplotly(p, tooltip = "text")
 
@@ -1106,7 +965,6 @@ server <- function(input, output, session) {
 
   })
 
-
   ## Download Tab  --------------------------------------------------------------
   # sync Water Quality selections to Download tab
 
@@ -1115,10 +973,8 @@ server <- function(input, output, session) {
       updateSelectInput(session,
                         "location_filter_dl",
                         selected = input$location_filter_wq)
-      # updateSliderInput(session, "year_range_dl", value = input$year_range)
       shinyWidgets::updateAirDateInput(session, "start_date_dl", value = input$start_date_wq)
       shinyWidgets::updateAirDateInput(session, "end_date_dl",   value = input$end_date_wq)
-
       updateSelectizeInput(session, "analyte_download", selected = input$analyte)
     }
   })
@@ -1128,20 +984,10 @@ server <- function(input, output, session) {
   observeEvent(input$clear_all_dl, {
     # Reset location (selectInput)
     updateSelectInput(session, inputId = "location_filter_dl", selected = character(0))
-
     # Reset analyte (selectizeInput)
     updateSelectizeInput(session, inputId = "analyte_download", selected = character(0))
-
-    # Reset year range slider (download tab)
-    # updateSliderInput(session,
-    #                   "year_range_dl",
-    #                   value = c(min(wq_data$date), max(wq_data$date)),
-    #                   timeFormat = "%b %Y")
-
     shinyWidgets::updateAirDateInput(session, "start_date_dl", value = min(wq_data$date))
     shinyWidgets::updateAirDateInput(session, "end_date_dl",   value = max(wq_data$date))
-
-
     # Reset include_weather checkbox (download tab)
     updateCheckboxInput(session, inputId = "include_weather", value = FALSE)
   })
@@ -1162,7 +1008,6 @@ server <- function(input, output, session) {
     )
 
     dl_download_data() |>
-      # dplyr::select(date, station_id_name, analyte, value, unit) |>
       dplyr::select(station_id, station_description, date, time, year, analyte, value, unit, everything(), -station_id_name) |>
       DT::datatable(options = list(pageLength = 10, scrollX = TRUE))
   })

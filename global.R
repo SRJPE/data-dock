@@ -62,7 +62,6 @@ rst_sites$longitude <- coords[, 1]
 rst_sites$latitude <- coords[, 2]
 
 # habitat extents
-# TODO check how/if this is being used
 salmonid_habitat_extents <- readRDS("data-raw/salmonid_habitat_extents.Rds")
 
 ## ================== data pull from edi ============
@@ -100,7 +99,7 @@ sample_location <- read_csv(here::here("data-raw","grunid_sample_location.csv"))
 run_designation <- genetics_data_raw |>
   mutate(code = substr(sample_id, 1, 3),
          year= paste0(20,substr(sample_id, 4,5)),
-         month = month(datetime_collected), # TODO currentlu there are only months 12 and 11 so it does not plot well
+         month = month(datetime_collected),
          sample_event = sub("^[^_]+_([^_]+)_.*$", "\\1", sample_id),
          sample_event = as.numeric(sample_event),
          gtseq_chr28_geno = tolower(gtseq_chr28_geno),
@@ -150,11 +149,16 @@ file_metadata <- fetch_data_from_api(edi_file_url_metadata)
 wq_metadata_raw <- read_csv(
   I(rawToChar(file_metadata)),
   show_col_types = FALSE) |>
-  clean_names() |>
-  filter(latitude != "variable") |> # these data entries do not have lat/long, so I am leaving them out for now
-  st_as_sf(coords = c("longitude", "latitude"), crs = 4326)
+  clean_names()
+
+# "variable" locations
+# wq_metadata_raw |>
+#   filter(latitude == "variable") |>
+#   view()
 
 wq_metadata <- wq_metadata_raw |>
+  filter(latitude != "variable") |> # these data entries do not have lat/long, so I am leaving them out for now
+  st_as_sf(coords = c("longitude", "latitude"), crs = 4326) |>
   group_by(station_description) |>
   mutate(station_description = case_when(
     status == "Inactive" ~ paste0(station_description, " - Historical"),
@@ -167,7 +171,6 @@ wq_metadata$longitude <- coords[, 1]
 wq_metadata$latitude <- coords[, 2]
 
 # =================== combine metadata with data ===============
-# TODO maybe combine this with metadata to keep just one data object
 wq_data_joined <- wq_data_raw |>
 left_join(wq_metadata |>  st_drop_geometry() |> select(station_id, station_description),
           by = "station_id") |>
