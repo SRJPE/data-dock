@@ -5,6 +5,19 @@ library(shinyWidgets)
 
 ui <- fluidPage(
   theme = bs_theme(bootswatch = "flatly"),
+  tags$head(
+    tags$link(
+      rel  = "stylesheet",
+      href = "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    ),
+    tags$script(HTML("
+  $(document).ready(function() {
+    $('[title]').tooltip({ trigger: 'hover' });
+    $('span[data-toggle=\"popover\"]').popover();  // only targets spans, not selectize
+  });
+"))
+  ),
+
   tags$style(HTML("
   #count_type_g .btn-default {
     background-color: #f0f0f0 !important;
@@ -56,10 +69,11 @@ ui <- fluidPage(
                   inputId = "location_filter_wq",
                   label = tagList(
                     tags$strong("Station"),
-                    tags$div(
-                      "Historical sites are no longer being monitored.",
-                      style = "font-size: 0.8em; color: #666;"
-                      )
+                    tags$span(
+                      icon("circle-info"),
+                      title = "Historical sites are no longer being monitored.",
+                      style = "color: #aaa; margin-left: 5px; cursor: help; font-size: 0.85em;"
+                    )
                     ),
                   choices = stats::setNames(stations[ord], stations_label[ord]),
                   multiple = TRUE,
@@ -74,15 +88,18 @@ ui <- fluidPage(
               shinyWidgets::airDatepickerInput(
                 inputId = "start_date_wq",
                 label = tagList(
-                  tags$strong("Start Date"),
-                  tags$div(
-                    "If unavailable, the closest date with data is used.",
-                    style = "font-size: 0.8em; color: #666;"
+                  tags$strong("Start Month and Year"),
+                  tags$span(
+                    icon("circle-info"),
+                    title = "If month and year selected are unavailable, the closest date with data is used.",
+                    style = "color: #aaa; margin-left: 5px; cursor: help; font-size: 0.85em;"
                     )
                   ),
                 value = min(wq_data$date),
                 range = FALSE,
-                dateFormat = "MMM dd, yyyy",
+                dateFormat = "MMM yyyy",
+                view = "months",
+                minView = "months",
                 clearButton = FALSE,
                 autoClose = TRUE,
                 minDate = min(wq_data$date),
@@ -94,33 +111,35 @@ ui <- fluidPage(
               shinyWidgets::airDatepickerInput(
                 inputId = "end_date_wq",
                 label = tagList(
-                  tags$strong("End Date"),
-                  tags$div(
-                    "If unavailable, the closest date with data is used.",
-                    style = "font-size: 0.8em; color: #666;"
+                  tags$strong("End Month and Year"),
+                  tags$span(
+                    icon("circle-info"),
+                    title = "If month and year selected are unavailable, the closest date with data is used.",
+                    style = "color: #aaa; margin-left: 5px; cursor: help; font-size: 0.85em;"
                     )
                   ),
                 value = max(wq_data$date),
                 range = FALSE,
-                dateFormat = "MMM dd, yyyy",
+                dateFormat  = "MMM yyyy",
+                view = "months",
+                minView = "months",
                 clearButton = FALSE,
                 autoClose = TRUE,
                 minDate = min(wq_data$date),
                 maxDate = max(wq_data$date)
                 )
               ),
-
             div(
               style = "min-width: 200px;",
               selectizeInput(
                 inputId = "analyte",
                 label = tagList(
                   tags$strong("Analyte"),
-                  tags$div(
-                    "Surface measurements are collected one meter below the surface of
-                    the water and bottom measurements are collected approximately one meter
-                    above the bottom of the channel floor.",
-                    style = "font-size: 0.8em; color: #666;"
+                  tags$span(
+                    icon("circle-info"),
+                    title = "Surface samples: collected ~1 m below water surface. Bottom: collected ~1 m above channel floor.
+                    The analyte dropdown only includes analytes available at the selected station.",
+                    style = "color: #aaa; margin-left: 5px; cursor: help; font-size: 0.85em;"
                   )
                 ),
                 choices = NULL,
@@ -135,7 +154,7 @@ ui <- fluidPage(
             actionButton("clear_all", "Clear All", icon = icon("eraser")),
           ),
 
-          # === Map and Floating Plot Panel ===
+          # === Map ===
           fluidRow(
             column(width = 4, leafletOutput("wq_map", height = "600px")),
             column(
@@ -145,16 +164,14 @@ ui <- fluidPage(
               tags$p(
                 "Note: Vertical dashed lines with a short horizontal cap indicate non-detect values.
                              Their height corresponds to the reporting limit (MDL/MRL).",
-                style = "font-size: 0.9em; font-style: italic; color: #555; margin-top:5px;"
-              )
-            ),
-            conditionalPanel(condition = "input.plot_type == 'Box Plot'",
-                             tags$p(
-                               "Note: Boxplots for some stations may not be displayed if more than 50% of the data at that location are non-detects.",
-                               style = "font-size: 0.9em; font-style: italic; color: #555; margin-top:5px;"
+                style = "font-size: 0.9em; font-style: italic; color: #555; margin-top:5px;")
+              ),
+              conditionalPanel(condition = "input.plot_type == 'Box Plot'",
+                               tags$p(
+                                 "Note: Boxplots for some stations may not be displayed if more than 50% of the data at that location are non-detects.",
+                                 style = "font-size: 0.9em; font-style: italic; color: #555; margin-top:5px;")
                                )
-                             )
-            )
+              )
             ),
 
           fluidRow(column(
@@ -182,8 +199,7 @@ ui <- fluidPage(
                 tags$span("Download the data currently selected in the map and filters."),
                 tags$br(),
                 tags$span("For custom queries, visit the Download tab."),
-                style = "margin-bottom: 5px; font-style: italic; color: #555;"
-                )
+                style = "margin-bottom: 5px; font-style: italic; color: #555;")
               )
             )
             )
@@ -204,10 +220,12 @@ ui <- fluidPage(
               ),
             shinyWidgets::airDatepickerInput(
               inputId = "start_date_dl",
-              label = "Start Date",
+              label = "Start Month and Year",
               value = min(wq_data$date),
               range = FALSE,
-              dateFormat = "MMM dd, yyyy",
+              dateFormat = "MMM yyyy",
+              view = "months",
+              minView = "months",
               clearButton = FALSE,
               autoClose = TRUE,
               minDate = min(wq_data$date),
@@ -215,16 +233,17 @@ ui <- fluidPage(
               ),
             shinyWidgets::airDatepickerInput(
               inputId = "end_date_dl",
-              label = "End Date",
+              label = "End Month and Year",
               value = max(wq_data$date),
               range = FALSE,
-              dateFormat = "MMM dd, yyyy",
+              dateFormat  = "MMM yyyy",
+              view = "months",
+              minView = "months",
               clearButton = FALSE,
               autoClose = TRUE,
               minDate = min(wq_data$date),
               maxDate = max(wq_data$date)
               ),
-
             selectizeInput(
               "analyte_download",
               "Analyte",
@@ -234,7 +253,7 @@ ui <- fluidPage(
             ),
             checkboxInput(
               inputId = "include_weather",
-              label = "Include associated weather observations (Rain, Sky Conditions)",
+              label = "Include associated weather observations (Rain, Sky Conditions, Weather Observations and Wave Scale)",
               value = FALSE
             ),
             actionButton(
@@ -254,16 +273,14 @@ ui <- fluidPage(
               ),
               tags$p(
                 HTML(
-                  "Download the data you’ve selected using the filters on this tab.<br>
-        The table provides a preview only — the exported <code>.csv</code> file will include the complete raw dataset.<br>
-        For more information about the data and metadata, please visit the
-        <a href='https://portal.edirepository.org/nis/metadataviewer?packageid=edi.458.13' target='_blank'>EDI package here</a>."
+                "Filtered data preview — the exported <code>.csv</code> includes the complete raw dataset.<br>
+                For data and metadata, see the <a href='https://portal.edirepository.org/nis/metadataviewer?packageid=edi.458.13' target='_blank'>EDI package</a>
+                (EDI account required for full access)."
                 ),
-                #TODO add link to EDI
                 style = "font-style: italic; color: #555; text-align: center; margin-top: 10px;"
+                )
               )
-            )
-          ),
+            ),
 
           # Data preview table
           mainPanel(
@@ -343,17 +360,9 @@ ui <- fluidPage(
               actionButton("clear_all_g", "Clear All Sites", icon = icon("eraser")),
               ),
 
-            # === Map and Floating Plot Panel ===
+            # === Map  ===
             fluidRow(
               column(width = 4, leafletOutput("g_map", height = "600px")),
-              # column(
-              #   width = 8,
-              #   plotlyOutput("g_dynamic_plot", height = "600px"),
-              #   tags$p(
-              #     "Note: The year is representative of a monitoring year (Nov-May), see [data collection methods](insert link) for more detail.",
-              #     style = "font-size: 0.9em; font-style: italic; color: #555; margin-top:5px;"
-              #   )
-              # )
               column(
                 width = 8,
                 plotlyOutput("g_dynamic_plot", height = "600px"),
@@ -369,9 +378,15 @@ ui <- fluidPage(
                     )
                   ),
                 tags$p(
-                  "Note: The year is representative of a monitoring year (Nov-May), see [data collection methods](insert link) for more detail.",
-                  style = "font-size: 0.9em; font-style: italic; color: #555; margin-top:5px;"
-                  )
+                  tags$span(
+                    "Note: The year is representative of a monitoring year (Nov-May), see ",
+                    tags$a(
+                      "data collection methods on EDI package here",
+                      href = "https://portal.edirepository.org/nis/metadataviewer?packageid=edi.2335.1",
+                      target = "_blank"),
+                    " for more detail."),
+                  style = "margin-bottom: 5px; text-align: left; font-style: italic; color: #555;"
+                ),
                 )
               ),
             fluidRow(column(
@@ -443,16 +458,14 @@ ui <- fluidPage(
               ),
               tags$p(
                 HTML(
-                  "Download the data you’ve selected using the filters on this tab.<br>
-        The table provides a preview only — the exported <code>.csv</code> file will include the complete raw dataset.<br>
-        For more information about the data and metadata, please visit the
-        <a href='link-to-metadata-file' target='_blank'>EDI package here</a>."
+                "Filtered data preview — the exported <code>.csv</code> includes the complete raw dataset.<br>
+                For data and metadata, see the <a href='https://portal.edirepository.org/nis/metadataviewer?packageid=edi.2335.1' target='_blank'>EDI package</a>
+                (EDI account required for full access)."
                 ),
-                #TODO add link to EDI
                 style = "font-style: italic; color: #555; text-align: center; margin-top: 10px;"
+                )
               )
-            )
-          ),
+            ),
 
           # Data preview table
           mainPanel(
