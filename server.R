@@ -238,13 +238,24 @@ server <- function(input, output, session) {
       title_text2 <- "Run Type: "
       y_axis_text <- "Run Assignment Proportions"
     }
+    legend_title <- if (input$data_plot_g == "Greb 1L RoSA Genotype") {
+      "Genotype"
+    } else {
+      "Run type"
+    }
+
+    count_y_label <- if (input$data_plot_g == "Greb 1L RoSA Genotype") {
+      "Genotype Count (n)"
+    } else {
+      "Run Type Count (n)"
+    }
 
     # toggle: proportions vs counts
     show_counts <- input$count_type_g == "TRUE"
 
     if (input$plot_type_g == "Water Year") {
       y_var <- if (show_counts) "count" else "run_percent"
-      y_label <- if (show_counts) "Count (n)" else y_axis_text
+      y_label <- if (show_counts) count_y_label else y_axis_text
       hover_label <- if (show_counts) "Count: " else title_text
       hover_val <- if (show_counts) df$count else signif(df$run_percent, 2)
 
@@ -265,14 +276,14 @@ server <- function(input, output, session) {
         facet_wrap(~ map_label, ncol = 1) +
         scale_fill_manual(values = run_col) +
         theme_minimal() +
-        labs(x = "", y = y_label, fill = "")
+        labs(x = "", y = y_label, fill = legend_title)
     }
 
     if (input$plot_type_g == "Month") {
 
       selected_years <- input$year_range_g
       y_var <- if (show_counts) "total_samples" else "run_percent"
-      y_label <- if (show_counts) "Count (n)" else y_axis_text
+      y_label <- if (show_counts) count_y_label else y_axis_text
       hover_label <- if (show_counts) "Count: " else title_text
       hover_val <- if (show_counts) df$total_samples else signif(df$run_percent, 2)
       n_years <- length(unique(df$year))
@@ -292,7 +303,7 @@ server <- function(input, output, session) {
                        )) +
         geom_bar(stat = "identity", position = "stack") +
         facet_wrap(~ location_name + year, ncol = n_years) +
-        scale_fill_manual(name = "Run type", values = run_col) +
+        scale_fill_manual(name = legend_title, values = run_col) +
         labs(x = "", y = y_label) +
         theme_minimal() +
         theme(axis.text.x = element_text(
