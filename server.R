@@ -114,7 +114,7 @@ server <- function(input, output, session) {
   )
 })
 
-  ### Reactive Data --------------------------------------------------------
+  ### Reactive Data
 
   filtered_g_data <- reactive({
     req(input$year_range_g)
@@ -367,7 +367,7 @@ server <- function(input, output, session) {
                       )), max(run_designation$year)))
   })
 
-  # Table -------------------------------------------------------------------
+  ### Table -------------------------------------------------------------------
 
   dl_download_data_g <- reactive({filtered_g_data() |>
                                    filter(run_name %in% input$run_download)})
@@ -1017,7 +1017,7 @@ server <- function(input, output, session) {
     updateCheckboxInput(session, inputId = "include_weather", value = FALSE)
   })
 
-  # Table -------------------------------------------------------------------
+  ### Table -------------------------------------------------------------------
 
   # assign to outputs
   output$download_wq_csv_dl <- make_download_handler(dl_download_data)
