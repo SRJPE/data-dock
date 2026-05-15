@@ -65,11 +65,26 @@ rst_sites$latitude <- coords[, 2]
 salmonid_habitat_extents <- readRDS("data-raw/salmonid_habitat_extents.Rds")
 
 ## ================== data pull from edi ============
+# Get all revisions for this package series
 genetics_identifier <- "2335"
-genetics_version <- "1"
+genetics_revisions_url <- paste0(
+  "https://pasta.lternet.edu/package/eml/edi/", genetics_identifier)
+
+genetics_revisions_raw <- fetch_data_from_api(genetics_revisions_url)
+genetics_revisions <- read_lines(I(rawToChar(genetics_revisions_raw)))
+
+# Extract newest revision number
+genetics_version <- genetics_revisions |>
+  basename() |>
+  as.numeric() |>
+  max(na.rm = TRUE) |>
+  as.character()
+
+# check of edi version that is being pulled
+# genetics_version
+
 edi_file_base_url <- paste0(
-  "https://pasta.lternet.edu/package/data/eml/edi/", genetics_identifier, "/", genetics_version
-)
+  "https://pasta.lternet.edu/package/data/eml/edi/", genetics_identifier, "/", genetics_version)
 file_ids_bytes <- fetch_data_from_api(edi_file_base_url)
 #file_ids contains the list of files from the package in the form of ids
 file_ids_genetics <- read_csv(file_ids_bytes,
@@ -118,11 +133,27 @@ run_designation <- genetics_data_raw |>
 
 # ------------------ WATER QUALITY DATA ------------------------------------------------------
 
+# Get all revisions for this package series
 identifier <- "458"
-version <- "13"
+revisions_url <- paste0(
+  "https://pasta.lternet.edu/package/eml/edi/",
+  identifier)
+
+revisions_raw <- fetch_data_from_api(revisions_url)
+revisions <- read_lines(I(rawToChar(revisions_raw)))
+
+# Extract newest revision number
+version <- revisions |>
+  basename() |>
+  as.numeric() |>
+  max(na.rm = TRUE) |>
+  as.character()
+
+# check of edi version that is being pulled
+# version
+
 edi_file_base_url <- paste0(
-  "https://pasta.lternet.edu/package/data/eml/edi/", identifier, "/", version
-)
+  "https://pasta.lternet.edu/package/data/eml/edi/", identifier, "/", version)
 file_ids_bytes <- fetch_data_from_api(edi_file_base_url)
 #file_ids contains the list of files from the package in the form of ids
 file_ids <- read_csv(file_ids_bytes,
@@ -142,7 +173,7 @@ wq_data_raw <- read_csv(
          value = result_value,
          unit = result_unit)
 
-# ==================== metadata pull frmo edi =====
+# ==================== metadata pull frmo edi ==========
 edi_file_url_metadata <- paste0(edi_file_base_url, "/ac44e8bf5f7a8afce67ba0d6cbfbc228")
 file_metadata <- fetch_data_from_api(edi_file_url_metadata)
 
