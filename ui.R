@@ -56,7 +56,7 @@ ui <- fluidPage(
               style = "min-width: 200px;",
 
               {
-                stations <- sort(unique(wq_metadata$station_id_name))
+                stations <- sort(unique(wq_data$station_id_name))
                 stations_label <- stringr::str_replace(
                   stations,
                   "^([A-Za-z]+)0*(\\d+[A-Za-z]?)\\s*-\\s*(.+)$",
@@ -214,7 +214,7 @@ ui <- fluidPage(
             selectizeInput(
               "location_filter_dl",
               "Station",
-              choices = sort(unique(wq_metadata$station_id_name)),
+              choices = sort(unique(wq_data$station_id_name)),
               multiple = TRUE,
               options = list(plugins = list('remove_button'), placeholder = "Select a station")
               ),

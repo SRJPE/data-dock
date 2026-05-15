@@ -188,7 +188,7 @@ wq_metadata_raw <- read_csv(
 #   view()
 
 wq_metadata <- wq_metadata_raw |>
-  filter(latitude != "variable") |> # these data entries do not have lat/long, so I am leaving them out for now
+  filter(latitude != "variable") |> # these data entries are associated with LSZ locations
   st_as_sf(coords = c("longitude", "latitude"), crs = 4326) |>
   group_by(station_description) |>
   mutate(station_description = case_when(
@@ -202,6 +202,7 @@ wq_metadata$longitude <- coords[, 1]
 wq_metadata$latitude <- coords[, 2]
 
 # =================== combine metadata with data ===============
+# combine to add station description to data from metadata
 wq_data_joined <- wq_data_raw |>
 left_join(wq_metadata |>  st_drop_geometry() |> select(station_id, station_description),
           by = "station_id") |>
@@ -210,22 +211,29 @@ left_join(wq_metadata |>  st_drop_geometry() |> select(station_id, station_descr
 wq_data <- wq_data_joined |>
   mutate(date = as.Date(date),
          value = as.numeric(value),
-         year = year(date)) |>
-  filter(!is.na(station_description),
-         analyte != "Latitude",
+         year = year(date),
+         station_description = case_when(station_id == "LSZ2" ~ "Low Salinity Zone (2000 uS/cm boundary)",
+                                         station_id == "LSZ2-SJR" ~ "Low Salinity Zone in San Joaquin River (2000 uS/cm boundary)",
+                                         station_id == "LSZ6" ~ "Low Salinity Zone (6000 uS/cm boundary)",
+                                         station_id == "LSZ6-SJR" ~ "Low Salinity Zone in San Joaquin River (6000 uS/cm boundary)",
+                                         T ~ station_description)) |>
+  filter(analyte != "Latitude",
          analyte != "Longitude",
          analyte != "Rain",
-         analyte != "Sky Conditions") |>
-  mutate(station_id_name = paste(station_id, "-", station_description)) |>
-  glimpse()
+         analyte != "Sky Conditions",
+         analyte != "Weather Observations",
+         analyte != "Wave Scale") |>
+  mutate(station_id_name = paste(station_id, "-", station_description))
 
-# was planning on using analyte lat/long to assign location. however, it is inconsistent across same station_id
-wq_data_missing_location <- wq_data |>
-  filter(station_id %in% c("LSZ6", "LSZ2", "LSZ2-SJR", "LSZ6-SJR"),
-         analyte %in% c("Latitude", "Longitude"))
+# Separate object for variable sites only
+wq_metadata_variable <- wq_metadata_raw |>
+  filter(latitude == "variable") |>
+  mutate(station_description = case_when(
+    status == "Inactive" ~ paste0(station_description, " - Historical"),
+    TRUE ~ station_description),
+    station_id_name = paste(station_id, "-", station_description))
 
 # ==================== weather analytes ==========================
 wq_quality_weather <- wq_data_joined |>
   filter(analyte %in% c("Rain", "Sky Conditions", "Weather Observations", "Wave Scale")) |>
-  mutate(station_id_name = paste(station_id, "-", station_description)) |> glimpse()
-
+  mutate(station_id_name = paste(station_id, "-", station_description))

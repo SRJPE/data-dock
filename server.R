@@ -422,7 +422,7 @@ server <- function(input, output, session) {
         showNotification(
           "No weather data (Rain or Sky Conditions) available for the selected site(s) and year(s).",
           type = "message",
-          duration = 6
+          duration = 12
         )
       } else {
         weather <- weather |>
@@ -603,6 +603,20 @@ server <- function(input, output, session) {
   # redraw highlight + zoom on dropdown change
   observeEvent(input$location_filter_wq, {
     draw_and_zoom_selection(input$location_filter_wq)
+    # Notify user if any selected sites are not on the map
+    unmappable <- input$location_filter_wq[
+      !input$location_filter_wq %in% wq_metadata$station_id_name
+    ]
+    if (length(unmappable) > 0) {
+      showNotification(
+        paste0(
+          "The following site(s) have no location data and won't appear on the map: ",
+          paste(unmappable, collapse = ", ")
+        ),
+        type = "message",
+        duration = 12
+      )
+    }
   }, ignoreInit = TRUE)
 
   ### Clear Button --------------------------------------------
