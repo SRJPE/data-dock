@@ -44,6 +44,7 @@ rst <- rst_raw |>
                            T ~ str_to_title(stream)))
 
 # adding Delta Entry and Lower Feather Rm 17
+#TODO confirm if we want to add this file, or just extract delta locations
 additional_rst <- readxl::read_xlsx("data-raw/sample_locations_20220830.xlsx") |>
   filter(code %in% c("F17", "DEL")) |>
   st_as_sf(coords = c("longitude", "latitude"), crs = 4326) |>
@@ -60,6 +61,10 @@ rst_sites <- bind_rows(additional_rst, rst)
 coords <- sf::st_coordinates(rst_sites)
 rst_sites$longitude <- coords[, 1]
 rst_sites$latitude <- coords[, 2]
+set.seed(42)  # jitter consistent every time app loads
+rst_sites_clean <- rst_sites |>
+  mutate(longitude = longitude + runif(n(), min = -0.15, max = 0.15),
+         latitude  = latitude  + runif(n(), min = -0.15, max = 0.15))
 
 # habitat extents
 salmonid_habitat_extents <- readRDS("data-raw/salmonid_habitat_extents.Rds")
