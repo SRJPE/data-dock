@@ -24,7 +24,7 @@ Three additional local files are used for shiny app.
 |------------------------|------------------------|------------------------|
 | Genetics                      | `edi.2335`                                                                        | Always pulls latest revision automatically                           |
 | Water Quality                 | `edi.458`                                                                         | Always pulls latest revision automatically                           |
-| RST monitoring site locations | Local file `data-raw/rst_sites.Rds` + `data-raw/sample_locations_20220830.xlsx`  **see TODO | RST monitoring site locations (coordinates are jittered for privacy) |
+| RST monitoring site locations | Local file `data-raw/rst_trap_locations.csv` | RST monitoring site locations (coordinates are jittered for privacy) |
 | Genetics sample location names    | Local file `data-raw/grunid_sample_location.csv` | Lookup table linking 3-letter site codes to full location names. Used to join site labels onto genetics data |
 | River Polylines               | Locat file sourced from [CVPIA](https://cvpia-osc.github.io/DSMhabitat/articles/habitat-extents-map.html) | River polylines displayed on both maps                               |
 
@@ -62,13 +62,13 @@ requests:
 
 ### Spatial
 
-`rst_sites` and `salmonid_habitat_extents`
+`rst_trap_locations` and `salmonid_habitat_extents`
 
 ### Notes
 
 -   All EDI data is pulled **live at app startup** via the PASTA REST
     API. No local copies of WQ or genetics data are stored
--   `rst_sites` and `salmonid_habitat_extents` are the only datasets
+-   `rst_trap_locations` and `salmonid_habitat_extents` are the only datasets
     loaded from local files
 
 ### EDI File IDs

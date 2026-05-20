@@ -402,8 +402,7 @@ PASTA REST API. Three additional local files are used for shiny app.</p>
 </tr>
 <tr class="odd">
 <td>RST monitoring site locations</td>
-<td>Local file <code>data-raw/rst_sites.Rds</code> +
-<code>data-raw/sample_locations_20220830.xlsx</code> **see TODO</td>
+<td>Local file <code>data-raw/rst_trap_locations.csv</code></td>
 <td>RST monitoring site locations (coordinates are jittered for
 privacy)</td>
 </tr>
@@ -521,15 +520,17 @@ and site labels</td>
 </div>
 <div id="spatial" class="section level3">
 <h3>Spatial</h3>
-<p><code>rst_sites</code> and <code>salmonid_habitat_extents</code></p>
+<p><code>rst_trap_locations</code> and
+<code>salmonid_habitat_extents</code></p>
 </div>
 <div id="notes" class="section level3">
 <h3>Notes</h3>
 <ul>
 <li>All EDI data is pulled <strong>live at app startup</strong> via the
 PASTA REST API. No local copies of WQ or genetics data are stored</li>
-<li><code>rst_sites</code> and <code>salmonid_habitat_extents</code> are
-the only datasets loaded from local files</li>
+<li><code>rst_trap_locations</code> and
+<code>salmonid_habitat_extents</code> are the only datasets loaded from
+local files</li>
 </ul>
 </div>
 <div id="edi-file-ids" class="section level3">
