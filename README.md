@@ -23,14 +23,15 @@ Built with: R, Shiny, Leaflet, Plotly, ggplot2, sf, shinyWidgets
 
 Both Water Quality and Genetics datasets are pulled **live from EDI
 (Environmental Data Initiative)** at app startup via the PASTA REST API.
-Two additional local files are used for shiny app.
+Three additional local files are used for shiny app.
 
 | Dataset                       | Source                                                                            | Notes                                                                |
 |------------------------|------------------------|------------------------|
 | Genetics                      | `edi.2335`                                                                        | Always pulls latest revision automatically                           |
 | Water Quality                 | `edi.458`                                                                         | Always pulls latest revision automatically                           |
-| RST monitoring site locations | Local file `data-raw/rst_sites.Rds` + `data-raw/sample_locations_20220830.xlsx`   | RST monitoring site locations (coordinates are jittered for privacy) |
-| River Polylines               | [CVPIA](https://cvpia-osc.github.io/DSMhabitat/articles/habitat-extents-map.html) | River polylines displayed on both maps                               |
+| RST monitoring site locations | Local file `data-raw/rst_sites.Rds` + `data-raw/sample_locations_20220830.xlsx`  **see TODO | RST monitoring site locations (coordinates are jittered for privacy) |
+| Genetics sample location names    | Local file `data-raw/grunid_sample_location.csv` | Lookup table linking 3-letter site codes to full location names. Used to join site labels onto genetics data |
+| River Polylines               | Locat file sourced from [CVPIA](https://cvpia-osc.github.io/DSMhabitat/articles/habitat-extents-map.html) | River polylines displayed on both maps                               |
 
 ## How Data Loading Works (`global.R`)
 

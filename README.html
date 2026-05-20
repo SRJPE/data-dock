@@ -375,7 +375,7 @@ Built with: R, Shiny, Leaflet, Plotly, ggplot2, sf, shinyWidgets</p>
 <h2>Data Sources</h2>
 <p>Both Water Quality and Genetics datasets are pulled <strong>live from
 EDI (Environmental Data Initiative)</strong> at app startup via the
-PASTA REST API. Two additional local files are used for shiny app.</p>
+PASTA REST API. Three additional local files are used for shiny app.</p>
 <table>
 <colgroup>
 <col width="33%" />
@@ -403,13 +403,19 @@ PASTA REST API. Two additional local files are used for shiny app.</p>
 <tr class="odd">
 <td>RST monitoring site locations</td>
 <td>Local file <code>data-raw/rst_sites.Rds</code> +
-<code>data-raw/sample_locations_20220830.xlsx</code></td>
+<code>data-raw/sample_locations_20220830.xlsx</code> **see TODO</td>
 <td>RST monitoring site locations (coordinates are jittered for
 privacy)</td>
 </tr>
 <tr class="even">
+<td>Genetics sample location names</td>
+<td>Local file <code>data-raw/grunid_sample_location.csv</code></td>
+<td>Lookup table linking 3-letter site codes to full location names.
+Used to join site labels onto genetics data</td>
+</tr>
+<tr class="odd">
 <td>River Polylines</td>
-<td><a href="https://cvpia-osc.github.io/DSMhabitat/articles/habitat-extents-map.html">CVPIA</a></td>
+<td>Locat file sourced from <a href="https://cvpia-osc.github.io/DSMhabitat/articles/habitat-extents-map.html">CVPIA</a></td>
 <td>River polylines displayed on both maps</td>
 </tr>
 </tbody>
