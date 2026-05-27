@@ -47,7 +47,7 @@ rst_sites <- rst_csv |>
   mutate(label = case_when(site == "knights landing" ~ "Sacramento River - Knights Landing",
                            site == "tisdale" ~ "Sacramento River - Tisdale",
                            site == "eye riffle" ~ "Feather River - RM 61",
-                           site == "sac-delta entry" ~ "Sacramento River - Delta Entry",
+                           site == "delta entry" ~ "Sacramento River - Delta Entry",
                            site == 'rm 17 (new "lower" RST)'~ "Feather River - RM 17",
                            T ~ str_to_title(stream))) |>
   select(stream, site, latitude, longitude, label)
