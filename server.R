@@ -77,7 +77,7 @@ server <- function(input, output, session) {
         weight = 1.5
       ) |>
       # RST monitoring site markers
-      # NOTE: coordinates are jittered ~15km for privacy — see global.R
+      # NOTE: coordinates are jittered ~500m for privacy — see global.R
       addCircleMarkers(
         data = rst_sites,
         layerId = ~label,
@@ -111,7 +111,7 @@ server <- function(input, output, session) {
     })
   }, once = TRUE)
 
-  # Map click → toggle site in/out of dropdown selection
+  # Map click -> toggle site in/out of dropdown selection
   # "__hi" suffix on highlight marker IDs is stripped before processing
   observeEvent(input$g_map_marker_click, ignoreInit = TRUE, {
     click <- input$g_map_marker_click
@@ -125,12 +125,12 @@ server <- function(input, output, session) {
     updateSelectizeInput(session, "location_filter_g", selected = new_sel)
   })
 
-  # Dropdown change → redraw highlights
+  # Dropdown change -> redraw highlights
   observeEvent(input$location_filter_g, {
     draw_and_zoom_selection_g(input$location_filter_g)
   }, ignoreInit = TRUE)
 
-  # "All Years" button → reset year dropdown to all available years
+  # "All Years" button -> reset year dropdown to all available years
   observeEvent(input$select_all_years_g, {
     updateSelectizeInput(
       session,
@@ -162,8 +162,8 @@ server <- function(input, output, session) {
   })
 
   # Aggregates filtered data for plotting.
-  # Water Year: summarizes by year + location → proportions or counts
-  # Month: summarizes by year + month + location → proportions or counts
+  # Water Year: summarizes by year + location -> proportions or counts
+  # Month: summarizes by year + month + location -> proportions or counts
   #        uses fake_date (1991/1992) to align Nov-May monitoring year on x-axis
   data_for_plot_g <- reactive({
     grouping_variable <- if (input$data_plot_g == "Greb 1L RoSA Genotype") {
@@ -598,7 +598,7 @@ server <- function(input, output, session) {
       ")
   })
 
-  # Map click → toggle station in/out of dropdown selection
+  # Map click -> toggle station in/out of dropdown selection
   observeEvent(input$wq_map_marker_click, ignoreInit = TRUE, {
     click <- input$wq_map_marker_click
     req(!is.null(click), !is.null(click$id))
@@ -610,7 +610,7 @@ server <- function(input, output, session) {
     updateSelectizeInput(session, "location_filter_wq", selected = new_sel)
   })
 
-  # Dropdown change → redraw highlights + warn if selected site has no coordinates
+  # Dropdown change -> redraw highlights + warn if selected site has no coordinates
   observeEvent(input$location_filter_wq, {
     draw_and_zoom_selection(input$location_filter_wq)
 

@@ -48,16 +48,16 @@ rst_sites <- rst_csv |>
                            site == "tisdale" ~ "Sacramento River - Tisdale",
                            site == "eye riffle" ~ "Feather River - RM 61",
                            site == "sac-delta entry" ~ "Sacramento River - Delta Entry",
-                           site == "feather-rm17" ~ "Feather River - RM 17",
+                           site == 'rm 17 (new "lower" RST)'~ "Feather River - RM 17",
                            T ~ str_to_title(stream))) |>
   select(stream, site, latitude, longitude, label)
 
-# Jitter coordinates for privacy (~15 km offset)
+# Jitter coordinates for privacy (~500m offset)
 # set.seed() ensures jitter is identical on every app restart
 set.seed(42)  # jitter consistent every time app loads
 rst_sites <- rst_sites |>
-  mutate(longitude = longitude + runif(n(), min = -0.15, max = 0.15),
-         latitude  = latitude  + runif(n(), min = -0.15, max = 0.15))
+  mutate(longitude = longitude + runif(n(), min = -0.005, max = 0.005),
+         latitude  = latitude  + runif(n(), min = -0.005, max = 0.005))
 
 # habitat extents
 # River polylines displayed on both the WQ and genetics maps
