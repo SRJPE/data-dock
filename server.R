@@ -1,19 +1,10 @@
 server <- function(input, output, session) {
   # GENETICS ----------------------------------------------------------------
-  # shared download handler function
-  make_download_handler <- function(data_fun) {
-    downloadHandler(
-      filename = function()
-        paste0("genetics_", Sys.Date(), ".csv"),
-      content = function(file) {
-        readr::write_csv(data_fun(), file)
-      }
-    )
-  }
 
 ## Visualize ---------------------------------------------------------------
 
   ### Map ---------------------------------------------------------
+  # draws highlight markers on selected genetics monitoring sites
   draw_and_zoom_selection_g <- function(sel_names) {
     map <- leafletProxy("g_map") |>
       clearGroup("highlight") |>
@@ -81,6 +72,12 @@ server <- function(input, output, session) {
     ")
   })
 
+  session$onFlushed(function() {
+    observe({
+      draw_and_zoom_selection_g(input$location_filter_g)
+    })
+  }, once = TRUE)
+
   observeEvent(input$g_map_marker_click, ignoreInit = TRUE, {
     click <- input$g_map_marker_click
     req(!is.null(click), !is.null(click$id))
@@ -107,12 +104,12 @@ server <- function(input, output, session) {
   }, ignoreInit = TRUE)
 
   observeEvent(input$select_all_years_g, {
-  updateSelectizeInput(
-    session,
-    inputId  = "year_range_g",
-    selected = sort(unique(run_designation$year))
-  )
-})
+    updateSelectizeInput(
+      session,
+      inputId  = "year_range_g",
+      selected = sort(unique(run_designation$year))
+      )
+    })
 
   ### Reactive Data
 
@@ -202,8 +199,22 @@ server <- function(input, output, session) {
   })
 
   ### Download ------------------------------------------------
+  # shared download handler function
+  make_genetics_download_handler <- function(data_fun) {
+    downloadHandler(
+      filename = function() paste0("genetics_", Sys.Date(), ".csv"),
+      content  = function(file) readr::write_csv(data_fun(), file)
+    )
+  }
 
-  output$download_g_csv <- make_download_handler(filtered_g_data)
+  make_wq_download_handler <- function(data_fun) {
+    downloadHandler(
+      filename = function() paste0("water_quality_", Sys.Date(), ".csv"),
+      content  = function(file) readr::write_csv(data_fun(), file)
+    )
+  }
+
+  output$download_g_csv <- make_genetics_download_handler(filtered_g_data)
 
   ### Plot ---------------------------------------------------------
 
@@ -216,15 +227,6 @@ server <- function(input, output, session) {
           layout(title = "No data available for current selection.")
       )
     }
-
-    run_col <- c(
-      "spring" = "#337538",
-      "fall or late fall" = "#DCCD7D",
-      "winter" = "#94CBEC",
-      "early" = "#5DA899",
-      "late" =  "#DCCD7D",
-      "heterozygote" = "gray"
-    )
 
     if (input$data_plot_g == "Greb 1L RoSA Genotype") {
       grouping_variable <- "genotype"
@@ -361,18 +363,19 @@ server <- function(input, output, session) {
 
     # Reset year range slider (download tab)
     updateSelectizeInput(session,
-                      "year_range_dl_g",
-                      value = c(as.numeric(min(
-                        run_designation$year
-                      )), max(run_designation$year)))
+                         "year_range_dl_g",
+                         selected = sort(unique(run_designation$year)))
   })
 
   ### Table -------------------------------------------------------------------
 
-  dl_download_data_g <- reactive({filtered_g_data() |>
-                                   filter(run_name %in% input$run_download)})
+  dl_download_data_g <- reactive({
+    filtered_g_data() |>
+      filter(run_name %in% input$run_download)
+    })
+
   # assign to outputs
-  output$download_g_csv_dl <- make_download_handler(dl_download_data_g)
+  output$download_g_csv_dl <- make_genetics_download_handler(dl_download_data_g)
 
   output$dl_preview_table_g <- DT::renderDataTable({
     dl_download_data_g() |>
@@ -464,16 +467,6 @@ server <- function(input, output, session) {
     )
   })
 
-  # shared download handler function
-  make_download_handler <- function(data_fun) {
-    downloadHandler(
-      filename = function()
-        paste0("water_quality_", Sys.Date(), ".csv"),
-      content = function(file) {
-        readr::write_csv(data_fun(), file)
-      }
-    )
-  }
 
   ## Visualize Tab -----------------------------------------------------------
 
@@ -506,7 +499,7 @@ server <- function(input, output, session) {
   })
 
   ### Map --------------------------------------------------------------
-  # zoom to selection
+  # draws highlight markers on selected stations
   draw_and_zoom_selection <- function(sel_names) {
     map <- leafletProxy("wq_map") |>
       clearGroup("highlight") |>
@@ -597,7 +590,7 @@ server <- function(input, output, session) {
     else
       union(current, id)
 
-    updateSelectInput(session, "location_filter_wq", selected = new_sel)
+    updateSelectizeInput(session, "location_filter_wq", selected = new_sel)
   })
 
   # redraw highlight + zoom on dropdown change
@@ -645,8 +638,8 @@ server <- function(input, output, session) {
 
 
   ### Download ------------------------------------------------
-
-  output$download_wq_csv <- make_download_handler(wq_download_data)
+  output$download_wq_csv    <- make_wq_download_handler(wq_download_data)
+  output$download_wq_csv_dl <- make_wq_download_handler(dl_download_data)
 
   ### Messages ----------------------------------------------------------------
 
@@ -701,10 +694,6 @@ server <- function(input, output, session) {
     }
 
     plot_type <- as.character(input$plot_type)[1]
-    y_lab <- if (length(input$analyte) == 1)
-      input$analyte[[1]]
-    else
-      "Value"
 
     # flags + segment ids
     df <- df |>
@@ -769,17 +758,6 @@ server <- function(input, output, session) {
         facet_wrap(~ analyte_label, scales = "free_y", ncol = 1) +
         labs(x = "", y = y_axis_lab, color = "Location") +
         theme_minimal()
-
-      # Tol Muted color palette
-      tol_muted <- c(
-        "#332288",
-        "#117733",
-        "#44AA99",
-        "#88CCEE",
-        "#DDCC77",
-        "#CC6677",
-        "#AA4499",
-        "#882255")
 
       # lines/points for detected ONLY, with group resetting after non-detects
       if (nrow(detected) > 0) {
@@ -915,7 +893,6 @@ server <- function(input, output, session) {
           strip.text = element_text(face = "bold")
         )
 
-      # TODO add units to the box plots (just like line plot)
     } else if (plot_type == "Box Plot") {
       boxplot_data <- df |>
         left_join(prop_nd) |>
@@ -995,7 +972,7 @@ server <- function(input, output, session) {
 
   observeEvent(input$wq_tabs, {
     if (input$wq_tabs == "Download Data") {
-      updateSelectInput(session,
+      updateSelectizeInput(session,
                         "location_filter_dl",
                         selected = input$location_filter_wq)
       shinyWidgets::updateAirDateInput(session, "start_date_dl", value = input$start_date_wq)
@@ -1008,7 +985,7 @@ server <- function(input, output, session) {
 
   observeEvent(input$clear_all_dl, {
     # Reset location (selectInput)
-    updateSelectInput(session, inputId = "location_filter_dl", selected = character(0))
+    updateSelectizeInput(session, inputId = "location_filter_dl", selected = character(0))
     # Reset analyte (selectizeInput)
     updateSelectizeInput(session, inputId = "analyte_download", selected = character(0))
     shinyWidgets::updateAirDateInput(session, "start_date_dl", value = min(wq_data$date))
@@ -1020,7 +997,7 @@ server <- function(input, output, session) {
   ### Table -------------------------------------------------------------------
 
   # assign to outputs
-  output$download_wq_csv_dl <- make_download_handler(dl_download_data)
+  output$download_wq_csv_dl <- make_wq_download_handler(dl_download_data)
 
   output$dl_preview_table <- DT::renderDataTable({
     req(

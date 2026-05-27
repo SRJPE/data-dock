@@ -51,7 +51,8 @@ requests:
 | `wq_quality_weather`   | EDI `edi.458`                  | Raw weather observations (Rain, Sky Conditions, Weather Observations, Wave Scale) . Pulled separately from `wq_data` |
 | `wq_data`              | Derived from `wq_data_raw`     | Cleaned WQ observations joined to metadata. Excludes Latitude, Longitude, Rain, Sky Conditions analytes              |
 | `wq_metadata`          | Derived from `wq_metadata_raw` | Mappable stations only (excludes `latitude == "variable"`) . Used for map markers, converted to `sf` object          |
-| `wq_metadata_variable` | Derived from `wq_metadata_raw` | Stations with no fixed lat/long, included in dropdowns and plots but not shown on map                                |
+                            
+
 
 ### Genetics
 
@@ -164,10 +165,6 @@ applied to raw data.
 
 -   `StationID` must match `Station` in `wq_data_raw` for the join to
     work
-
--   Rows where `latitude == "variable"` are excluded from the map but
-    their station data still appears in dropdowns and plots via
-    `wq_metadata_variable`
 
 -   `status` must be exactly `"Active"` or `"Inactive"` – controls map
     marker color (black = active, gray = inactive) and highlight

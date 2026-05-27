@@ -1,15 +1,16 @@
 library(shiny)
 library(tidyverse)
-library(shinythemes)
 library(DT)
 library(shinyWidgets)
 library(lubridate)
 library(plotly)
-library(shinycssloaders)
+# library(shinycssloaders)
 library(sf)
 library(janitor)
-library(EDIutils)
+# library(EDIutils)
 library(readr)
+library(leaflet)
+library(bslib)
 
 
 # ======================== HELPERS =====================
@@ -17,6 +18,12 @@ library(readr)
 
 tol_muted <- c("#2E2585", "#337538", "#5DA899", "#94CBEC","#DCCD7D", "#C26A77", "#9F4A96","#7E2954")
 
+run_col <- c("spring" = "#337538",
+             "fall or late fall" = "#DCCD7D",
+             "winter" = "#94CBEC",
+             "early" = "#5DA899",
+             "late" =  "#DCCD7D",
+             "heterozygote" = "gray")
 
 ## function for reading data directly from EDI ---------
 fetch_data_from_api <- function(url) {
@@ -46,7 +53,7 @@ rst_sites <- rst_csv |>
   select(stream, site, latitude, longitude, label)
 
 set.seed(42)  # jitter consistent every time app loads
-rst_sites_clean <- rst_sites |>
+rst_sites <- rst_sites |>
   mutate(longitude = longitude + runif(n(), min = -0.15, max = 0.15),
          latitude  = latitude  + runif(n(), min = -0.15, max = 0.15))
 
@@ -214,15 +221,18 @@ wq_data <- wq_data_joined |>
          analyte != "Wave Scale") |>
   mutate(station_id_name = paste(station_id, "-", station_description))
 
-# Separate object for variable sites only
-wq_metadata_variable <- wq_metadata_raw |>
-  filter(latitude == "variable") |>
-  mutate(station_description = case_when(
-    status == "Inactive" ~ paste0(station_description, " - Historical"),
-    TRUE ~ station_description),
-    station_id_name = paste(station_id, "-", station_description))
 
 # ==================== weather analytes ==========================
 wq_quality_weather <- wq_data_joined |>
   filter(analyte %in% c("Rain", "Sky Conditions", "Weather Observations", "Wave Scale")) |>
   mutate(station_id_name = paste(station_id, "-", station_description))
+
+# ==================== station labels for dropdowns ==========================
+stations <- sort(unique(wq_data$station_id_name))
+stations_label <- stringr::str_replace(
+  stations,
+  "^([A-Za-z]+)0*(\\d+[A-Za-z]?)\\s*-\\s*(.+)$",
+  "\\3 (\\1\\2)"
+)
+ord <- order(stations_label)
+
