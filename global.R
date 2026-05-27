@@ -52,16 +52,21 @@ rst_sites <- rst_csv |>
                            T ~ str_to_title(stream))) |>
   select(stream, site, latitude, longitude, label)
 
+# Jitter coordinates for privacy (~15 km offset)
+# set.seed() ensures jitter is identical on every app restart
 set.seed(42)  # jitter consistent every time app loads
 rst_sites <- rst_sites |>
   mutate(longitude = longitude + runif(n(), min = -0.15, max = 0.15),
          latitude  = latitude  + runif(n(), min = -0.15, max = 0.15))
 
 # habitat extents
+# River polylines displayed on both the WQ and genetics maps
+# Source: CVPIA (https://cvpia-osc.github.io/DSMhabitat/)
 salmonid_habitat_extents <- readRDS("data-raw/salmonid_habitat_extents.Rds")
 
-## ================== data pull from edi ============
-# Get all revisions for this package series
+## ================ genetics data pull from edi ============
+# Package edi.2335 — SR JPE genetics data
+# Always pulls the latest revision automatically
 genetics_identifier <- "2335"
 genetics_revisions_url <- paste0(
   "https://pasta.lternet.edu/package/eml/edi/", genetics_identifier)
@@ -105,8 +110,14 @@ genetics_data_raw <- read_csv(
                                   field_run_type_id)) |>
 mutate(run_name = tolower(run_name))
 
+## ---Sample location lookup ----
+# Local file linking 3-letter site codes (from sample_id) to location names.
+# If new sites are added to genetics_data_raw, add their code here.
+# If new location_name values are added, update the map_label case_when below.
 sample_location <- read_csv(here::here("data-raw","grunid_sample_location.csv"))
 
+## --- Run Designation ---
+# Derived from genetics_data_raw + sample_location join.
 run_designation <- genetics_data_raw |>
   mutate(code = substr(sample_id, 1, 3),
          year= paste0(20,substr(sample_id, 4,5)),
@@ -129,7 +140,8 @@ run_designation <- genetics_data_raw |>
 
 # ------------------ WATER QUALITY DATA ------------------------------------------------------
 
-# Get all revisions for this package series
+# Package edi.458 — EMP discrete water quality data
+# Always pulls the latest revision automatically
 identifier <- "458"
 revisions_url <- paste0(
   "https://pasta.lternet.edu/package/eml/edi/",
@@ -170,6 +182,9 @@ wq_data_raw <- read_csv(
          unit = result_unit)
 
 # ==================== metadata pull frmo edi ==========
+# Station metadata: location, status (Active/Inactive), lat/long
+# Some stations have latitude == "variable" (no fixed location — e.g. LSZ sites)
+# These are excluded from the map but their data is included in plots/downloads
 edi_file_url_metadata <- paste0(edi_file_base_url, "/ac44e8bf5f7a8afce67ba0d6cbfbc228")
 file_metadata <- fetch_data_from_api(edi_file_url_metadata)
 
@@ -178,7 +193,7 @@ wq_metadata_raw <- read_csv(
   show_col_types = FALSE) |>
   clean_names()
 
-# "variable" locations
+# "variable" locations check
 # wq_metadata_raw |>
 #   filter(latitude == "variable") |>
 #   view()
@@ -192,13 +207,16 @@ wq_metadata <- wq_metadata_raw |>
     TRUE ~ station_description)) |>
   ungroup() |>
   mutate(station_id_name = paste(station_id, "-", station_description))
-# adding lat/long fields for zooming functionality
+# Extract lat/long back as numeric columns for Leaflet marker placement
 coords <- sf::st_coordinates(wq_metadata)
 wq_metadata$longitude <- coords[, 1]
 wq_metadata$latitude <- coords[, 2]
 
-# =================== combine metadata with data ===============
-# combine to add station description to data from metadata
+# =================== combine metadata with data (main dataset used by the app) ===============
+# Joins raw data to metadata to get station_description.
+# Excludes: coordinate analytes, weather analytes (handled separately below),
+#           and rows with no matching station in metadata.
+# LSZ stations have no fixed location — their descriptions are hardcoded here.
 wq_data_joined <- wq_data_raw |>
 left_join(wq_metadata |>  st_drop_geometry() |> select(station_id, station_description),
           by = "station_id") |>

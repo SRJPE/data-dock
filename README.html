@@ -479,12 +479,6 @@ Longitude, Rain, Sky Conditions analytes</td>
 <code>latitude == &quot;variable&quot;</code>) . Used for map markers, converted
 to <code>sf</code> object</td>
 </tr>
-<tr class="even">
-<td><code>wq_metadata_variable</code></td>
-<td>Derived from <code>wq_metadata_raw</code></td>
-<td>Stations with no fixed lat/long, included in dropdowns and plots but
-not shown on map</td>
-</tr>
 </tbody>
 </table>
 </div>
@@ -846,9 +840,6 @@ active</td>
 <ul>
 <li><p><code>StationID</code> must match <code>Station</code> in
 <code>wq_data_raw</code> for the join to work</p></li>
-<li><p>Rows where <code>latitude == &quot;variable&quot;</code> are excluded from
-the map but their station data still appears in dropdowns and plots via
-<code>wq_metadata_variable</code></p></li>
 <li><p><code>status</code> must be exactly <code>&quot;Active&quot;</code> or
 <code>&quot;Inactive&quot;</code> – controls map marker color (black = active,
 gray = inactive) and highlight behavior</p></li>
