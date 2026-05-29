@@ -108,15 +108,25 @@ requests:
 
 ## Updating Data
 
-Data updates automatically on each app restart — no code changes needed
-as long as the EDI package ID and file ID stay the same.
+Data updates automatically on each app restart. Therefore no code changes needed
+as long as the EDI **package IDs** stay the same (`edi.458` for Water 
+Quality, `edi.2335` for Genetics). The app automatically:
 
-**If EDI file IDs change** (e.g. after a major data revision):
+1. Finds the latest revision of each package
+2. Parses the EML metadata to get all file names and download URLs
+3. Matches files by filename prefix — no hardcoded file IDs
 
--   Find the new file ID in the EDI package page
--   Update the hardcoded file ID in `global.R`
--   Example: `"/c1174bbf130272bf4124905c2ff73c66"` for genetics run
-    designation file
+### The only thing that would require a code change
+
+If a **filename prefix changes** in a new EDI revision, the app will 
+fail to find the file at startup. To fix, update the `str_detect` 
+pattern in `global.R`:
+
+| Dataset | Expected filename prefix | Location in `global.R` |
+|---|---|---|
+| Water Quality data | `EMP_DWQ_1` | `filter(str_detect(name, "^EMP_DWQ_1"))` |
+| Water Quality metadata | `EMP_DWQ_Stations_` | `filter(str_detect(name, "^EMP_DWQ_Stations_"))` |
+| Genetics | `YOUR_GENETICS_PREFIX` | `filter(str_detect(name, "^genetic_identification_data"))` |
 
 # Data Structure Reference
 
@@ -253,6 +263,10 @@ applied to raw data.
 
 ## What to Check After an EDI Data Update
 
+- [ ] File naming conventions unchanged. Filenames still start with
+      `EMP_DWQ_1` (WQ data), `EMP_DWQ_Stations_` (WQ metadata), and
+      `genetic_identification_data` (genetics). If renamed, update the
+      `str_detect` pattern in `global.R`
 -   [ ] Column names unchanged in all raw files
 -   [ ] `station_id` values consistent between `wq_data_raw` and
     `wq_metadata_raw`

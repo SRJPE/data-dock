@@ -622,16 +622,52 @@ local files</li>
 </div>
 <div id="updating-data" class="section level2">
 <h2>Updating Data</h2>
-<p>Data updates automatically on each app restart — no code changes
-needed as long as the EDI package ID and file ID stay the same.</p>
-<p><strong>If EDI file IDs change</strong> (e.g. after a major data
-revision):</p>
-<ul>
-<li>Find the new file ID in the EDI package page</li>
-<li>Update the hardcoded file ID in <code>global.R</code></li>
-<li>Example: <code>&quot;/c1174bbf130272bf4124905c2ff73c66&quot;</code> for
-genetics run designation file</li>
-</ul>
+<p>Data updates automatically on each app restart. Therefore no code
+changes needed as long as the EDI <strong>package IDs</strong> stay the
+same (<code>edi.458</code> for Water Quality, <code>edi.2335</code> for
+Genetics). The app automatically:</p>
+<ol style="list-style-type: decimal">
+<li>Finds the latest revision of each package</li>
+<li>Parses the EML metadata to get all file names and download URLs</li>
+<li>Matches files by filename prefix — no hardcoded file IDs</li>
+</ol>
+<div id="the-only-thing-that-would-require-a-code-change" class="section level3">
+<h3>The only thing that would require a code change</h3>
+<p>If a <strong>filename prefix changes</strong> in a new EDI revision,
+the app will fail to find the file at startup. To fix, update the
+<code>str_detect</code> pattern in <code>global.R</code>:</p>
+<table>
+<colgroup>
+<col width="33%" />
+<col width="33%" />
+<col width="33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Dataset</th>
+<th>Expected filename prefix</th>
+<th>Location in <code>global.R</code></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Water Quality data</td>
+<td><code>EMP_DWQ_1</code></td>
+<td><code>filter(str_detect(name, &quot;^EMP_DWQ_1&quot;))</code></td>
+</tr>
+<tr class="even">
+<td>Water Quality metadata</td>
+<td><code>EMP_DWQ_Stations_</code></td>
+<td><code>filter(str_detect(name, &quot;^EMP_DWQ_Stations_&quot;))</code></td>
+</tr>
+<tr class="odd">
+<td>Genetics</td>
+<td><code>YOUR_GENETICS_PREFIX</code></td>
+<td><code>filter(str_detect(name, &quot;^genetic_identification_data&quot;))</code></td>
+</tr>
+</tbody>
+</table>
+</div>
 </div>
 </div>
 <div id="data-structure-reference" class="section level1">
@@ -1132,6 +1168,11 @@ values converted to lowercase: <code>&quot;early&quot;</code>,
 <div id="what-to-check-after-an-edi-data-update" class="section level2">
 <h2>What to Check After an EDI Data Update</h2>
 <ul class="task-list">
+<li><input type="checkbox"></input>File naming conventions unchanged.
+Filenames still start with <code>EMP_DWQ_1</code> (WQ data),
+<code>EMP_DWQ_Stations_</code> (WQ metadata), and
+<code>genetic_identification_data</code> (genetics). If renamed, update
+the <code>str_detect</code> pattern in <code>global.R</code></li>
 <li><input type="checkbox"></input>Column names unchanged in all raw
 files</li>
 <li><input type="checkbox"></input><code>station_id</code> values consistent
