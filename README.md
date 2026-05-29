@@ -26,7 +26,7 @@ Three additional local files are used for shiny app.
 | Water Quality                 | `edi.458`                                                                         | Always pulls latest revision automatically                           |
 | RST monitoring site locations | Local file `data-raw/rst_trap_locations.csv` | RST monitoring site locations (coordinates are jittered for privacy) |
 | Genetics sample location names    | Local file `data-raw/grunid_sample_location.csv` | Lookup table linking 3-letter site codes to full location names. Used to join site labels onto genetics data |
-| River Polylines               | Locat file sourced from [CVPIA](https://cvpia-osc.github.io/DSMhabitat/articles/habitat-extents-map.html) | River polylines displayed on both maps                               |
+| River Polylines               | Local file sourced from [CVPIA](https://cvpia-osc.github.io/DSMhabitat/articles/habitat-extents-map.html) | River polylines displayed on both maps                               |
 
 ## How Data Loading Works (`global.R`)
 
@@ -37,8 +37,9 @@ requests:
 
 2.  Automatically selects the newest revision number
 
-3.  Fetches the file list for that revision 4. Downloads the target file
-    by its EDI file ID
+3.  Fetches the file list for that revision 
+
+4. Downloads the target filenby its EDI file ID
 
 ## Key Data Objects (created in `global.R`)
 
@@ -49,9 +50,19 @@ requests:
 | `wq_data_raw`          | EDI `edi.458`                  | Raw WQ observations as pulled from EDI                                                                               |
 | `wq_metadata_raw`      | EDI `edi.458`                  | Raw station metadata as pulled from EDI                                                                              |
 | `wq_quality_weather`   | EDI `edi.458`                  | Raw weather observations (Rain, Sky Conditions, Weather Observations, Wave Scale) . Pulled separately from `wq_data` |
-| `wq_data`              | Derived from `wq_data_raw`     | Cleaned WQ observations joined to metadata. Excludes Latitude, Longitude, Rain, Sky Conditions analytes              |
+| `wq_data`              | Derived from `wq_data_raw`     | Analysis-ready WQ dataset. Joined to metadata, columns renamed, non-WQ analytes excluded, LSZ descriptions hardcoded, station_id_name label added. See details below.              |
 | `wq_metadata`          | Derived from `wq_metadata_raw` | Mappable stations only (excludes `latitude == "variable"`) . Used for map markers, converted to `sf` object          |
                             
+**What changed from `wq_data_raw` to `wq_data`:**
+
+- `station` renamed to `station_id`; `result_value` renamed to `value`; `result_unit` renamed to `unit`
+- `value` converted from character to numeric via `as.numeric()`
+- `date` converted from character to `Date` class
+- `year` column added by extracting from `date`
+- Joined to `wq_metadata` to add `station_description` via `station_id`
+- LSZ stations (`LSZ2`, `LSZ2-SJR`, `LSZ6`, `LSZ6-SJR`) have no fixed location so they don't join to `wq_metadata`. Their `station_description` is hardcoded directly
+- Non-WQ analytes excluded: `Latitude`, `Longitude`, `Rain`, `Sky Conditions`, `Weather Observations`, `Wave Scale`
+- `station_id_name` column added: `paste(station_id, "-", station_description)`. Used in all dropdowns, plots, and downloads
 
 
 ### Genetics
@@ -59,7 +70,22 @@ requests:
 | Object              | Source                           | Description                                                                         |
 |------------------------|------------------------|------------------------|
 | `genetics_data_raw` | EDI `edi.2335`                   | Raw genetics data as pulled from EDI                                                |
-| `run_designation`   | Derived from `genetics_data_raw` | Cleaned genetics data with run assignments, monitoring year, month, and site labels |
+| `run_designation`   | Derived from `genetics_data_raw` | Analysis-ready genetics dataset derived from `genetics_data_raw` joined to `sample_location`. Contains one row per fish sample with run assignments, monitoring year, month, genotype, and map-ready site display labels. Rows with missing date are excluded as they cannot be plotted. |
+
+
+**What changed from `genetics_data_raw` to `run_designation`:**
+
+- `final_run_designation` renamed to `run_name`; `field_run_type` renamed to `field_run_type_id` to maintain consistency with earlier data schema
+- `run_name`, `gtseq_chr28_geno` and `shlk_chr28_genotype` converted to lowercase
+- Missing `fork_length_mm` and `field_run_type_id` values imputed by randomly sampling from observed values to preserve row count without affecting run assignment or genotype columns
+- `code` column added. First 3 characters of `sample_id` (e.g. `"BTC22_2_A_1"` to `"BTC"`). Used to join to `sample_location` lookup table
+- `year`, `month`, `sample_event` columns added
+- `genotype` column added: GT-seq result (`gtseq_chr28_geno`) is used when available; falls back to SHERLOCK result (`shlk_chr28_genotype`) if GT-seq is `NA`
+- Joined to `sample_location` to add `location_name` via `code`
+- `map_label` column added. Name used in UI dropdowns and plot facets
+- Rows where `month` or `genotype` is `NA` are removed
+
+
 
 ### Spatial
 

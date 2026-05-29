@@ -72,10 +72,9 @@ genetics_revisions_url <- paste0(
   "https://pasta.lternet.edu/package/eml/edi/", genetics_identifier)
 
 genetics_revisions_raw <- fetch_data_from_api(genetics_revisions_url)
-genetics_revisions <- read_lines(I(rawToChar(genetics_revisions_raw)))
 
 # Extract newest revision number
-genetics_version <- genetics_revisions |>
+genetics_version <- read_lines(I(rawToChar(genetics_revisions_raw))) |>
   basename() |>
   as.numeric() |>
   max(na.rm = TRUE) |>
@@ -84,17 +83,22 @@ genetics_version <- genetics_revisions |>
 # check of edi version that is being pulled
 # genetics_version
 
-edi_file_base_url <- paste0(
-  "https://pasta.lternet.edu/package/data/eml/edi/", genetics_identifier, "/", genetics_version)
-file_ids_bytes <- fetch_data_from_api(edi_file_base_url)
-#file_ids contains the list of files from the package in the form of ids
-file_ids_genetics <- read_csv(file_ids_bytes,
-                     col_names = c("table_id"),
-                     show_col_types = FALSE)
+# Build file lookup table from EML metadata
+# file names and download URLs for all files in package
+genetics_eml_url <- paste0("https://pasta.lternet.edu/package/metadata/eml/edi/", genetics_identifier, "/", genetics_version)
+genetics_eml_raw <- fetch_data_from_api(genetics_eml_url)
+genetics_eml_parsed <- xml2::read_xml(genetics_eml_raw, options = "RECOVER")
 
-# file_ids_genetics |> View()
-edi_file_url <- paste0(edi_file_base_url, "/c1174bbf130272bf4124905c2ff73c66")
-file_data_genetics <- fetch_data_from_api(edi_file_url)
+genetics_file_lookup <- tibble::tibble(
+  name = xml2::xml_text(xml2::xml_find_all(genetics_eml_parsed, ".//dataTable/entityName")),
+  url  = xml2::xml_text(xml2::xml_find_all(genetics_eml_parsed, ".//dataTable/physical/distribution/online/url"))
+)
+
+# Pull genetics data file — update prefix if EDI file naming convention changes
+file_data_genetics <- fetch_data_from_api(
+  genetics_file_lookup |>
+    filter(stringr::str_detect(name, "^genetic_identification_data")) |>
+    pull(url))
 
 genetics_data_raw <- read_csv(
   I(rawToChar(file_data_genetics)),
@@ -110,7 +114,7 @@ genetics_data_raw <- read_csv(
                                   field_run_type_id)) |>
 mutate(run_name = tolower(run_name))
 
-## ---Sample location lookup ----
+## ================ Sample location lookup ============
 # Local file linking 3-letter site codes (from sample_id) to location names.
 # If new sites are added to genetics_data_raw, add their code here.
 # If new location_name values are added, update the map_label case_when below.
@@ -139,58 +143,60 @@ run_designation <- genetics_data_raw |>
 
 
 # ------------------ WATER QUALITY DATA ------------------------------------------------------
-
 # Package edi.458 — EMP discrete water quality data
 # Always pulls the latest revision automatically
+
 identifier <- "458"
-revisions_url <- paste0(
-  "https://pasta.lternet.edu/package/eml/edi/",
-  identifier)
-
+revisions_url <- paste0("https://pasta.lternet.edu/package/eml/edi/", identifier)
 revisions_raw <- fetch_data_from_api(revisions_url)
-revisions <- read_lines(I(rawToChar(revisions_raw)))
 
-# Extract newest revision number
-version <- revisions |>
+version <- read_lines(I(rawToChar(revisions_raw))) |>
   basename() |>
   as.numeric() |>
   max(na.rm = TRUE) |>
   as.character()
 
-# check of edi version that is being pulled
-# version
-
+# Build file lookup table from EML metadata
+# Parses EML XML to get entity names and download URLs for all files in package
 edi_file_base_url <- paste0(
   "https://pasta.lternet.edu/package/data/eml/edi/", identifier, "/", version)
-file_ids_bytes <- fetch_data_from_api(edi_file_base_url)
-#file_ids contains the list of files from the package in the form of ids
-file_ids <- read_csv(file_ids_bytes,
-                     col_names = c("table_id"),
-                     show_col_types = FALSE)
-# file_ids |> View()
+
+eml_url <- paste0(
+  "https://pasta.lternet.edu/package/metadata/eml/edi/", identifier, "/", version)
+eml_raw <- fetch_data_from_api(eml_url)
+eml_parsed <- xml2::read_xml(eml_raw, options = "RECOVER")
+
+file_lookup <- tibble::tibble(
+  name = xml2::xml_text(xml2::xml_find_all(eml_parsed, ".//dataTable/entityName")),
+  url  = xml2::xml_text(xml2::xml_find_all(eml_parsed, ".//dataTable/physical/distribution/online/url")))
+
 
 # ==================== data pull from edi ===============
-edi_file_url <- paste0(edi_file_base_url, "/72c6b8cfbeca84df5086e721fcff1757")
-file_data <- fetch_data_from_api(edi_file_url)
-
-wq_data_raw <- read_csv(
-  I(rawToChar(file_data)),
-  show_col_types = FALSE) |>
+# Matches files starting with "EMP_DWQ_1". It will work across EDI revisions, as long as fine name is consistent
+wq_data_raw <- fetch_data_from_api(file_lookup |>
+                                     filter(stringr::str_detect(name, "^EMP_DWQ_1")) |>
+                                     pull(url)) |>
+  rawToChar() |>
+  I() |>
+  read_csv(show_col_types = FALSE) |>
   clean_names() |>
   rename(station_id = station,
          value = result_value,
          unit = result_unit)
 
+
 # ==================== metadata pull frmo edi ==========
 # Station metadata: location, status (Active/Inactive), lat/long
 # Some stations have latitude == "variable" (no fixed location — e.g. LSZ sites)
 # These are excluded from the map but their data is included in plots/downloads
-edi_file_url_metadata <- paste0(edi_file_base_url, "/ac44e8bf5f7a8afce67ba0d6cbfbc228")
-file_metadata <- fetch_data_from_api(edi_file_url_metadata)
+# edi_file_url_metadata <- paste0(edi_file_base_url, "/ac44e8bf5f7a8afce67ba0d6cbfbc228")
 
-wq_metadata_raw <- read_csv(
-  I(rawToChar(file_metadata)),
-  show_col_types = FALSE) |>
+wq_metadata_raw <- fetch_data_from_api(file_lookup |>
+                                         filter(stringr::str_detect(name, "^EMP_DWQ_Stations_")) |>
+                                         pull(url)) |>
+  rawToChar() |>
+  I() |>
+  read_csv(show_col_types = FALSE) |>
   clean_names()
 
 # "variable" locations check

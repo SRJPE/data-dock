@@ -414,7 +414,7 @@ Used to join site labels onto genetics data</td>
 </tr>
 <tr class="odd">
 <td>River Polylines</td>
-<td>Locat file sourced from <a href="https://cvpia-osc.github.io/DSMhabitat/articles/habitat-extents-map.html">CVPIA</a></td>
+<td>Local file sourced from <a href="https://cvpia-osc.github.io/DSMhabitat/articles/habitat-extents-map.html">CVPIA</a></td>
 <td>River polylines displayed on both maps</td>
 </tr>
 </tbody>
@@ -427,8 +427,8 @@ handles all EDI requests:</p>
 <ol style="list-style-type: decimal">
 <li><p>Queries the PASTA API for all revisions of a package</p></li>
 <li><p>Automatically selects the newest revision number</p></li>
-<li><p>Fetches the file list for that revision 4. Downloads the target
-file by its EDI file ID</p></li>
+<li><p>Fetches the file list for that revision</p></li>
+<li><p>Downloads the target filenby its EDI file ID</p></li>
 </ol>
 </div>
 <div id="key-data-objects-created-in-global.r" class="section level2">
@@ -469,8 +469,9 @@ Observations, Wave Scale) . Pulled separately from
 <tr class="even">
 <td><code>wq_data</code></td>
 <td>Derived from <code>wq_data_raw</code></td>
-<td>Cleaned WQ observations joined to metadata. Excludes Latitude,
-Longitude, Rain, Sky Conditions analytes</td>
+<td>Analysis-ready WQ dataset. Joined to metadata, columns renamed,
+non-WQ analytes excluded, LSZ descriptions hardcoded, station_id_name
+label added. See details below.</td>
 </tr>
 <tr class="odd">
 <td><code>wq_metadata</code></td>
@@ -481,6 +482,31 @@ to <code>sf</code> object</td>
 </tr>
 </tbody>
 </table>
+<p><strong>What changed from <code>wq_data_raw</code> to
+<code>wq_data</code>:</strong></p>
+<ul>
+<li><code>station</code> renamed to <code>station_id</code>;
+<code>result_value</code> renamed to <code>value</code>;
+<code>result_unit</code> renamed to <code>unit</code></li>
+<li><code>value</code> converted from character to numeric via
+<code>as.numeric()</code></li>
+<li><code>date</code> converted from character to <code>Date</code>
+class</li>
+<li><code>year</code> column added by extracting from
+<code>date</code></li>
+<li>Joined to <code>wq_metadata</code> to add
+<code>station_description</code> via <code>station_id</code></li>
+<li>LSZ stations (<code>LSZ2</code>, <code>LSZ2-SJR</code>,
+<code>LSZ6</code>, <code>LSZ6-SJR</code>) have no fixed location so they
+don’t join to <code>wq_metadata</code>. Their
+<code>station_description</code> is hardcoded directly</li>
+<li>Non-WQ analytes excluded: <code>Latitude</code>,
+<code>Longitude</code>, <code>Rain</code>, <code>Sky Conditions</code>,
+<code>Weather Observations</code>, <code>Wave Scale</code></li>
+<li><code>station_id_name</code> column added:
+<code>paste(station_id, &quot;-&quot;, station_description)</code>. Used in all
+dropdowns, plots, and downloads</li>
+</ul>
 </div>
 <div id="genetics" class="section level3">
 <h3>Genetics</h3>
@@ -506,11 +532,43 @@ to <code>sf</code> object</td>
 <tr class="even">
 <td><code>run_designation</code></td>
 <td>Derived from <code>genetics_data_raw</code></td>
-<td>Cleaned genetics data with run assignments, monitoring year, month,
-and site labels</td>
+<td>Analysis-ready genetics dataset derived from
+<code>genetics_data_raw</code> joined to <code>sample_location</code>.
+Contains one row per fish sample with run assignments, monitoring year,
+month, genotype, and map-ready site display labels. Rows with missing
+date are excluded as they cannot be plotted.</td>
 </tr>
 </tbody>
 </table>
+<p><strong>What changed from <code>genetics_data_raw</code> to
+<code>run_designation</code>:</strong></p>
+<ul>
+<li><code>final_run_designation</code> renamed to <code>run_name</code>;
+<code>field_run_type</code> renamed to <code>field_run_type_id</code> to
+maintain consistency with earlier data schema</li>
+<li><code>run_name</code>, <code>gtseq_chr28_geno</code> and
+<code>shlk_chr28_genotype</code> converted to lowercase</li>
+<li>Missing <code>fork_length_mm</code> and
+<code>field_run_type_id</code> values imputed by randomly sampling from
+observed values to preserve row count without affecting run assignment
+or genotype columns</li>
+<li><code>code</code> column added. First 3 characters of
+<code>sample_id</code> (e.g. <code>&quot;BTC22_2_A_1&quot;</code> to
+<code>&quot;BTC&quot;</code>). Used to join to <code>sample_location</code> lookup
+table</li>
+<li><code>year</code>, <code>month</code>, <code>sample_event</code>
+columns added</li>
+<li><code>genotype</code> column added: GT-seq result
+(<code>gtseq_chr28_geno</code>) is used when available; falls back to
+SHERLOCK result (<code>shlk_chr28_genotype</code>) if GT-seq is
+<code>NA</code></li>
+<li>Joined to <code>sample_location</code> to add
+<code>location_name</code> via <code>code</code></li>
+<li><code>map_label</code> column added. Name used in UI dropdowns and
+plot facets</li>
+<li>Rows where <code>month</code> or <code>genotype</code> is
+<code>NA</code> are removed</li>
+</ul>
 </div>
 <div id="spatial" class="section level3">
 <h3>Spatial</h3>
