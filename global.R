@@ -65,6 +65,7 @@ rst_sites <- rst_sites |>
 salmonid_habitat_extents <- readRDS("data-raw/salmonid_habitat_extents.Rds")
 
 ## ================ genetics data pull from edi ============
+tryCatch({
 # Package edi.2335 — SR JPE genetics data
 # Always pulls the latest revision automatically
 genetics_identifier <- "2335"
@@ -114,11 +115,30 @@ genetics_data_raw <- read_csv(
                                   field_run_type_id)) |>
 mutate(run_name = tolower(run_name))
 
+# Save genetics backup on successful pull
+if (!dir.exists("data-raw/backup")) dir.create("data-raw/backup", recursive = TRUE)
+save(genetics_data_raw, file = "data-raw/backup/genetics_data_raw.Rda")
+message("Genetics data pulled successfully — backup saved.")
+# adding error message in case API fails to notify that backup data is being used
+}, error = function(e) {
+  warning(paste("EDI API unavailable for Genetics data. Loading from local backup.\nError:", e$message))
+  if (file.exists("data-raw/backup/genetics_data_raw.Rda")) {
+    load("data-raw/backup/genetics_data_raw.Rda", envir = .GlobalEnv)
+    message("Backup Genetics data loaded successfully.")
+  } else {
+    stop("EDI API unavailable and no local backup found for Genetics data.")
+  }
+})
+
 ## ================ Sample location lookup ============
 # Local file linking 3-letter site codes (from sample_id) to location names.
 # If new sites are added to genetics_data_raw, add their code here.
 # If new location_name values are added, update the map_label case_when below.
 sample_location <- read_csv(here::here("data-raw","grunid_sample_location.csv"))
+
+# Save genetics backup on successful pull
+if (!dir.exists("data-raw/backup")) dir.create("data-raw/backup", recursive = TRUE)
+save(genetics_data_raw, file = "data-raw/backup/genetics_data_raw.Rda")
 
 ## --- Run Designation ---
 # Derived from genetics_data_raw + sample_location join.
@@ -143,9 +163,9 @@ run_designation <- genetics_data_raw |>
 
 
 # ------------------ WATER QUALITY DATA ------------------------------------------------------
+tryCatch({
 # Package edi.458 — EMP discrete water quality data
 # Always pulls the latest revision automatically
-
 identifier <- "458"
 revisions_url <- paste0("https://pasta.lternet.edu/package/eml/edi/", identifier)
 revisions_raw <- fetch_data_from_api(revisions_url)
@@ -250,6 +270,29 @@ wq_data <- wq_data_joined |>
 wq_quality_weather <- wq_data_joined |>
   filter(analyte %in% c("Rain", "Sky Conditions", "Weather Observations", "Wave Scale")) |>
   mutate(station_id_name = paste(station_id, "-", station_description))
+
+# Save WQ backups on successful pull
+if (!dir.exists("data-raw/backup")) dir.create("data-raw/backup", recursive = TRUE)
+save(wq_data_raw,      file = "data-raw/backup/wq_data_raw.Rda")
+save(wq_metadata_raw,  file = "data-raw/backup/wq_metadata_raw.Rda")
+
+# Save WQ backups on successful pull
+if (!dir.exists("data-raw/backup")) dir.create("data-raw/backup", recursive = TRUE)
+save(wq_data_raw,     file = "data-raw/backup/wq_data_raw.Rda")
+save(wq_metadata_raw, file = "data-raw/backup/wq_metadata_raw.Rda")
+message("Water Quality data pulled successfully — backup saved.")
+# adding error message in case API fails to notify that backup data is being used
+}, error = function(e) {
+  warning(paste("EDI API unavailable for Water Quality data. Loading from local backup.\nError:", e$message))
+  if (file.exists("data-raw/backup/wq_data_raw.Rda") &&
+      file.exists("data-raw/backup/wq_metadata_raw.Rda")) {
+    load("data-raw/backup/wq_data_raw.Rda",     envir = .GlobalEnv)
+    load("data-raw/backup/wq_metadata_raw.Rda", envir = .GlobalEnv)
+    message("Backup Water Quality data loaded successfully.")
+  } else {
+    stop("EDI API unavailable and no local backup found for Water Quality data.")
+  }
+})
 
 # ==================== station labels for dropdowns ==========================
 stations <- sort(unique(wq_data$station_id_name))
