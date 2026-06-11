@@ -7,7 +7,7 @@ library(plotly)
 # library(shinycssloaders)
 library(sf)
 library(janitor)
-# library(EDIutils)
+library(EDIutils)
 library(readr)
 library(leaflet)
 library(bslib)
@@ -24,17 +24,6 @@ run_col <- c("spring" = "#337538",
              "early" = "#5DA899",
              "late" =  "#DCCD7D",
              "heterozygote" = "gray")
-
-## function for reading data directly from EDI ---------
-fetch_data_from_api <- function(url) {
-  tryCatch({
-    response <- httr::GET(url)
-    data <- httr::content(response, as = "raw")
-    return(data)
-  }, error = function(e) {
-    stop(paste("Error fetching data from API:", e$message))
-  })
-}
 
 # ------------------ GENETICS DATA ------------------------------------------------------
 
@@ -66,60 +55,45 @@ salmonid_habitat_extents <- readRDS("data-raw/salmonid_habitat_extents.Rds")
 
 ## ================ genetics data pull from edi ============
 tryCatch({
-# Package edi.2335 — SR JPE genetics data
-# Always pulls the latest revision automatically
-genetics_identifier <- "2335"
-genetics_revisions_url <- paste0(
-  "https://pasta.lternet.edu/package/eml/edi/", genetics_identifier)
+  # Package edi.2335 — SR JPE genetics data
+  # Always pulls the latest revision automatically
+  scope      <- "edi"
+  identifier <- "2335"
+  revision   <- EDIutils::list_data_package_revisions(scope, identifier, filter = "newest")
+  package_id <- paste(scope, identifier, revision, sep = ".")
 
-genetics_revisions_raw <- fetch_data_from_api(genetics_revisions_url)
+  # List all data entities in the package
+  res <- EDIutils::read_data_entity_names(package_id)
 
-# Extract newest revision number
-genetics_version <- read_lines(I(rawToChar(genetics_revisions_raw))) |>
-  basename() |>
-  as.numeric() |>
-  max(na.rm = TRUE) |>
-  as.character()
+  # Pull genetics data — matches file starting with "genetic_identification_data"
+  genetics_data_raw <- EDIutils::read_data_entity(
+    package_id,
+    res$entityId[stringr::str_detect(res$entityName, "^genetic_identification_data")]
+  ) |>
+    read_csv(show_col_types = FALSE) |>
+    clean_names() |>
+    rename(run_name          = final_run_designation,
+           field_run_type_id = field_run_type) |>  # renaming for now to keep consistency with previous sample query
+    mutate(
+      fork_length_mm = ifelse(
+        is.na(fork_length_mm),
+        sample(fork_length_mm[!is.na(fork_length_mm)],
+               sum(is.na(fork_length_mm)), replace = TRUE),
+        fork_length_mm),
+      field_run_type_id = ifelse(
+        is.na(field_run_type_id),
+        sample(field_run_type_id[!is.na(field_run_type_id)],
+               sum(is.na(field_run_type_id)), replace = TRUE),
+        field_run_type_id)
+    ) |>
+    mutate(run_name = tolower(run_name))
 
-# check of edi version that is being pulled
-# genetics_version
+  # Save genetics backup on successful pull
+  if (!dir.exists("data-raw/backup")) dir.create("data-raw/backup", recursive = TRUE)
+  save(genetics_data_raw, file = "data-raw/backup/genetics_data_raw.Rda")
+  message("Genetics data pulled successfully — backup saved.")
 
-# Build file lookup table from EML metadata
-# file names and download URLs for all files in package
-genetics_eml_url <- paste0("https://pasta.lternet.edu/package/metadata/eml/edi/", genetics_identifier, "/", genetics_version)
-genetics_eml_raw <- fetch_data_from_api(genetics_eml_url)
-genetics_eml_parsed <- xml2::read_xml(genetics_eml_raw, options = "RECOVER")
-
-genetics_file_lookup <- tibble::tibble(
-  name = xml2::xml_text(xml2::xml_find_all(genetics_eml_parsed, ".//dataTable/entityName")),
-  url  = xml2::xml_text(xml2::xml_find_all(genetics_eml_parsed, ".//dataTable/physical/distribution/online/url"))
-)
-
-# Pull genetics data file — update prefix if EDI file naming convention changes
-file_data_genetics <- fetch_data_from_api(
-  genetics_file_lookup |>
-    filter(stringr::str_detect(name, "^genetic_identification_data")) |>
-    pull(url))
-
-genetics_data_raw <- read_csv(
-  I(rawToChar(file_data_genetics)),
-  show_col_types = FALSE) |>
-  clean_names() |>
-  rename(run_name = final_run_designation,
-       field_run_type_id = field_run_type) |>  # renaming for now to keep consistency with previous sample query
-  mutate(fork_length_mm = ifelse(is.na(fork_length_mm),
-                               sample(fork_length_mm[!is.na(fork_length_mm)], sum(is.na(fork_length_mm)), replace = TRUE),
-                               fork_length_mm),
-       field_run_type_id = ifelse(is.na(field_run_type_id),
-                                  sample(field_run_type_id[!is.na(field_run_type_id)], sum(is.na(field_run_type_id)), replace = TRUE),
-                                  field_run_type_id)) |>
-mutate(run_name = tolower(run_name))
-
-# Save genetics backup on successful pull
-if (!dir.exists("data-raw/backup")) dir.create("data-raw/backup", recursive = TRUE)
-save(genetics_data_raw, file = "data-raw/backup/genetics_data_raw.Rda")
-message("Genetics data pulled successfully — backup saved.")
-# adding error message in case API fails to notify that backup data is being used
+  # adding error message in case API fails to notify that backup data is being used
 }, error = function(e) {
   warning(paste("EDI API unavailable for Genetics data. Loading from local backup.\nError:", e$message))
   if (file.exists("data-raw/backup/genetics_data_raw.Rda")) {
@@ -135,10 +109,6 @@ message("Genetics data pulled successfully — backup saved.")
 # If new sites are added to genetics_data_raw, add their code here.
 # If new location_name values are added, update the map_label case_when below.
 sample_location <- read_csv(here::here("data-raw","grunid_sample_location.csv"))
-
-# Save genetics backup on successful pull
-if (!dir.exists("data-raw/backup")) dir.create("data-raw/backup", recursive = TRUE)
-save(genetics_data_raw, file = "data-raw/backup/genetics_data_raw.Rda")
 
 ## --- Run Designation ---
 # Derived from genetics_data_raw + sample_location join.
@@ -163,67 +133,59 @@ run_designation <- genetics_data_raw |>
 
 
 # ------------------ WATER QUALITY DATA ------------------------------------------------------
-tryCatch({
-# Package edi.458 — EMP discrete water quality data
-# Always pulls the latest revision automatically
-identifier <- "458"
-revisions_url <- paste0("https://pasta.lternet.edu/package/eml/edi/", identifier)
-revisions_raw <- fetch_data_from_api(revisions_url)
-
-version <- read_lines(I(rawToChar(revisions_raw))) |>
-  basename() |>
-  as.numeric() |>
-  max(na.rm = TRUE) |>
-  as.character()
-
-# Build file lookup table from EML metadata
-# Parses EML XML to get entity names and download URLs for all files in package
-edi_file_base_url <- paste0(
-  "https://pasta.lternet.edu/package/data/eml/edi/", identifier, "/", version)
-
-eml_url <- paste0(
-  "https://pasta.lternet.edu/package/metadata/eml/edi/", identifier, "/", version)
-eml_raw <- fetch_data_from_api(eml_url)
-eml_parsed <- xml2::read_xml(eml_raw, options = "RECOVER")
-
-file_lookup <- tibble::tibble(
-  name = xml2::xml_text(xml2::xml_find_all(eml_parsed, ".//dataTable/entityName")),
-  url  = xml2::xml_text(xml2::xml_find_all(eml_parsed, ".//dataTable/physical/distribution/online/url")))
-
 
 # ==================== data pull from edi ===============
-# Matches files starting with "EMP_DWQ_1". It will work across EDI revisions, as long as fine name is consistent
-wq_data_raw <- fetch_data_from_api(file_lookup |>
-                                     filter(stringr::str_detect(name, "^EMP_DWQ_1")) |>
-                                     pull(url)) |>
-  rawToChar() |>
-  I() |>
-  read_csv(show_col_types = FALSE) |>
-  clean_names() |>
-  rename(station_id = station,
-         value = result_value,
-         unit = result_unit)
 
+tryCatch({
+  # Package edi.458 — EMP discrete water quality data
+  # Always pulls the latest revision automatically
+  scope      <- "edi"
+  identifier <- "458"
+  revision   <- EDIutils::list_data_package_revisions(scope, identifier, filter = "newest")
+  package_id <- paste(scope, identifier, revision, sep = ".")
 
-# ==================== metadata pull frmo edi ==========
-# Station metadata: location, status (Active/Inactive), lat/long
-# Some stations have latitude == "variable" (no fixed location — e.g. LSZ sites)
-# These are excluded from the map but their data is included in plots/downloads
-# edi_file_url_metadata <- paste0(edi_file_base_url, "/ac44e8bf5f7a8afce67ba0d6cbfbc228")
+  # List all data entities in the package
+  res <- EDIutils::read_data_entity_names(package_id)
 
-wq_metadata_raw <- fetch_data_from_api(file_lookup |>
-                                         filter(stringr::str_detect(name, "^EMP_DWQ_Stations_")) |>
-                                         pull(url)) |>
-  rawToChar() |>
-  I() |>
-  read_csv(show_col_types = FALSE) |>
-  clean_names()
+  # Pull WQ data — matches file starting with "EMP_DWQ_1"
+  wq_data_raw <- EDIutils::read_data_entity(
+    package_id,
+    res$entityId[stringr::str_detect(res$entityName, "^EMP_DWQ_1")]
+  ) |>
+    read_csv(show_col_types = FALSE) |>
+    clean_names() |>
+    rename(station_id = station,
+           value      = result_value,
+           unit       = result_unit)
 
-# "variable" locations check
-# wq_metadata_raw |>
-#   filter(latitude == "variable") |>
-#   view()
+  # Pull WQ station metadata — matches file starting with "EMP_DWQ_Stations_"
+  wq_metadata_raw <- EDIutils::read_data_entity(
+    package_id,
+    res$entityId[stringr::str_detect(res$entityName, "^EMP_DWQ_Stations_")]
+  ) |>
+    read_csv(show_col_types = FALSE) |>
+    clean_names()
 
+  # Save backups on successful pull
+  if (!dir.exists("data-raw/backup")) dir.create("data-raw/backup", recursive = TRUE)
+  save(wq_data_raw,     file = "data-raw/backup/wq_data_raw.Rda")
+  save(wq_metadata_raw, file = "data-raw/backup/wq_metadata_raw.Rda")
+  message("Water Quality data pulled successfully — backup saved.")
+
+}, error = function(e) {
+  warning(paste("EDI API unavailable for Water Quality data. Loading from local backup.\nError:", e$message))
+  if (file.exists("data-raw/backup/wq_data_raw.Rda") &&
+      file.exists("data-raw/backup/wq_metadata_raw.Rda")) {
+    load("data-raw/backup/wq_data_raw.Rda",     envir = .GlobalEnv)
+    load("data-raw/backup/wq_metadata_raw.Rda", envir = .GlobalEnv)
+    message("Backup Water Quality data loaded successfully.")
+  } else {
+    stop("EDI API unavailable and no local backup found for Water Quality data.")
+  }
+})
+# =======================================================
+
+# cleaning metadata to: exclude invalid lat/longs, converts to sf object, adds "historical" label
 wq_metadata <- wq_metadata_raw |>
   filter(latitude != "variable") |> # these data entries are associated with LSZ locations
   st_as_sf(coords = c("longitude", "latitude"), crs = 4326) |>
@@ -270,29 +232,6 @@ wq_data <- wq_data_joined |>
 wq_quality_weather <- wq_data_joined |>
   filter(analyte %in% c("Rain", "Sky Conditions", "Weather Observations", "Wave Scale")) |>
   mutate(station_id_name = paste(station_id, "-", station_description))
-
-# Save WQ backups on successful pull
-if (!dir.exists("data-raw/backup")) dir.create("data-raw/backup", recursive = TRUE)
-save(wq_data_raw,      file = "data-raw/backup/wq_data_raw.Rda")
-save(wq_metadata_raw,  file = "data-raw/backup/wq_metadata_raw.Rda")
-
-# Save WQ backups on successful pull
-if (!dir.exists("data-raw/backup")) dir.create("data-raw/backup", recursive = TRUE)
-save(wq_data_raw,     file = "data-raw/backup/wq_data_raw.Rda")
-save(wq_metadata_raw, file = "data-raw/backup/wq_metadata_raw.Rda")
-message("Water Quality data pulled successfully — backup saved.")
-# adding error message in case API fails to notify that backup data is being used
-}, error = function(e) {
-  warning(paste("EDI API unavailable for Water Quality data. Loading from local backup.\nError:", e$message))
-  if (file.exists("data-raw/backup/wq_data_raw.Rda") &&
-      file.exists("data-raw/backup/wq_metadata_raw.Rda")) {
-    load("data-raw/backup/wq_data_raw.Rda",     envir = .GlobalEnv)
-    load("data-raw/backup/wq_metadata_raw.Rda", envir = .GlobalEnv)
-    message("Backup Water Quality data loaded successfully.")
-  } else {
-    stop("EDI API unavailable and no local backup found for Water Quality data.")
-  }
-})
 
 # ==================== station labels for dropdowns ==========================
 stations <- sort(unique(wq_data$station_id_name))
