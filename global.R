@@ -74,18 +74,6 @@ tryCatch({
     clean_names() |>
     rename(run_name          = final_run_designation,
            field_run_type_id = field_run_type) |>  # renaming for now to keep consistency with previous sample query
-    mutate(
-      fork_length_mm = ifelse(
-        is.na(fork_length_mm),
-        sample(fork_length_mm[!is.na(fork_length_mm)],
-               sum(is.na(fork_length_mm)), replace = TRUE),
-        fork_length_mm),
-      field_run_type_id = ifelse(
-        is.na(field_run_type_id),
-        sample(field_run_type_id[!is.na(field_run_type_id)],
-               sum(is.na(field_run_type_id)), replace = TRUE),
-        field_run_type_id)
-    ) |>
     mutate(run_name = tolower(run_name))
 
   # Save genetics backup on successful pull
