@@ -1,7 +1,3 @@
-library(shiny)
-library(leaflet)
-library(bslib)
-library(shinyWidgets)
 
 ui <- fluidPage(
   theme = bs_theme(bootswatch = "flatly"),
@@ -49,22 +45,10 @@ ui <- fluidPage(
         ### Visualize ---------------------------------------------------------------
         tabPanel(
           "Visualize Data",
-          fluidRow(column(width = 12, )),
           div(
             style = "display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 10px;",
             div(
               style = "min-width: 200px;",
-
-              {
-                stations <- sort(unique(wq_metadata$station_id_name))
-                stations_label <- stringr::str_replace(
-                  stations,
-                  "^([A-Za-z]+)0*(\\d+[A-Za-z]?)\\s*-\\s*(.+)$",
-                  "\\3 (\\1\\2)"
-                )
-                # Sort alphabetically by station name
-                ord <- order(stations_label)
-
                 selectizeInput(
                   inputId = "location_filter_wq",
                   label = tagList(
@@ -79,8 +63,6 @@ ui <- fluidPage(
                   multiple = TRUE,
                   options = list(plugins = list('remove_button'), placeholder = 'Select a station')
                 )
-              }
-
               ),
 
             div(
@@ -214,7 +196,7 @@ ui <- fluidPage(
             selectizeInput(
               "location_filter_dl",
               "Station",
-              choices = sort(unique(wq_metadata$station_id_name)),
+              choices = stats::setNames(stations[ord], stations_label[ord]),
               multiple = TRUE,
               options = list(plugins = list('remove_button'), placeholder = "Select a station")
               ),

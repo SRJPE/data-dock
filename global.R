@@ -1,15 +1,16 @@
 library(shiny)
 library(tidyverse)
-library(shinythemes)
 library(DT)
 library(shinyWidgets)
 library(lubridate)
 library(plotly)
-library(shinycssloaders)
+# library(shinycssloaders)
 library(sf)
 library(janitor)
 library(EDIutils)
 library(readr)
+library(leaflet)
+library(bslib)
 
 
 # ======================== HELPERS =====================
@@ -17,85 +18,88 @@ library(readr)
 
 tol_muted <- c("#2E2585", "#337538", "#5DA899", "#94CBEC","#DCCD7D", "#C26A77", "#9F4A96","#7E2954")
 
-
-## function for reading data directly from EDI ---------
-fetch_data_from_api <- function(url) {
-  tryCatch({
-    response <- httr::GET(url)
-    data <- httr::content(response, as = "raw")
-    return(data)
-  }, error = function(e) {
-    stop(paste("Error fetching data from API:", e$message))
-  })
-}
+run_col <- c("spring" = "#337538",
+             "fall or late fall" = "#DCCD7D",
+             "winter" = "#94CBEC",
+             "early" = "#5DA899",
+             "late" =  "#DCCD7D",
+             "heterozygote" = "gray")
 
 # ------------------ GENETICS DATA ------------------------------------------------------
 
 ## ================== rst sites data  ============
-rst_raw <- readRDS("data-raw/rst_sites.Rds")
+# reading csv
+rst_csv <- read.csv("data-raw/rst_trap_locations.csv")
 
-rst <- rst_raw |>
-  filter(site %in% c("lcc", "ubc", "mill creek", "deer creek", "okie dam",
-                     "tisdale", "knights landing", "hallwood", "eye riffle")) |>
-  select(stream, site, geometry) |>
+rst_sites <- rst_csv |>
+  select(stream, site, latitude, longitude) |>
   mutate(label = case_when(site == "knights landing" ~ "Sacramento River - Knights Landing",
                            site == "tisdale" ~ "Sacramento River - Tisdale",
                            site == "eye riffle" ~ "Feather River - RM 61",
-                           T ~ str_to_title(stream)))
+                           site == "delta entry" ~ "Sacramento River - Delta Entry",
+                           site == 'rm 17 (new "lower" RST)'~ "Feather River - RM 17",
+                           T ~ str_to_title(stream))) |>
+  select(stream, site, latitude, longitude, label)
 
-# adding Delta Entry and Lower Feather Rm 17
-additional_rst <- readxl::read_xlsx("data-raw/sample_locations_20220830.xlsx") |>
-  filter(code %in% c("F17", "DEL")) |>
-  st_as_sf(coords = c("longitude", "latitude"), crs = 4326) |>
-  mutate(stream = tolower(stream_name),
-         site = tolower(location_name),
-         label = case_when(site == "sac-delta entry" ~ "Sacramento River - Delta Entry",
-                           site == "feather-rm17" ~ "Feather River - RM 17")
-        ) |>
-  select(stream, site, geometry, label)
-
-rst_sites <- bind_rows(additional_rst, rst)
-
-# adding lat/long fields for zooming functionality
-coords <- sf::st_coordinates(rst_sites)
-rst_sites$longitude <- coords[, 1]
-rst_sites$latitude <- coords[, 2]
+# Jitter coordinates for privacy (~500m offset)
+# set.seed() ensures jitter is identical on every app restart
+set.seed(42)  # jitter consistent every time app loads
+rst_sites <- rst_sites |>
+  mutate(longitude = longitude + runif(n(), min = -0.005, max = 0.005),
+         latitude  = latitude  + runif(n(), min = -0.005, max = 0.005))
 
 # habitat extents
+# River polylines displayed on both the WQ and genetics maps
+# Source: CVPIA (https://cvpia-osc.github.io/DSMhabitat/)
 salmonid_habitat_extents <- readRDS("data-raw/salmonid_habitat_extents.Rds")
 
-## ================== data pull from edi ============
-genetics_identifier <- "2335"
-genetics_version <- "1"
-edi_file_base_url <- paste0(
-  "https://pasta.lternet.edu/package/data/eml/edi/", genetics_identifier, "/", genetics_version
-)
-file_ids_bytes <- fetch_data_from_api(edi_file_base_url)
-#file_ids contains the list of files from the package in the form of ids
-file_ids_genetics <- read_csv(file_ids_bytes,
-                     col_names = c("table_id"),
-                     show_col_types = FALSE)
+## ================ genetics data pull from edi ============
+tryCatch({
+  # Package edi.2335 — SR JPE genetics data
+  # Always pulls the latest revision automatically
+  scope      <- "edi"
+  identifier <- "2335"
+  revision   <- EDIutils::list_data_package_revisions(scope, identifier, filter = "newest")
+  package_id <- paste(scope, identifier, revision, sep = ".")
 
-# file_ids_genetics |> View()
-edi_file_url <- paste0(edi_file_base_url, "/c1174bbf130272bf4124905c2ff73c66")
-file_data_genetics <- fetch_data_from_api(edi_file_url)
+  # List all data entities in the package
+  res <- EDIutils::read_data_entity_names(package_id)
 
-genetics_data_raw <- read_csv(
-  I(rawToChar(file_data_genetics)),
-  show_col_types = FALSE) |>
-  clean_names() |>
-  rename(run_name = final_run_designation,
-       field_run_type_id = field_run_type) |>  # renaming for now to keep consistency with previous sample query
-  mutate(fork_length_mm = ifelse(is.na(fork_length_mm),
-                               sample(fork_length_mm[!is.na(fork_length_mm)], sum(is.na(fork_length_mm)), replace = TRUE),
-                               fork_length_mm),
-       field_run_type_id = ifelse(is.na(field_run_type_id),
-                                  sample(field_run_type_id[!is.na(field_run_type_id)], sum(is.na(field_run_type_id)), replace = TRUE),
-                                  field_run_type_id)) |>
-mutate(run_name = tolower(run_name))
+  # Pull genetics data — matches file starting with "genetic_identification_data"
+  genetics_data_raw <- EDIutils::read_data_entity(
+    package_id,
+    res$entityId[stringr::str_detect(res$entityName, "^genetic_identification_data")]
+  ) |>
+    read_csv(show_col_types = FALSE) |>
+    clean_names() |>
+    rename(run_name          = final_run_designation,
+           field_run_type_id = field_run_type) |>  # renaming for now to keep consistency with previous sample query
+    mutate(run_name = tolower(run_name))
 
+  # Save genetics backup on successful pull
+  if (!dir.exists("data-raw/backup")) dir.create("data-raw/backup", recursive = TRUE)
+  save(genetics_data_raw, file = "data-raw/backup/genetics_data_raw.Rda")
+  message("Genetics data pulled successfully — backup saved.")
+
+  # adding error message in case API fails to notify that backup data is being used
+}, error = function(e) {
+  warning(paste("EDI API unavailable for Genetics data. Loading from local backup.\nError:", e$message))
+  if (file.exists("data-raw/backup/genetics_data_raw.Rda")) {
+    load("data-raw/backup/genetics_data_raw.Rda", envir = .GlobalEnv)
+    message("Backup Genetics data loaded successfully.")
+  } else {
+    stop("EDI API unavailable and no local backup found for Genetics data.")
+  }
+})
+
+## ================ Sample location lookup ============
+# Local file linking 3-letter site codes (from sample_id) to location names.
+# If new sites are added to genetics_data_raw, add their code here.
+# If new location_name values are added, update the map_label case_when below.
 sample_location <- read_csv(here::here("data-raw","grunid_sample_location.csv"))
 
+## --- Run Designation ---
+# Derived from genetics_data_raw + sample_location join.
 run_designation <- genetics_data_raw |>
   mutate(code = substr(sample_id, 1, 3),
          year= paste0(20,substr(sample_id, 4,5)),
@@ -118,46 +122,60 @@ run_designation <- genetics_data_raw |>
 
 # ------------------ WATER QUALITY DATA ------------------------------------------------------
 
-identifier <- "458"
-version <- "13"
-edi_file_base_url <- paste0(
-  "https://pasta.lternet.edu/package/data/eml/edi/", identifier, "/", version
-)
-file_ids_bytes <- fetch_data_from_api(edi_file_base_url)
-#file_ids contains the list of files from the package in the form of ids
-file_ids <- read_csv(file_ids_bytes,
-                     col_names = c("table_id"),
-                     show_col_types = FALSE)
-# file_ids |> View()
-
 # ==================== data pull from edi ===============
-edi_file_url <- paste0(edi_file_base_url, "/72c6b8cfbeca84df5086e721fcff1757")
-file_data <- fetch_data_from_api(edi_file_url)
 
-wq_data_raw <- read_csv(
-  I(rawToChar(file_data)),
-  show_col_types = FALSE) |>
-  clean_names() |>
-  rename(station_id = station,
-         value = result_value,
-         unit = result_unit)
+tryCatch({
+  # Package edi.458 — EMP discrete water quality data
+  # Always pulls the latest revision automatically
+  scope      <- "edi"
+  identifier <- "458"
+  revision   <- EDIutils::list_data_package_revisions(scope, identifier, filter = "newest")
+  package_id <- paste(scope, identifier, revision, sep = ".")
 
-# ==================== metadata pull frmo edi =====
-edi_file_url_metadata <- paste0(edi_file_base_url, "/ac44e8bf5f7a8afce67ba0d6cbfbc228")
-file_metadata <- fetch_data_from_api(edi_file_url_metadata)
+  # List all data entities in the package
+  res <- EDIutils::read_data_entity_names(package_id)
 
-wq_metadata_raw <- read_csv(
-  I(rawToChar(file_metadata)),
-  show_col_types = FALSE) |>
-  clean_names()
+  # Pull WQ data — matches file starting with "EMP_DWQ_1"
+  wq_data_raw <- EDIutils::read_data_entity(
+    package_id,
+    res$entityId[stringr::str_detect(res$entityName, "^EMP_DWQ_1")]
+  ) |>
+    read_csv(show_col_types = FALSE) |>
+    clean_names() |>
+    rename(station_id = station,
+           value      = result_value,
+           unit       = result_unit)
 
-# "variable" locations
-# wq_metadata_raw |>
-#   filter(latitude == "variable") |>
-#   view()
+  # Pull WQ station metadata — matches file starting with "EMP_DWQ_Stations_"
+  wq_metadata_raw <- EDIutils::read_data_entity(
+    package_id,
+    res$entityId[stringr::str_detect(res$entityName, "^EMP_DWQ_Stations_")]
+  ) |>
+    read_csv(show_col_types = FALSE) |>
+    clean_names()
 
+  # Save backups on successful pull
+  if (!dir.exists("data-raw/backup")) dir.create("data-raw/backup", recursive = TRUE)
+  save(wq_data_raw,     file = "data-raw/backup/wq_data_raw.Rda")
+  save(wq_metadata_raw, file = "data-raw/backup/wq_metadata_raw.Rda")
+  message("Water Quality data pulled successfully — backup saved.")
+
+}, error = function(e) {
+  warning(paste("EDI API unavailable for Water Quality data. Loading from local backup.\nError:", e$message))
+  if (file.exists("data-raw/backup/wq_data_raw.Rda") &&
+      file.exists("data-raw/backup/wq_metadata_raw.Rda")) {
+    load("data-raw/backup/wq_data_raw.Rda",     envir = .GlobalEnv)
+    load("data-raw/backup/wq_metadata_raw.Rda", envir = .GlobalEnv)
+    message("Backup Water Quality data loaded successfully.")
+  } else {
+    stop("EDI API unavailable and no local backup found for Water Quality data.")
+  }
+})
+# =======================================================
+
+# cleaning metadata to: exclude invalid lat/longs, converts to sf object, adds "historical" label
 wq_metadata <- wq_metadata_raw |>
-  filter(latitude != "variable") |> # these data entries do not have lat/long, so I am leaving them out for now
+  filter(latitude != "variable") |> # these data entries are associated with LSZ locations
   st_as_sf(coords = c("longitude", "latitude"), crs = 4326) |>
   group_by(station_description) |>
   mutate(station_description = case_when(
@@ -165,12 +183,16 @@ wq_metadata <- wq_metadata_raw |>
     TRUE ~ station_description)) |>
   ungroup() |>
   mutate(station_id_name = paste(station_id, "-", station_description))
-# adding lat/long fields for zooming functionality
+# Extract lat/long back as numeric columns for Leaflet marker placement
 coords <- sf::st_coordinates(wq_metadata)
 wq_metadata$longitude <- coords[, 1]
 wq_metadata$latitude <- coords[, 2]
 
-# =================== combine metadata with data ===============
+# =================== combine metadata with data (main dataset used by the app) ===============
+# Joins raw data to metadata to get station_description.
+# Excludes: coordinate analytes, weather analytes (handled separately below),
+#           and rows with no matching station in metadata.
+# LSZ stations have no fixed location — their descriptions are hardcoded here.
 wq_data_joined <- wq_data_raw |>
 left_join(wq_metadata |>  st_drop_geometry() |> select(station_id, station_description),
           by = "station_id") |>
@@ -179,22 +201,32 @@ left_join(wq_metadata |>  st_drop_geometry() |> select(station_id, station_descr
 wq_data <- wq_data_joined |>
   mutate(date = as.Date(date),
          value = as.numeric(value),
-         year = year(date)) |>
-  filter(!is.na(station_description),
-         analyte != "Latitude",
+         year = year(date),
+         station_description = case_when(station_id == "LSZ2" ~ "Low Salinity Zone (2000 uS/cm boundary)",
+                                         station_id == "LSZ2-SJR" ~ "Low Salinity Zone in San Joaquin River (2000 uS/cm boundary)",
+                                         station_id == "LSZ6" ~ "Low Salinity Zone (6000 uS/cm boundary)",
+                                         station_id == "LSZ6-SJR" ~ "Low Salinity Zone in San Joaquin River (6000 uS/cm boundary)",
+                                         T ~ station_description)) |>
+  filter(analyte != "Latitude",
          analyte != "Longitude",
          analyte != "Rain",
-         analyte != "Sky Conditions") |>
-  mutate(station_id_name = paste(station_id, "-", station_description)) |>
-  glimpse()
+         analyte != "Sky Conditions",
+         analyte != "Weather Observations",
+         analyte != "Wave Scale") |>
+  mutate(station_id_name = paste(station_id, "-", station_description))
 
-# was planning on using analyte lat/long to assign location. however, it is inconsistent across same station_id
-wq_data_missing_location <- wq_data |>
-  filter(station_id %in% c("LSZ6", "LSZ2", "LSZ2-SJR", "LSZ6-SJR"),
-         analyte %in% c("Latitude", "Longitude"))
 
 # ==================== weather analytes ==========================
 wq_quality_weather <- wq_data_joined |>
   filter(analyte %in% c("Rain", "Sky Conditions", "Weather Observations", "Wave Scale")) |>
-  mutate(station_id_name = paste(station_id, "-", station_description)) |> glimpse()
+  mutate(station_id_name = paste(station_id, "-", station_description))
+
+# ==================== station labels for dropdowns ==========================
+stations <- sort(unique(wq_data$station_id_name))
+stations_label <- stringr::str_replace(
+  stations,
+  "^([A-Za-z]+)0*(\\d+[A-Za-z]?)\\s*-\\s*(.+)$",
+  "\\3 (\\1\\2)"
+)
+ord <- order(stations_label)
 
