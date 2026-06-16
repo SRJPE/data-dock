@@ -382,12 +382,32 @@ server <- function(input, output, session) {
 
   # Download tab data — additionally filtered by run_name
   dl_download_data_g <- reactive({
-    filtered_g_data() |>
-      filter(run_name %in% input$run_download)
+    req(input$year_range_dl_g, input$location_filter_dl_g)
+
+    data <- run_designation |>
+      filter(year %in% input$year_range_dl_g)
+
+    if (!is.null(input$location_filter_dl_g) &&
+        !"All Locations" %in% input$location_filter_dl_g) {
+      data <- data |> filter(map_label %in% input$location_filter_dl_g)
+    }
+
+    if (length(input$run_download) > 0) {
+      data <- data |> filter(run_name %in% input$run_download)
+    }
+
+    data
   })
 
   # Preview table — shows key columns first, then remaining columns
   output$dl_preview_table_g <- DT::renderDataTable({
+    req(
+      input$location_filter_dl_g,
+      input$year_range_dl_g,
+      input$run_download,
+      length(input$location_filter_dl_g) > 0,
+      length(input$run_download) > 0
+    )
     dl_download_data_g() |>
       dplyr::select(sample_id, code, sample_event, year, month,
                     datetime_collected, location_name, map_label,
