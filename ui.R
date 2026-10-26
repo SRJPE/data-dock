@@ -256,7 +256,7 @@ ui <- fluidPage(
               tags$p(
                 HTML(
                 "Filtered data preview — the exported <code>.csv</code> includes the complete raw dataset.<br>
-                For data and metadata, see the <a href='https://portal.edirepository.org/nis/metadataviewer?packageid=edi.458.13' target='_blank'>EDI package</a>
+                For data and metadata, see the <a href='https://portal.edirepository.org/nis/mapbrowse?scope=edi&identifier=458' target='_blank'>EDI package</a>
                 (EDI account required for full access)."
                 ),
                 style = "font-style: italic; color: #555; text-align: center; margin-top: 10px;"
@@ -441,7 +441,7 @@ ui <- fluidPage(
               tags$p(
                 HTML(
                 "Filtered data preview — the exported <code>.csv</code> includes the complete raw dataset.<br>
-                For data and metadata, see the <a href='https://portal.edirepository.org/nis/metadataviewer?packageid=edi.2335.1' target='_blank'>EDI package</a>
+                For data and metadata, see the <a href='https://portal.edirepository.org/nis/mapbrowse?scope=edi&identifier=2335' target='_blank'>EDI package</a>
                 (EDI account required for full access)."
                 ),
                 style = "font-style: italic; color: #555; text-align: center; margin-top: 10px;"
